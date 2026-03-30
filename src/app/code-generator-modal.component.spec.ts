@@ -43,7 +43,7 @@ describe('CodeGeneratorModalComponent', () => {
       expect(code).toContain('Study: Test Study');
       expect(code).toContain('sites <- c("Site1", "Site2")');
       expect(code).toContain('block_sizes <- c(3, 6)');
-      expect(code).toContain('subjects_per_site <- 10');
+      expect(code).toContain('subjects_per_stratum <- 10');
       expect(code).toContain('arms <- c("Arm A", "Arm B")');
       expect(code).toContain('ratios <- c(1, 2)');
       expect(code).toContain('strata1_levels <- c("Low", "High")');

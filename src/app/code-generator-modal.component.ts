@@ -144,7 +144,7 @@ set.seed(${this.hashCode(this.config.seed)})
 # Parameters
 sites <- c(${sites.map(s => '"' + s + '"').join(', ')})
 block_sizes <- c(${blockSizes.join(', ')})
-subjects_per_site <- ${this.config.subjectsPerSite || 0}
+subjects_per_stratum <- ${this.config.subjectsPerSite || 0}
 
 # Treatment Arms
 arms <- c(${arms.map(a => '"' + a.name + '"').join(', ')})
@@ -166,17 +166,21 @@ generate_block <- function(block_size) {
   sample(block) # Shuffle
 }
 
+if (any(block_sizes %% total_ratio != 0)) stop("Error: All block sizes must be exact multiples of the total allocation ratio.")
+
 # Generate Schema
-schema <- data.frame()
+schema_list <- list()
 
 for (site in sites) {
+  site_subject_count <- 0
+
   for (i in 1:nrow(strata_grid)) {
     stratum <- strata_grid[i, , drop=FALSE]
     
     subject_count <- 0
     block_number <- 1
     
-    while (subject_count < subjects_per_site) {
+    while (subject_count < subjects_per_stratum) {
       # Pick random block size
       current_block_size <- sample(block_sizes, 1)
       
@@ -185,9 +189,10 @@ for (site in sites) {
       
       for (treatment in current_block) {
         subject_count <- subject_count + 1
+        site_subject_count <- site_subject_count + 1
         
         # Format Subject ID (Simplified)
-        subject_id <- sprintf("%s-%03d", site, subject_count)
+        subject_id <- sprintf("%s-%03d", site, site_subject_count)
         
         row <- data.frame(
           SubjectID = subject_id,
@@ -198,15 +203,17 @@ for (site in sites) {
         )
         row <- cbind(row, stratum)
         
-        schema <- rbind(schema, row)
+        schema_list[[length(schema_list) + 1]] <- row
         
-        if (subject_count >= subjects_per_site) break
+        if (subject_count >= subjects_per_stratum) break
       }
-      if (subject_count >= subjects_per_site) break
+      if (subject_count >= subjects_per_stratum) break
       block_number <- block_number + 1
     }
   }
 }
+
+schema <- do.call(rbind, schema_list)
 
 print(head(schema))
 # write.csv(schema, "randomization_schema.csv", row.names=FALSE)
