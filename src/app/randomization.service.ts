@@ -22,7 +22,7 @@ export interface RandomizationConfig {
   sites: string[];
   strata: StratificationFactor[];
   blockSizes: number[];
-  subjectsPerSite: number;
+  maxSubjectsPerStratum: number;
   seed: string;
   subjectIdMask: string;
 }
@@ -88,12 +88,13 @@ export class RandomizationService {
       const schema: GeneratedSchema[] = [];
 
       for (const site of config.sites) {
+        let siteSubjectCount = 0;
         for (const stratum of strataCombinations) {
-          let subjectCount = 0;
+          let stratumSubjectCount = 0;
           let blockNumber = 1;
 
           // Generate enough blocks for the site/stratum
-          while (subjectCount < config.subjectsPerSite) {
+          while (stratumSubjectCount < config.maxSubjectsPerStratum) {
             // Pick a random block size from the allowed sizes
             const blockSizeIndex = Math.floor(rng() * config.blockSizes.length);
             const blockSize = config.blockSizes[blockSizeIndex];
@@ -116,7 +117,8 @@ export class RandomizationService {
 
             // Assign subjects
             for (const arm of block) {
-              subjectCount++;
+              siteSubjectCount++;
+              stratumSubjectCount++;
 
               // Format Subject ID
               let subjectId = config.subjectIdMask;
@@ -130,10 +132,10 @@ export class RandomizationService {
               const match = subjectId.match(/\[(0+)1\]/);
               if (match) {
                 const padding = match[1].length + 1;
-                const paddedNum = subjectCount.toString().padStart(padding, '0');
+                const paddedNum = siteSubjectCount.toString().padStart(padding, '0');
                 subjectId = subjectId.replace(match[0], paddedNum);
               } else {
-                subjectId = subjectId.replace('[001]', subjectCount.toString().padStart(3, '0'));
+                subjectId = subjectId.replace('[001]', siteSubjectCount.toString().padStart(3, '0'));
               }
 
               schema.push({
@@ -147,7 +149,7 @@ export class RandomizationService {
                 treatmentArmId: arm.id
               });
 
-              if (subjectCount >= config.subjectsPerSite) break;
+              if (stratumSubjectCount >= config.maxSubjectsPerStratum) break;
             }
             blockNumber++;
           }

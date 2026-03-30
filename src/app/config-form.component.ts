@@ -126,8 +126,8 @@ import { RandomizationConfig } from './randomization.service';
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label for="subjectsPerSite" class="block text-sm font-medium text-gray-700 mb-1">Subjects per Site</label>
-                <input id="subjectsPerSite" type="number" formControlName="subjectsPerSite" min="1" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border">
+                <label for="maxSubjectsPerStratum" class="block text-sm font-medium text-gray-700 mb-1">Max Subjects per Stratum</label>
+                <input id="maxSubjectsPerStratum" type="number" formControlName="maxSubjectsPerStratum" min="1" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border">
               </div>
               <div>
                 <label for="seed" class="block text-sm font-medium text-gray-700 mb-1">Random Seed (Optional)</label>
@@ -197,7 +197,7 @@ export class ConfigFormComponent {
     ]),
     sitesStr: ['101, 102, 103', Validators.required],
     blockSizesStr: ['4, 6', Validators.required],
-    subjectsPerSite: [20, [Validators.required, Validators.min(1)]],
+    maxSubjectsPerStratum: [20, [Validators.required, Validators.min(1)]],
     seed: [''],
     subjectIdMask: ['[SiteID]-[StratumCode]-[001]', Validators.required]
   }, { validators: this.validateBlockSizes.bind(this) });
@@ -278,7 +278,7 @@ export class ConfigFormComponent {
         levels: s.levelsStr.split(',').map((l: string) => l.trim()).filter((l: string) => l)
       })),
       blockSizes: val.blockSizesStr.split(',').map((s: string) => parseInt(s.trim(), 10)).filter((n: number) => !isNaN(n)),
-      subjectsPerSite: val.subjectsPerSite,
+      maxSubjectsPerStratum: val.maxSubjectsPerStratum,
       seed: val.seed || undefined,
       subjectIdMask: val.subjectIdMask
     };

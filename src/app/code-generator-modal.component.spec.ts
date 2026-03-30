@@ -30,7 +30,7 @@ describe('CodeGeneratorModalComponent', () => {
           { id: 'strata2', name: 'Strata 2', levels: ['Yes', 'No'] }
         ],
         blockSizes: [3, 6],
-        subjectsPerSite: 10,
+        maxSubjectsPerStratum: 10,
         seed: 'test_seed',
         subjectIdMask: '[SiteID]-[StratumCode]-[001]'
       };
@@ -43,11 +43,31 @@ describe('CodeGeneratorModalComponent', () => {
       expect(code).toContain('Study: Test Study');
       expect(code).toContain('sites <- c("Site1", "Site2")');
       expect(code).toContain('block_sizes <- c(3, 6)');
-      expect(code).toContain('subjects_per_site <- 10');
+      expect(code).toContain('max_subjects_per_stratum <- 10');
       expect(code).toContain('arms <- c("Arm A", "Arm B")');
       expect(code).toContain('ratios <- c(1, 2)');
       expect(code).toContain('strata1_levels <- c("Low", "High")');
       expect(code).toContain('strata2_levels <- c("Yes", "No")');
+
+      // Verify block math failsafe
+      expect(code).toContain('if (any(block_sizes %% total_ratio != 0)) {');
+      expect(code).toContain('stop("Block sizes must be exact multiples of the total allocation ratio.")');
+
+      // Verify list accumulation
+      expect(code).toContain('schema_list <- list()');
+      expect(code).toContain('schema_list[[row_idx]] <- row');
+      expect(code).toContain('schema <- do.call(rbind, schema_list)');
+
+      // Verify QC integration
+      expect(code).toContain('print(table(schema$Treatment))');
+      expect(code).toContain('print(table(schema$Site, schema$Treatment))');
+      expect(code).toContain('print(table(schema$BlockSize))');
+
+      // Verify continuous ID tracking
+      expect(code).toContain('site_subject_count <- 0');
+      expect(code).toContain('stratum_subject_count <- 0');
+      expect(code).toContain('sprintf("%s-%03d", site, site_subject_count)');
+      expect(code).toContain('while (stratum_subject_count < max_subjects_per_stratum)');
     });
 
     it('should generate valid Python code', () => {
@@ -62,6 +82,24 @@ describe('CodeGeneratorModalComponent', () => {
       expect(code).toContain('arms = [{"name": "Arm A", "ratio": 1}, {"name": "Arm B", "ratio": 2}]');
       expect(code).toContain('strata_levels = [\n    ["Low", "High"],\n    ["Yes", "No"]\n]');
       expect(code).toContain('strata_names = ["strata1", "strata2"]');
+
+      // Verify block math failsafe
+      expect(code).toContain('if any(bs % total_ratio != 0 for bs in block_sizes):');
+      expect(code).toContain('raise ValueError("Block sizes must be exact multiples of the total allocation ratio.")');
+
+      // Verify dictionary unpacking
+      expect(code).toContain('**stratum');
+
+      // Verify QC integration
+      expect(code).toContain('print(df[\'Treatment\'].value_counts())');
+      expect(code).toContain('print(pd.crosstab(df[\'Site\'], df[\'Treatment\']))');
+      expect(code).toContain('print(df[\'BlockSize\'].value_counts())');
+
+      // Verify continuous ID tracking
+      expect(code).toContain('site_subject_count = 0');
+      expect(code).toContain('stratum_subject_count = 0');
+      expect(code).toContain('subject_id = f"{site}-{site_subject_count:03d}"');
+      expect(code).toContain('while stratum_subject_count < max_subjects_per_stratum:');
     });
 
     it('should generate valid SAS code', () => {
@@ -72,7 +110,7 @@ describe('CodeGeneratorModalComponent', () => {
       expect(code).toContain('%let ratios = 1 2;');
       expect(code).toContain('%let sites = "Site1" "Site2";');
       expect(code).toContain('%let block_sizes = 3 6;');
-      expect(code).toContain('%let subjects_per_site = 10;');
+      expect(code).toContain('%let max_subjects_per_stratum = 10;');
       expect(code).toContain('%let total_ratio = 3;');
       expect(code).toContain('%let strata1_levels = "Low" "High";');
       expect(code).toContain('%let strata2_levels = "Yes" "No";');
@@ -80,6 +118,23 @@ describe('CodeGeneratorModalComponent', () => {
       expect(code).toContain('rand(\'uniform\');');
       expect(code).toContain('proc sort data=_blocks;');
       expect(code).toContain('by Site strata1 strata2 block_num _rand_sort;');
+
+      // Verify block math failsafe
+      expect(code).toContain('if mod(_block_size, &total_ratio.) ^= 0 then do;');
+      expect(code).toContain('%abort cancel;');
+
+      // Verify continuous ID tracking
+      expect(code).toContain('retain _site_subj_count 0;');
+      expect(code).toContain('if first.Site then _site_subj_count = 0;');
+      expect(code).toContain('retain _stratum_subj_count;');
+      expect(code).toContain('if _stratum_subj_count <= &max_subjects_per_stratum. then do;');
+      expect(code).toContain('SubjectID = cats(Site, "-", put(_site_subj_count, z3.));');
+
+      // Verify QC integration
+      expect(code).toContain('proc freq data=final_schema;');
+      expect(code).toContain('tables Treatment / nocum;');
+      expect(code).toContain('tables Site * Treatment / nocol nopercent;');
+      expect(code).toContain('tables block_size / nocum;');
     });
   });
 
@@ -93,7 +148,7 @@ describe('CodeGeneratorModalComponent', () => {
         sites: [],
         strata: [],
         blockSizes: [],
-        subjectsPerSite: 0,
+        maxSubjectsPerStratum: 0,
         seed: '',
         subjectIdMask: ''
       };
