@@ -104,10 +104,13 @@ export class CodeGeneratorModalComponent {
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
     link.setAttribute('download', `randomization_code.${extension}`);
-    link.style.visibility = 'hidden';
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
   }
 
   hashCode(str: string | undefined): number {
