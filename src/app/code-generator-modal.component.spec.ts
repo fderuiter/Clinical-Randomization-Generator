@@ -54,9 +54,11 @@ describe('CodeGeneratorModalComponent', () => {
       const code = component.pythonCode;
       expect(code).toContain('Protocol: TEST-123');
       expect(code).toContain('Study: Test Study');
+      expect(code).toContain('import numpy as np');
+      expect(code).toContain('rng = np.random.default_rng(' + component.hashCode("test_seed") + ')');
       expect(code).toContain('sites = ["Site1", "Site2"]');
       expect(code).toContain('block_sizes = [3, 6]');
-      expect(code).toContain('subjects_per_site = 10');
+      expect(code).toContain('max_subjects_per_stratum = 10');
       expect(code).toContain('arms = [{"name": "Arm A", "ratio": 1}, {"name": "Arm B", "ratio": 2}]');
       expect(code).toContain('strata_levels = [\n    ["Low", "High"],\n    ["Yes", "No"]\n]');
       expect(code).toContain('strata_names = ["strata1", "strata2"]');
