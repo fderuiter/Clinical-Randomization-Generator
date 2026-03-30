@@ -1,26 +1,19 @@
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {ConfigFormComponent} from './config-form.component';
 import {ResultsGridComponent} from './results-grid.component';
-import {AuditLogModalComponent} from './audit-log-modal.component';
 import {RandomizationService, RandomizationConfig, RandomizationResult} from './randomization.service';
 import {CodeGeneratorModalComponent} from './code-generator-modal.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-generator',
-  imports: [ConfigFormComponent, ResultsGridComponent, AuditLogModalComponent, CodeGeneratorModalComponent],
+  imports: [ConfigFormComponent, ResultsGridComponent, CodeGeneratorModalComponent],
   template: `
     <div class="space-y-8">
       <!-- Intro -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-lg font-semibold text-gray-900">Study-Agnostic Randomization</h2>
-          <button (click)="showAuditLog.set(true)" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-md transition-colors border border-indigo-400 flex items-center gap-2 text-sm font-medium">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Audit Log
-          </button>
         </div>
         <p class="text-gray-600 text-sm leading-relaxed">
           Configure your clinical trial parameters below to generate a statistically sound, reproducible, and balanced treatment allocation schema. 
@@ -65,11 +58,6 @@ import {CodeGeneratorModalComponent} from './code-generator-modal.component';
         </div>
       }
 
-      <!-- Audit Log Modal -->
-      @if (showAuditLog()) {
-        <app-audit-log-modal (closeModal)="showAuditLog.set(false)"></app-audit-log-modal>
-      }
-
       <!-- Code Generator Modal -->
       @if (showCodeGenerator() && codeConfig()) {
         <app-code-generator-modal [config]="codeConfig()!" [initialTab]="codeLanguage()" (closeModal)="showCodeGenerator.set(false)"></app-code-generator-modal>
@@ -83,7 +71,6 @@ export class GeneratorComponent {
   isLoading = signal(false);
   error = signal<string | null>(null);
   result = signal<RandomizationResult | null>(null);
-  showAuditLog = signal(false);
   showCodeGenerator = signal(false);
   codeConfig = signal<RandomizationConfig | null>(null);
   codeLanguage = signal<'R' | 'SAS' | 'Python'>('R');
