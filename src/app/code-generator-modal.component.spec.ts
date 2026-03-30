@@ -66,13 +66,18 @@ describe('CodeGeneratorModalComponent', () => {
       const code = component.sasCode;
       expect(code).toContain('Protocol: TEST-123');
       expect(code).toContain('Study: Test Study');
-      expect(code).toContain('name="Arm A"; ratio=1; output;');
-      expect(code).toContain('name="Arm B"; ratio=2; output;');
-      expect(code).toContain('site="Site1"; output;');
-      expect(code).toContain('site="Site2"; output;');
-      expect(code).toContain('size=3; output;');
-      expect(code).toContain('size=6; output;');
+      expect(code).toContain('%let arms = "Arm A" "Arm B";');
+      expect(code).toContain('%let ratios = 1 2;');
+      expect(code).toContain('%let sites = "Site1" "Site2";');
+      expect(code).toContain('%let block_sizes = 3 6;');
       expect(code).toContain('%let subjects_per_site = 10;');
+      expect(code).toContain('%let total_ratio = 3;');
+      expect(code).toContain('%let strata1_levels = "Low" "High";');
+      expect(code).toContain('%let strata2_levels = "Yes" "No";');
+      expect(code).toContain('call streaminit(&seed.);');
+      expect(code).toContain('rand(\'uniform\');');
+      expect(code).toContain('proc sort data=_blocks;');
+      expect(code).toContain('by Site strata1 strata2 block_num _rand_sort;');
     });
   });
 
@@ -112,9 +117,8 @@ describe('CodeGeneratorModalComponent', () => {
     it('should handle empty config in SAS code', () => {
       const code = component.sasCode;
       expect(code).toContain('Protocol: Unknown');
-      // Updated the test to correctly check that `site="..."` isn't present
-      expect(code).not.toContain('site="');
-      expect(code).not.toContain('size=;');
+      expect(code).toContain('%let arms = ;');
+      expect(code).toContain('%let sites = ;');
     });
   });
 

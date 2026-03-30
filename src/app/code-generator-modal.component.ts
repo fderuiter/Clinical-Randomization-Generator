@@ -300,46 +300,191 @@ print(df.head())
     const sites = this.config.sites || [];
     const blockSizes = this.config.blockSizes || [];
     const arms = this.config.arms || [];
+    const strata = this.config.strata || [];
+    const totalRatio = arms.reduce((sum, a) => sum + a.ratio, 0);
 
-    return `/* Randomization Schema Generation in SAS */
+    let code = `/* Randomization Schema Generation in SAS */
 /* Protocol: ${this.config.protocolId || 'Unknown'} */
 /* Study: ${this.config.studyName || 'Unknown'} */
 
 %let seed = ${this.hashCode(this.config.seed)};
 %let subjects_per_site = ${this.config.subjectsPerSite || 0};
+%let total_ratio = ${totalRatio};
 
-/* Define Arms */
-data arms;
-  length name $50;
-  ${arms.map((a) => `name="${a.name}"; ratio=${a.ratio}; output;`).join('\n  ')}
-run;
-
-/* Define Sites */
-data sites;
-  length site $50;
-  ${sites.map(s => `site="${s}"; output;`).join('\n  ')}
-run;
-
-/* Define Block Sizes */
-data block_sizes;
-  ${blockSizes.map(b => `size=${b}; output;`).join('\n  ')}
-run;
-
-/* Note: SAS implementation of dynamic stratified block randomization 
-   requires extensive macro programming or PROC PLAN. 
-   Below is a simplified conceptual approach using PROC PLAN. */
-
-proc plan seed=&seed;
-  factors site=${sites.length || 1} 
-          stratum=1 /* Simplified */
-          block=10 /* Estimated blocks */
-          treatment=4 /* Max block size */ / noprint;
-  output out=schema;
-run;
-
-/* A complete SAS implementation would typically use a custom DATA step 
-   with CALL RANUNI or CALL STREAMINIT to dynamically build blocks 
-   matching the exact ratios and strata combinations. */
+/* User-defined Parameters */
+%let arms = ${arms.map(a => `"${a.name}"`).join(' ')};
+%let ratios = ${arms.map(a => a.ratio).join(' ')};
+%let block_sizes = ${blockSizes.join(' ')};
+%let sites = ${sites.map(s => `"${s}"`).join(' ')};
 `;
+
+    if (strata.length > 0) {
+      code += `%let strata_factors = ${strata.map(s => `"${s.id}"`).join(' ')};\n`;
+      for (const s of strata) {
+        code += `%let ${s.id}_levels = ${(s.levels || []).map(l => `"${l}"`).join(' ')};\n`;
+      }
+    }
+
+    code += `
+/* 1. Build the Design Matrix (Sites and Strata) */
+data _sites;
+  length Site $50;
+  _n_sites = countw(&sites., ' ', 'q');
+  do _i = 1 to _n_sites;
+    Site = dequote(scan(&sites., _i, ' ', 'q'));
+    output;
+  end;
+  drop _i _n_sites;
+run;
+`;
+
+    let designVars = ['Site'];
+    if (strata.length > 0) {
+      for (let i = 0; i < strata.length; i++) {
+        const s = strata[i];
+        designVars.push(s.id);
+        code += `
+data _strata_${i+1};
+  length ${s.id} $50;
+  _n_levels = countw(&${s.id}_levels., ' ', 'q');
+  do _i = 1 to _n_levels;
+    ${s.id} = dequote(scan(&${s.id}_levels., _i, ' ', 'q'));
+    output;
+  end;
+  drop _i _n_levels;
+run;
+`;
+      }
+
+      code += `
+proc sql noprint;
+  create table _design as
+  select a.Site`;
+      for (let i = 0; i < strata.length; i++) {
+        const char = String.fromCharCode(98 + i); // 'b', 'c', etc.
+        code += `, ${char}.${strata[i].id}`;
+      }
+      code += `
+  from _sites a`;
+      for (let i = 0; i < strata.length; i++) {
+        const char = String.fromCharCode(98 + i);
+        code += `
+  cross join _strata_${i+1} ${char}`;
+      }
+      code += `;\nquit;\n`;
+    } else {
+      code += `
+proc sql noprint;
+  create table _design as
+  select a.Site
+  from _sites a;
+quit;
+`;
+    }
+
+    code += `
+/* 2. Generate Blocks and Assign Treatments */
+data _blocks;
+  set _design;
+  call streaminit(&seed.);
+  length Treatment $50;
+
+  _total_ratio = &total_ratio.;
+  _subj_count = 0;
+  block_num = 1;
+
+  do while (_subj_count < &subjects_per_site.);
+    /* Dynamic Block Selection */
+    _rand_val = rand('uniform');
+`;
+
+    for (let i = 0; i < blockSizes.length; i++) {
+      if (i === 0 && blockSizes.length === 1) {
+        code += `    block_size = ${blockSizes[i]};\n`;
+      } else if (i === 0) {
+        const p = (i + 1) / blockSizes.length;
+        code += `    if _rand_val <= ${p.toFixed(5)} then block_size = ${blockSizes[i]};\n`;
+      } else if (i === blockSizes.length - 1) {
+        code += `    else block_size = ${blockSizes[i]};\n`;
+      } else {
+        const p = (i + 1) / blockSizes.length;
+        code += `    else if _rand_val <= ${p.toFixed(5)} then block_size = ${blockSizes[i]};\n`;
+      }
+    }
+
+    code += `
+    _subj_count = _subj_count + block_size;
+    _multiplier = block_size / _total_ratio;
+    _n_arms = countw(&arms., ' ', 'q');
+
+    /* Generate Treatments for the Block */
+    do _a = 1 to _n_arms;
+      Treatment = dequote(scan(&arms., _a, ' ', 'q'));
+      _arm_ratio = input(scan(&ratios., _a, ' '), best.);
+
+      do _t = 1 to round(_arm_ratio * _multiplier);
+        _rand_sort = rand('uniform');
+        output;
+      end;
+    end;
+    block_num = block_num + 1;
+  end;
+run;
+`;
+
+    code += `
+/* 3. Enforce Physical Sorting to Permute Blocks */
+`;
+    const byVars = designVars.join(' ');
+    code += `proc sort data=_blocks;
+  by ${byVars} block_num _rand_sort;
+run;
+`;
+
+    const lastDesignVar = designVars[designVars.length - 1];
+
+    code += `
+/* 4. Final Data Deliverable & Cleanup */
+data final_schema;
+  set _blocks;
+  by ${byVars};
+  retain _seq;
+  if first.${lastDesignVar} then _seq = 1;
+  else _seq = _seq + 1;
+
+  if _seq <= &subjects_per_site.;
+
+  /* Format Subject ID */
+  length SubjectID $50;
+  SubjectID = cats(Site, "-", put(_seq, z3.));
+
+  drop _:;
+run;
+`;
+
+    code += `
+/* 5. Quality Control (QC) Checks */
+proc freq data=final_schema;
+  title "Overall Treatment Balance";
+  tables Treatment / nocum;
+run;
+
+proc freq data=final_schema;
+  title "Site-Level Treatment Balance";
+  tables Site * Treatment / nocol nopercent;
+run;
+
+proc freq data=final_schema;
+  title "Block Size Distribution";
+  tables block_size / nocum;
+run;
+
+title "Randomization Schema Preview";
+proc print data=final_schema(obs=20);
+run;
+title;
+`;
+
+    return code.trim() + '\n';
   }
 }
