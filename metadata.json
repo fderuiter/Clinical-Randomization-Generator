@@ -1,0 +1,5 @@
+{
+  "name": "Clinical Randomization Generator",
+  "description": "Study-agnostic randomization schema generator for clinical trials with stratified block randomization.",
+  "requestFramePermissions": []
+}
