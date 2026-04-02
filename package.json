@@ -35,7 +35,7 @@
     "@angular/build": "^21.0.0",
     "@angular/cli": "^21.0.0",
     "@angular/compiler-cli": "^21.0.0",
-    "@angular/platform-browser-dynamic": "^21.2.7",
+    "@angular/platform-browser-dynamic": "^21.0.0",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/express": "^5.0.1",
