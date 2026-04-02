@@ -1,5 +1,5 @@
 {
-  "name": "ai-studio-angular-app",
+  "name": "clinical-randomization-generator",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
