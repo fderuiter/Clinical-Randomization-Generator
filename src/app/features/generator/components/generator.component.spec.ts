@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { GeneratorComponent } from './generator.component';
-import { RandomizationService, RandomizationConfig, RandomizationResult } from './randomization.service';
+import { RandomizationService } from '../../../core/services/randomization.service';
+import { RandomizationConfig, RandomizationResult } from '../../../models/randomization.model';
 import { of, throwError, delay } from 'rxjs';
 import { By } from '@angular/platform-browser';
 import { Component, EventEmitter, Output } from '@angular/core';

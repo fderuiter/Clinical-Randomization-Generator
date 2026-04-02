@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { RandomizationService, RandomizationConfig } from './randomization.service';
+import { RandomizationService } from './randomization.service';
+import { RandomizationConfig } from '../../models/randomization.model';
 
 describe('RandomizationService', () => {
   let service: RandomizationService;

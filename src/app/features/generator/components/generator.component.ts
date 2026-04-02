@@ -1,7 +1,8 @@
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {ConfigFormComponent} from './config-form.component';
 import {ResultsGridComponent} from './results-grid.component';
-import {RandomizationService, RandomizationConfig, RandomizationResult} from './randomization.service';
+import { RandomizationService } from '../../../core/services/randomization.service';
+import { RandomizationConfig, RandomizationResult } from '../../../models/randomization.model';
 import {CodeGeneratorModalComponent} from './code-generator-modal.component';
 
 @Component({

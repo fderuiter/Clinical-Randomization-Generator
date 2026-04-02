@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ResultsGridComponent } from './results-grid.component';
-import { RandomizationResult } from './randomization.service';
+import { RandomizationResult } from '../../../models/randomization.model';
 import { By } from '@angular/platform-browser';
 
 // Mock jsPDF and URL.createObjectURL to prevent errors and actual file downloads
