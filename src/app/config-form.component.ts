@@ -200,7 +200,7 @@ import { RandomizationConfig } from './randomization.service';
           </button>
 
           @if (dropdownOpen) {
-            <div class="origin-bottom-right absolute right-0 bottom-full mb-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+            <div class="origin-bottom-right absolute right-0 bottom-full mb-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black/5 focus:outline-none z-10">
               <div class="py-1" role="menu" aria-orientation="vertical">
                 <button type="button" (click)="onGenerateCode('R')" class="text-gray-700 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 hover:text-gray-900" role="menuitem">R Script</button>
                 <button type="button" (click)="onGenerateCode('SAS')" class="text-gray-700 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 hover:text-gray-900" role="menuitem">SAS Script</button>
