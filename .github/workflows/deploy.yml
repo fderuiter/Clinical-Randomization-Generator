@@ -38,7 +38,7 @@ jobs:
       - name: Build Angular Project
         # The --base-href flag is CRITICAL. It tells Angular to look for assets
         # in the repository subdirectory, not the root domain.
-        run: npm run build -- --base-href /clinical-randomization-generator/
+        run: npm run build -- --base-href /Clinical-Randomization-Generator/
 
       - name: Fix Angular Routing (Create 404.html)
         # GitHub Pages doesn't understand SPA routing. This copies the index file
