@@ -4,7 +4,7 @@ test.describe('Code Generator Modal UI', () => {
   test.beforeEach(async ({ page }) => {
     // Add an explicit listener for console errors to catch potential download issues
     page.on('pageerror', err => console.log(`Page Error: ${err.message}`));
-    await page.goto('http://localhost:4200');
+    await page.goto('http://localhost:3000');
   });
 
   test('should generate, display, and download code in all three languages', async ({ page }) => {
