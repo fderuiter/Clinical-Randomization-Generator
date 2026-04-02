@@ -1,9 +1,8 @@
-import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
-import {ConfigFormComponent} from './config-form.component';
-import {ResultsGridComponent} from './results-grid.component';
-import { RandomizationService } from '../../../core/services/randomization.service';
-import { RandomizationConfig, RandomizationResult } from '../../../models/randomization.model';
-import {CodeGeneratorModalComponent} from './code-generator-modal.component';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ConfigFormComponent } from './config-form.component';
+import { ResultsGridComponent } from './results-grid.component';
+import { CodeGeneratorModalComponent } from './code-generator-modal.component';
+import { GeneratorStateService } from '../../../core/services/generator-state.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,10 +22,10 @@ import {CodeGeneratorModalComponent} from './code-generator-modal.component';
       </div>
 
       <!-- Configuration Form -->
-      <app-config-form (generate)="onGenerate($event)" (generateCode)="onGenerateCode($event)"></app-config-form>
+      <app-config-form></app-config-form>
 
       <!-- Loading State -->
-      @if (isLoading()) {
+      @if (state.isGenerating()) {
         <div class="flex flex-col items-center justify-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
           <svg class="animate-spin h-10 w-10 text-indigo-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -37,7 +36,7 @@ import {CodeGeneratorModalComponent} from './code-generator-modal.component';
       }
 
       <!-- Error State -->
-      @if (error()) {
+      @if (state.error()) {
         <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
           <div class="flex">
             <div class="flex-shrink-0">
@@ -46,60 +45,26 @@ import {CodeGeneratorModalComponent} from './code-generator-modal.component';
               </svg>
             </div>
             <div class="ml-3">
-              <p class="text-sm text-red-700 font-medium">{{ error() }}</p>
+              <p class="text-sm text-red-700 font-medium">{{ state.error() }}</p>
             </div>
           </div>
         </div>
       }
 
       <!-- Results Grid -->
-      @if (result() && !isLoading()) {
+      @if (state.results() && !state.isGenerating()) {
         <div id="results-section">
-          <app-results-grid [data]="result()"></app-results-grid>
+          <app-results-grid></app-results-grid>
         </div>
       }
 
       <!-- Code Generator Modal -->
-      @if (showCodeGenerator() && codeConfig()) {
-        <app-code-generator-modal [config]="codeConfig()!" [initialTab]="codeLanguage()" (closeModal)="showCodeGenerator.set(false)"></app-code-generator-modal>
+      @if (state.showCodeGenerator() && state.config()) {
+        <app-code-generator-modal></app-code-generator-modal>
       }
     </div>
   `
 })
 export class GeneratorComponent {
-  private randomizationService = inject(RandomizationService);
-  
-  isLoading = signal(false);
-  error = signal<string | null>(null);
-  result = signal<RandomizationResult | null>(null);
-  showCodeGenerator = signal(false);
-  codeConfig = signal<RandomizationConfig | null>(null);
-  codeLanguage = signal<'R' | 'SAS' | 'Python'>('R');
-
-  onGenerateCode(event: {config: RandomizationConfig, language: 'R' | 'SAS' | 'Python'}) {
-    this.codeConfig.set(event.config);
-    this.codeLanguage.set(event.language);
-    this.showCodeGenerator.set(true);
-  }
-
-  onGenerate(config: RandomizationConfig) {
-    this.isLoading.set(true);
-    this.error.set(null);
-    this.result.set(null);
-
-    this.randomizationService.generateSchema(config).subscribe({
-      next: (res) => {
-        this.result.set(res);
-        this.isLoading.set(false);
-        setTimeout(() => {
-          document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      },
-      error: (err) => {
-        console.error(err);
-        this.error.set(err.error?.error || 'An error occurred during schema generation.');
-        this.isLoading.set(false);
-      }
-    });
-  }
+  public state = inject(GeneratorStateService);
 }

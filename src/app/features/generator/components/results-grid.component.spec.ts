@@ -2,6 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ResultsGridComponent } from './results-grid.component';
 import { RandomizationResult } from '../../../models/randomization.model';
 import { By } from '@angular/platform-browser';
+import { GeneratorStateService } from '../../../core/services/generator-state.service';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
 
 // Mock jsPDF and URL.createObjectURL to prevent errors and actual file downloads
 vi.mock('jspdf', () => {
@@ -19,6 +22,7 @@ vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
 describe('ResultsGridComponent', () => {
   let component: ResultsGridComponent;
   let fixture: ComponentFixture<ResultsGridComponent>;
+  let mockStateService: any;
 
   const generateMockData = (count: number): RandomizationResult => {
     return {
@@ -58,8 +62,23 @@ describe('ResultsGridComponent', () => {
   beforeEach(async () => {
     globalThis.URL.createObjectURL = vi.fn() as any;
 
+    mockStateService = {
+      config: signal(null),
+      results: signal(null),
+      isGenerating: signal(false),
+      error: signal(null),
+      showCodeGenerator: signal(false),
+      codeLanguage: signal('R'),
+      generateSchema: vi.fn(),
+      openCodeGenerator: vi.fn(),
+      closeCodeGenerator: vi.fn()
+    };
+
     await TestBed.configureTestingModule({
-      imports: [ResultsGridComponent]
+      imports: [ResultsGridComponent],
+      providers: [
+        { provide: GeneratorStateService, useValue: mockStateService }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultsGridComponent);
@@ -73,7 +92,8 @@ describe('ResultsGridComponent', () => {
   describe('Pagination', () => {
     it('should compute totalItems, totalPages, startIndex, endIndex and paginatedData correctly', () => {
       const mockResult = generateMockData(45);
-      component.data = mockResult; // Triggers setter that sets result and resets page to 1
+      mockStateService.results.set(mockResult);
+      component.currentPage.set(1);
       fixture.detectChanges();
 
       expect(component.totalItems()).toBe(45);
@@ -87,7 +107,8 @@ describe('ResultsGridComponent', () => {
 
     it('should update pagination state when Next button is clicked', () => {
       const mockResult = generateMockData(45);
-      component.data = mockResult;
+      mockStateService.results.set(mockResult);
+      component.currentPage.set(1);
       fixture.detectChanges();
 
       // Find "Next" button
@@ -110,7 +131,7 @@ describe('ResultsGridComponent', () => {
   describe('Blinding', () => {
     it('should default to blinded and show *** BLINDED *** in DOM', () => {
       const mockResult = generateMockData(5);
-      component.data = mockResult;
+      mockStateService.results.set(mockResult);
       fixture.detectChanges();
 
       expect(component.isUnblinded()).toBe(false);
@@ -125,7 +146,7 @@ describe('ResultsGridComponent', () => {
 
     it('should show actual treatment names when unblinded', () => {
       const mockResult = generateMockData(5);
-      component.data = mockResult;
+      mockStateService.results.set(mockResult);
       fixture.detectChanges();
 
       component.toggleBlinding();
@@ -144,7 +165,7 @@ describe('ResultsGridComponent', () => {
   describe('Export Spies', () => {
     it('should trigger exportCsv when CSV button is clicked', () => {
       const mockResult = generateMockData(5);
-      component.data = mockResult;
+      mockStateService.results.set(mockResult);
       fixture.detectChanges();
 
       const spy = vi.spyOn(component, 'exportCsv');
@@ -160,7 +181,7 @@ describe('ResultsGridComponent', () => {
 
     it('should trigger exportPdf when PDF button is clicked', () => {
       const mockResult = generateMockData(5);
-      component.data = mockResult;
+      mockStateService.results.set(mockResult);
       fixture.detectChanges();
 
       const spy = vi.spyOn(component, 'exportPdf');

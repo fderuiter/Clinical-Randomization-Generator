@@ -1,14 +1,33 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ConfigFormComponent } from './config-form.component';
+import { GeneratorStateService } from '../../../core/services/generator-state.service';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
 
 describe('ConfigFormComponent', () => {
   let component: ConfigFormComponent;
   let fixture: ComponentFixture<ConfigFormComponent>;
+  let mockStateService: any;
 
   beforeEach(async () => {
+    mockStateService = {
+      config: signal(null),
+      results: signal(null),
+      isGenerating: signal(false),
+      error: signal(null),
+      showCodeGenerator: signal(false),
+      codeLanguage: signal('R'),
+      generateSchema: vi.fn(),
+      openCodeGenerator: vi.fn(),
+      closeCodeGenerator: vi.fn()
+    };
+
     await TestBed.configureTestingModule({
-      imports: [ReactiveFormsModule, ConfigFormComponent]
+      imports: [ReactiveFormsModule, ConfigFormComponent],
+      providers: [
+        { provide: GeneratorStateService, useValue: mockStateService }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ConfigFormComponent);

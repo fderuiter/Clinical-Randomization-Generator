@@ -1,5 +1,5 @@
-import { Component, Input, computed, signal } from '@angular/core';
-import { RandomizationResult } from '../../../models/randomization.model';
+import { Component, computed, signal, inject } from '@angular/core';
+import { GeneratorStateService } from '../../../core/services/generator-state.service';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { APP_VERSION } from '../../../../environments/version';
@@ -13,25 +13,20 @@ import { APP_VERSION } from '../../../../environments/version';
   `]
 })
 export class ResultsGridComponent {
-  result = signal<RandomizationResult | null>(null);
-
-  @Input() set data(val: RandomizationResult | null) {
-    this.result.set(val);
-    this.currentPage.set(1);
-  }
+  public state = inject(GeneratorStateService);
 
   isUnblinded = signal(false);
   currentPage = signal(1);
   pageSize = 20;
 
-  totalItems = computed(() => this.result()?.schema.length || 0);
+  totalItems = computed(() => this.state.results()?.schema.length || 0);
   totalPages = computed(() => Math.ceil(this.totalItems() / this.pageSize));
 
   startIndex = computed(() => (this.currentPage() - 1) * this.pageSize);
   endIndex = computed(() => Math.min(this.startIndex() + this.pageSize, this.totalItems()));
 
   paginatedData = computed(() => {
-    const data = this.result()?.schema || [];
+    const data = this.state.results()?.schema || [];
     return data.slice(this.startIndex(), this.endIndex());
   });
 
@@ -52,7 +47,7 @@ export class ResultsGridComponent {
   }
 
   exportCsv() {
-    const data = this.result();
+    const data = this.state.results();
     if (!data) return;
 
     const strataHeaders = data.metadata.strata?.map(s => s.name || s.id) || [];
@@ -93,7 +88,7 @@ export class ResultsGridComponent {
   }
 
   exportPdf() {
-    const data = this.result();
+    const data = this.state.results();
     if (!data) return;
 
     const doc = new jsPDF();

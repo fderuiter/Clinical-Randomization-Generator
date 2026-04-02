@@ -1,13 +1,32 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CodeGeneratorModalComponent } from './code-generator-modal.component';
+import { GeneratorStateService } from '../../../core/services/generator-state.service';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
 
 describe('CodeGeneratorModalComponent', () => {
   let component: CodeGeneratorModalComponent;
   let fixture: ComponentFixture<CodeGeneratorModalComponent>;
+  let mockStateService: any;
 
   beforeEach(async () => {
+    mockStateService = {
+      config: signal(null),
+      results: signal(null),
+      isGenerating: signal(false),
+      error: signal(null),
+      showCodeGenerator: signal(false),
+      codeLanguage: signal('R'),
+      generateSchema: vi.fn(),
+      openCodeGenerator: vi.fn(),
+      closeCodeGenerator: vi.fn()
+    };
+
     await TestBed.configureTestingModule({
-      imports: [CodeGeneratorModalComponent]
+      imports: [CodeGeneratorModalComponent],
+      providers: [
+        { provide: GeneratorStateService, useValue: mockStateService }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(CodeGeneratorModalComponent);
@@ -16,7 +35,7 @@ describe('CodeGeneratorModalComponent', () => {
 
   describe('when config is fully populated', () => {
     beforeEach(() => {
-      component.config = {
+      mockStateService.config.set({
         protocolId: 'TEST-123',
         studyName: 'Test Study',
         phase: 'Phase 1',
@@ -38,7 +57,7 @@ describe('CodeGeneratorModalComponent', () => {
         ],
         seed: 'test_seed',
         subjectIdMask: '[SiteID]-[StratumCode]-[001]'
-      };
+      });
       fixture.detectChanges();
     });
 
@@ -159,7 +178,7 @@ describe('CodeGeneratorModalComponent', () => {
 
   describe('when config has empty arrays/values', () => {
     beforeEach(() => {
-      component.config = {
+      mockStateService.config.set({
         protocolId: '',
         studyName: '',
         phase: '',
@@ -170,7 +189,7 @@ describe('CodeGeneratorModalComponent', () => {
         stratumCaps: [],
         seed: '',
         subjectIdMask: ''
-      };
+      });
       fixture.detectChanges();
     });
 
@@ -200,7 +219,7 @@ describe('CodeGeneratorModalComponent', () => {
 
   describe('when config properties are undefined', () => {
     beforeEach(() => {
-      component.config = {} as any;
+      mockStateService.config.set({});
       fixture.detectChanges();
     });
 
