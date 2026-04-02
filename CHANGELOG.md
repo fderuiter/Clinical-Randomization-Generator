@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.0.0...v1.1.0) (2026-04-02)
+
+
+### Features
+
+* add draft schema watermark to csv and pdf exports ([#17](https://github.com/fderuiter/Clinical-Randomization-Generator/issues/17)) ([fde3439](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/fde34393610477a74999a70ba1db30f888c64b80))
+
 # 1.0.0 (2026-04-02)
 
 
