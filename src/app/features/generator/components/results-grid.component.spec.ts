@@ -3,26 +3,15 @@ import { ResultsGridComponent } from './results-grid.component';
 import { RandomizationResult } from '../../../models/randomization.model';
 import { By } from '@angular/platform-browser';
 import { GeneratorStateService } from '../../../core/services/generator-state.service';
+import { DataExportService } from '../../../core/services/data-export.service';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
-
-// Mock jsPDF and URL.createObjectURL to prevent errors and actual file downloads
-vi.mock('jspdf', () => {
-  return {
-    default: class {
-      setFontSize = vi.fn();
-      text = vi.fn();
-      setTextColor = vi.fn();
-      save = vi.fn();
-    }
-  };
-});
-vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
 
 describe('ResultsGridComponent', () => {
   let component: ResultsGridComponent;
   let fixture: ComponentFixture<ResultsGridComponent>;
   let mockStateService: any;
+  let mockDataExportService: any;
 
   const generateMockData = (count: number): RandomizationResult => {
     return {
@@ -74,10 +63,16 @@ describe('ResultsGridComponent', () => {
       closeCodeGenerator: vi.fn()
     };
 
+    mockDataExportService = {
+      exportCsv: vi.fn(),
+      exportPdf: vi.fn()
+    };
+
     await TestBed.configureTestingModule({
       imports: [ResultsGridComponent],
       providers: [
-        { provide: GeneratorStateService, useValue: mockStateService }
+        { provide: GeneratorStateService, useValue: mockStateService },
+        { provide: DataExportService, useValue: mockDataExportService }
       ]
     }).compileComponents();
 
@@ -163,12 +158,10 @@ describe('ResultsGridComponent', () => {
   });
 
   describe('Export Spies', () => {
-    it('should trigger exportCsv when CSV button is clicked', () => {
+    it('should call DataExportService.exportCsv when CSV button is clicked', () => {
       const mockResult = generateMockData(5);
       mockStateService.results.set(mockResult);
       fixture.detectChanges();
-
-      const spy = vi.spyOn(component, 'exportCsv');
 
       const buttons = fixture.debugElement.queryAll(By.css('button'));
       const csvButton = buttons.find(b => b.nativeElement.textContent.trim().includes('CSV'));
@@ -176,15 +169,13 @@ describe('ResultsGridComponent', () => {
       expect(csvButton).toBeTruthy();
       csvButton?.triggerEventHandler('click', null);
 
-      expect(spy).toHaveBeenCalled();
+      expect(mockDataExportService.exportCsv).toHaveBeenCalledWith(mockResult, component.isUnblinded());
     });
 
-    it('should trigger exportPdf when PDF button is clicked', () => {
+    it('should call DataExportService.exportPdf when PDF button is clicked', () => {
       const mockResult = generateMockData(5);
       mockStateService.results.set(mockResult);
       fixture.detectChanges();
-
-      const spy = vi.spyOn(component, 'exportPdf');
 
       const buttons = fixture.debugElement.queryAll(By.css('button'));
       const pdfButton = buttons.find(b => b.nativeElement.textContent.trim().includes('PDF'));
@@ -192,7 +183,7 @@ describe('ResultsGridComponent', () => {
       expect(pdfButton).toBeTruthy();
       pdfButton?.triggerEventHandler('click', null);
 
-      expect(spy).toHaveBeenCalled();
+      expect(mockDataExportService.exportPdf).toHaveBeenCalledWith(mockResult, component.isUnblinded());
     });
   });
 });
