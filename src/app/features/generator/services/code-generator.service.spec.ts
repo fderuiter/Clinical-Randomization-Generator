@@ -1,11 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { CodeGeneratorService } from './code-generator.service';
 import { RandomizationConfig } from '../../../models/randomization.model';
-import { vi } from 'vitest';
-
-vi.mock('../../../../environments/version', () => ({
-  APP_VERSION: 'test-version'
-}));
 
 describe('CodeGeneratorService', () => {
   let service: CodeGeneratorService;
