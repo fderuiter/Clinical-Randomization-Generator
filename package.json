@@ -1,6 +1,6 @@
 {
   "name": "clinical-randomization-generator",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -9,7 +9,10 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "serve:ssr:app": "node dist/app/server/server.mjs"
+    "serve:ssr:app": "node dist/app/server/server.mjs",
+    "prestart": "node generate-version.js",
+    "prebuild": "node generate-version.js",
+    "pretest": "node generate-version.js"
   },
   "private": true,
   "dependencies": {
@@ -37,6 +40,12 @@
     "@angular/compiler-cli": "^21.0.0",
     "@angular/platform-browser-dynamic": "^21.0.0",
     "@playwright/test": "^1.58.2",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.6",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/express": "^5.0.1",
     "@types/jest": "^30.0.0",
@@ -48,6 +57,7 @@
     "eslint": "^9.39.1",
     "jsdom": "^27.4.0",
     "postcss": "^8.5.3",
+    "semantic-release": "^25.0.3",
     "tailwindcss": "^4.1.12",
     "typescript": "~5.9.2",
     "typescript-eslint": "8.47.0",

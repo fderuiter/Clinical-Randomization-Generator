@@ -7,9 +7,11 @@ on:
   workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
 
 permissions:
-  contents: read
+  contents: write # Needed for semantic-release to create tags/releases
   pages: write
   id-token: write
+  issues: write
+  pull-requests: write
 
 concurrency:
   group: "pages"
@@ -34,6 +36,11 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
+
+      - name: Semantic Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
 
       - name: Build Angular Project
         # The --base-href flag is CRITICAL. It tells Angular to look for assets
