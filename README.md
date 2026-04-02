@@ -1,6 +1,4 @@
 <div align="center">
-  <img width="1200" height="475" alt="Clinical Randomization Generator Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-
   <h1>Clinical Randomization Generator</h1>
   <p>A study-agnostic, client-side randomization schema generator for clinical trials.</p>
 </div>
