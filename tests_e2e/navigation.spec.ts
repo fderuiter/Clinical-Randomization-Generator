@@ -1,0 +1,62 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Application Navigation', () => {
+  test.beforeEach(async ({ page }) => {
+    page.on('pageerror', err => console.log(`Page Error: ${err.message}`));
+  });
+
+  test('should display the landing page at the root URL', async ({ page }) => {
+    await page.goto('http://localhost:4200');
+    await expect(page.getByRole('heading', { name: /Clinical Randomization Generator/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Get started/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Learn more/i })).toBeVisible();
+  });
+
+  test('should navigate to the generator page via the "Get started" link', async ({ page }) => {
+    await page.goto('http://localhost:4200');
+    await page.getByRole('link', { name: /Get started/i }).click();
+    await expect(page).toHaveURL(/\/generator/);
+    await expect(page.getByText(/Study-Agnostic Randomization/i)).toBeVisible();
+  });
+
+  test('should navigate to the About page via the header nav link', async ({ page }) => {
+    await page.goto('http://localhost:4200');
+    // Use the nav in the header (not the footer or elsewhere)
+    await page.locator('header').getByRole('link', { name: /About/i }).click();
+    await expect(page).toHaveURL(/\/about/);
+    await expect(page.getByRole('heading', { name: /About the Generator/i })).toBeVisible();
+  });
+
+  test('should navigate to the Generator page via the header nav link', async ({ page }) => {
+    await page.goto('http://localhost:4200');
+    await page.locator('header').getByRole('link', { name: /Generator/i }).click();
+    await expect(page).toHaveURL(/\/generator/);
+    await expect(page.getByText(/Study-Agnostic Randomization/i)).toBeVisible();
+  });
+
+  test('should navigate back to the landing page via the logo link', async ({ page }) => {
+    await page.goto('http://localhost:4200/generator');
+    await page.getByRole('link', { name: /Clinical Randomization Generator/ }).first().click();
+    await expect(page).toHaveURL('http://localhost:4200/');
+    await expect(page.getByRole('link', { name: /Get started/i })).toBeVisible();
+  });
+
+  test('should redirect any unknown route back to the landing page', async ({ page }) => {
+    await page.goto('http://localhost:4200/this-route-does-not-exist');
+    await expect(page).toHaveURL('http://localhost:4200/');
+    await expect(page.getByRole('link', { name: /Get started/i })).toBeVisible();
+  });
+
+  test('About page should display the 21 CFR Part 11 compliance warning', async ({ page }) => {
+    await page.goto('http://localhost:4200/about');
+    await expect(page.getByText(/not 21 CFR Part 11 compliant/i)).toBeVisible();
+    await expect(page.getByText(/DRAFT SCHEMA/i)).toBeVisible();
+  });
+
+  test('About page should show the three feature sections', async ({ page }) => {
+    await page.goto('http://localhost:4200/about');
+    await expect(page.getByText(/Custom Ratios/i)).toBeVisible();
+    await expect(page.getByText(/Stratified Block Randomization/i)).toBeVisible();
+    await expect(page.getByText(/Code Generation/i)).toBeVisible();
+  });
+});

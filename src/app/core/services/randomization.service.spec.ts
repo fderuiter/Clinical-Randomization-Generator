@@ -251,4 +251,121 @@ describe('RandomizationService', () => {
       });
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Multi-site generation
+  // ---------------------------------------------------------------------------
+  it('should generate subjects independently for each site, resetting the per-site counter', () => {
+    return new Promise<void>((resolve) => {
+      const config: RandomizationConfig = {
+        protocolId: 'MULTI-SITE',
+        studyName: 'Multi-Site Study',
+        phase: 'Phase II',
+        arms: [
+          { id: '1', name: 'Treatment', ratio: 1 },
+          { id: '2', name: 'Control', ratio: 1 }
+        ],
+        sites: ['SiteA', 'SiteB', 'SiteC'],
+        strata: [],
+        blockSizes: [2],
+        stratumCaps: [{ levels: [], cap: 4 }],
+        seed: 'multi_site_seed',
+        subjectIdMask: '[SiteID]-[001]'
+      };
+
+      service.generateSchema(config).subscribe(result => {
+        const schema = result.schema;
+        expect(schema.length).toBe(12); // 3 sites × 4 subjects each
+
+        ['SiteA', 'SiteB', 'SiteC'].forEach(siteId => {
+          const siteSubjects = schema.filter(r => r.site === siteId);
+          expect(siteSubjects.length).toBe(4);
+          // Subject numbering should restart from 001 at each site
+          expect(siteSubjects[0].subjectId).toBe(`${siteId}-001`);
+        });
+
+        resolve();
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Subject ID mask — [StratumCode] placeholder
+  // ---------------------------------------------------------------------------
+  it('should substitute [StratumCode] in the subject ID mask with an abbreviated stratum value', () => {
+    return new Promise<void>((resolve) => {
+      const config: RandomizationConfig = {
+        protocolId: 'MASK-001',
+        studyName: 'Mask Test',
+        phase: 'Phase I',
+        arms: [{ id: '1', name: 'Active', ratio: 1 }],
+        sites: ['S01'],
+        strata: [{ id: 'age', name: 'Age', levels: ['Young'] }],
+        blockSizes: [1],
+        stratumCaps: [{ levels: ['Young'], cap: 1 }],
+        seed: 'mask_seed',
+        subjectIdMask: '[SiteID]-[StratumCode]-[001]'
+      };
+
+      service.generateSchema(config).subscribe(result => {
+        expect(result.schema.length).toBe(1);
+        const subjectId = result.schema[0].subjectId;
+        // Pattern: S01-<code>-001
+        expect(subjectId).toMatch(/^S01-.+-001$/);
+        expect(subjectId).not.toContain('[StratumCode]');
+        resolve();
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Auto-generated seed
+  // ---------------------------------------------------------------------------
+  it('should auto-generate a non-empty seed when config.seed is empty', () => {
+    return new Promise<void>((resolve) => {
+      const config: RandomizationConfig = {
+        protocolId: 'SEED-AUTO',
+        studyName: 'Auto-Seed Study',
+        phase: 'Phase I',
+        arms: [{ id: '1', name: 'Active', ratio: 1 }],
+        sites: ['Site1'],
+        strata: [],
+        blockSizes: [1],
+        stratumCaps: [{ levels: [], cap: 2 }],
+        seed: '',
+        subjectIdMask: '[SiteID]-[001]'
+      };
+
+      service.generateSchema(config).subscribe(result => {
+        expect(result.metadata.seed).toBeTruthy();
+        expect(result.metadata.seed.length).toBeGreaterThan(0);
+        resolve();
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Zero cap
+  // ---------------------------------------------------------------------------
+  it('should generate 0 subjects when the stratum cap is 0', () => {
+    return new Promise<void>((resolve) => {
+      const config: RandomizationConfig = {
+        protocolId: 'CAP-ZERO',
+        studyName: 'Zero Cap Study',
+        phase: 'Phase I',
+        arms: [{ id: '1', name: 'Active', ratio: 1 }],
+        sites: ['Site1'],
+        strata: [],
+        blockSizes: [2],
+        stratumCaps: [{ levels: [], cap: 0 }],
+        seed: 'zero_cap',
+        subjectIdMask: '[SiteID]-[001]'
+      };
+
+      service.generateSchema(config).subscribe(result => {
+        expect(result.schema.length).toBe(0);
+        resolve();
+      });
+    });
+  });
 });

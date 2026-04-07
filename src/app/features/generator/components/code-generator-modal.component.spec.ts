@@ -107,4 +107,148 @@ describe('CodeGeneratorModalComponent', () => {
       expect(mockCodeGeneratorService.generateR).not.toHaveBeenCalled();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // downloadCode()
+  // ---------------------------------------------------------------------------
+  describe('downloadCode()', () => {
+    let mockConfig: RandomizationConfig;
+
+    beforeEach(() => {
+      // Freeze timers so the 100ms setTimeout inside downloadCode() never fires
+      // during the test run (avoids NotFoundError from removeChild on a
+      // never-appended link element after mocks are restored).
+      vi.useFakeTimers();
+      globalThis.URL.createObjectURL = vi.fn(() => 'mock://url') as any;
+      globalThis.URL.revokeObjectURL = vi.fn() as any;
+
+      mockConfig = {
+        protocolId: 'DL-TEST',
+        studyName: 'Download Test',
+        phase: 'Phase I',
+        arms: [{ id: '1', name: 'Active', ratio: 1 }],
+        sites: ['Site1'],
+        strata: [],
+        blockSizes: [2],
+        stratumCaps: [],
+        seed: 'dl_seed',
+        subjectIdMask: '[SiteID]-[001]'
+      };
+      mockStateService.config.set(mockConfig);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    const verifyDownloadFilename = (language: 'R' | 'SAS' | 'Python', expectedFilename: string) => {
+      const appendSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((n: any) => n);
+      vi.spyOn(document.body, 'removeChild').mockImplementation((n: any) => n);
+
+      component.activeTab.set(language);
+      component.downloadCode();
+
+      const anchorEl = appendSpy.mock.calls[0][0] as HTMLAnchorElement;
+      expect(anchorEl.getAttribute('download')).toBe(expectedFilename);
+    };
+
+    it('should use randomization_code.R as the filename for R code', () => {
+      verifyDownloadFilename('R', 'randomization_code.R');
+    });
+
+    it('should use randomization_code.sas as the filename for SAS code', () => {
+      verifyDownloadFilename('SAS', 'randomization_code.sas');
+    });
+
+    it('should use randomization_code.py as the filename for Python code', () => {
+      verifyDownloadFilename('Python', 'randomization_code.py');
+    });
+
+    it('should call URL.createObjectURL with a Blob', () => {
+      vi.spyOn(document.body, 'appendChild').mockImplementation((n: any) => n);
+      vi.spyOn(document.body, 'removeChild').mockImplementation((n: any) => n);
+
+      component.activeTab.set('R');
+      component.downloadCode();
+
+      expect(globalThis.URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // copyCode()
+  // ---------------------------------------------------------------------------
+  describe('copyCode()', () => {
+    let mockConfig: RandomizationConfig;
+
+    beforeEach(() => {
+      mockConfig = {
+        protocolId: 'COPY-TEST',
+        studyName: 'Copy Test',
+        phase: 'Phase I',
+        arms: [{ id: '1', name: 'Active', ratio: 1 }],
+        sites: ['Site1'],
+        strata: [],
+        blockSizes: [2],
+        stratumCaps: [],
+        seed: 'copy_seed',
+        subjectIdMask: '[SiteID]-[001]'
+      };
+      mockStateService.config.set(mockConfig);
+    });
+
+    it('should write the current code to the clipboard', () => {
+      const clipboardWriteSpy = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: clipboardWriteSpy },
+        configurable: true,
+        writable: true
+      });
+
+      component.activeTab.set('R');
+      component.copyCode();
+
+      expect(clipboardWriteSpy).toHaveBeenCalledWith('Mock R Code');
+    });
+
+    it('should set the copied signal to true immediately after calling copyCode()', () => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: vi.fn().mockResolvedValue(undefined) },
+        configurable: true,
+        writable: true
+      });
+
+      component.copyCode();
+      expect(component.copied()).toBe(true);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Error handling in currentCode getter
+  // ---------------------------------------------------------------------------
+  describe('error handling in currentCode', () => {
+    it('should return the error string when the code generator throws', () => {
+      const mockConfig: RandomizationConfig = {
+        protocolId: 'ERR-TEST',
+        studyName: 'Error Test',
+        phase: 'Phase I',
+        arms: [{ id: '1', name: 'Active', ratio: 1 }],
+        sites: ['Site1'],
+        strata: [],
+        blockSizes: [2],
+        stratumCaps: [],
+        seed: 'err_seed',
+        subjectIdMask: '[SiteID]-[001]'
+      };
+      mockCodeGeneratorService.generateR.mockImplementation(() => {
+        throw new Error('generation failed');
+      });
+      mockStateService.config.set(mockConfig);
+      component.activeTab.set('R');
+
+      const code = component.currentCode;
+      expect(code).toBe('Error generating code. Please check your configuration.');
+    });
+  });
 });

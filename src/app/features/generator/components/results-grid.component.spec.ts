@@ -126,6 +126,57 @@ describe('ResultsGridComponent', () => {
       expect(component.paginatedData().length).toBe(20);
       expect(component.paginatedData()[0].subjectId).toBe('SUBJ-21');
     });
+
+    it('should not decrement below page 1 when prevPage() is called on the first page', () => {
+      const mockResult = generateMockData(45);
+      mockStateService.results.set(mockResult);
+      component.currentPage.set(1);
+      fixture.detectChanges();
+
+      component.prevPage();
+      fixture.detectChanges();
+
+      expect(component.currentPage()).toBe(1);
+    });
+
+    it('should not exceed the last page when nextPage() is called on the last page', () => {
+      const mockResult = generateMockData(45);
+      mockStateService.results.set(mockResult);
+      component.currentPage.set(3); // page 3 is the last page for 45 items
+      fixture.detectChanges();
+
+      component.nextPage();
+      fixture.detectChanges();
+
+      expect(component.currentPage()).toBe(3);
+    });
+
+    it('should show the correct remaining items on the last page', () => {
+      const mockResult = generateMockData(45);
+      mockStateService.results.set(mockResult);
+      component.currentPage.set(3); // last page: items 41-45 (5 items)
+      fixture.detectChanges();
+
+      expect(component.paginatedData().length).toBe(5);
+      expect(component.paginatedData()[0].subjectId).toBe('SUBJ-41');
+      expect(component.paginatedData()[4].subjectId).toBe('SUBJ-45');
+    });
+
+    it('should navigate forward then backward correctly', () => {
+      const mockResult = generateMockData(45);
+      mockStateService.results.set(mockResult);
+      component.currentPage.set(1);
+      fixture.detectChanges();
+
+      component.nextPage();
+      expect(component.currentPage()).toBe(2);
+
+      component.nextPage();
+      expect(component.currentPage()).toBe(3);
+
+      component.prevPage();
+      expect(component.currentPage()).toBe(2);
+    });
   });
 
   describe('Blinding', () => {
