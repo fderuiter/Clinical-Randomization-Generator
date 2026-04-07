@@ -288,7 +288,7 @@ describe('CodeGeneratorService', () => {
     describe('edge cases', () => {
       it('should produce empty strata_levels and strata_names when no strata defined', () => {
         const code = service.generatePython(minimalConfig);
-        expect(code).toContain('strata_levels = [\n    \n]');
+        expect(code).toMatch(/strata_levels = \[\s*\]/);
         expect(code).toContain('strata_names = []');
       });
 

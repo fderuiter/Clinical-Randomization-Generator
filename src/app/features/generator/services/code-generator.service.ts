@@ -69,7 +69,7 @@ ${strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + l + '"'
 # which causes paste() to emit integer level codes (1, 2, ...) instead of the actual
 # label strings, breaking the stratum_caps named-vector lookup below.
 strata_grid <- expand.grid(
-  ${strata.map(s => `${s.id} = ${s.id}_levels`).join(',\n  ')}${strata.length > 0 ? ',\n  stringsAsFactors = FALSE' : '\n  stringsAsFactors = FALSE'}
+  ${[...strata.map(s => `${s.id} = ${s.id}_levels`), 'stringsAsFactors = FALSE'].join(',\n  ')}
 )
 # If no strata are defined, expand.grid() returns 0 rows. Insert one empty row so
 # the generation loop executes once (treating the whole trial as a single stratum).
