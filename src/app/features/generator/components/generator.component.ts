@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, effect } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { ConfigFormComponent } from './config-form.component';
 import { ResultsGridComponent } from './results-grid.component';
 import { CodeGeneratorModalComponent } from './code-generator-modal.component';
@@ -67,4 +68,15 @@ import { GeneratorStateService } from '../../../core/services/generator-state.se
 })
 export class GeneratorComponent {
   public state = inject(GeneratorStateService);
+  private readonly document = inject(DOCUMENT);
+
+  constructor() {
+    effect(() => {
+      if (this.state.results()) {
+        setTimeout(() => {
+          this.document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    });
+  }
 }

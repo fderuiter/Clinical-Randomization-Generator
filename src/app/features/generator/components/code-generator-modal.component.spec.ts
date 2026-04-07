@@ -39,6 +39,7 @@ describe('CodeGeneratorModalComponent', () => {
 
     TestBed.runInInjectionContext(() => {
       component = new CodeGeneratorModalComponent();
+      component.ngOnInit();
     });
   });
 

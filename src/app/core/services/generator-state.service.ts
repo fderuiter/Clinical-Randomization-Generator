@@ -26,10 +26,6 @@ export class GeneratorStateService {
       next: (res) => {
         this.results.set(res);
         this.isGenerating.set(false);
-        // Keep the scroll behavior here for UX
-        setTimeout(() => {
-          document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
       },
       error: (err) => {
         console.error(err);
