@@ -65,9 +65,15 @@ if (any(block_sizes %% total_ratio != 0)) {
 ${strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + l + '"').join(', ')})`).join('\n')}
 
 # Generate all strata combinations
+# stringsAsFactors=FALSE is required: expand.grid() creates factor columns by default,
+# which causes paste() to emit integer level codes (1, 2, ...) instead of the actual
+# label strings, breaking the stratum_caps named-vector lookup below.
 strata_grid <- expand.grid(
-  ${strata.map(s => `${s.id} = ${s.id}_levels`).join(',\n  ')}
+  ${strata.map(s => `${s.id} = ${s.id}_levels`).join(',\n  ')}${strata.length > 0 ? ',\n  stringsAsFactors = FALSE' : '\n  stringsAsFactors = FALSE'}
 )
+# If no strata are defined, expand.grid() returns 0 rows. Insert one empty row so
+# the generation loop executes once (treating the whole trial as a single stratum).
+if (nrow(strata_grid) == 0) strata_grid <- data.frame(row.names = 1L)
 
 # Function to generate a single block
 generate_block <- function(block_size) {
@@ -82,10 +88,13 @@ row_idx <- 1
 
 for (site in sites) {
   site_subject_count <- 0
-  for (i in 1:nrow(strata_grid)) {
+  # seq_len() is used instead of 1:nrow() to avoid the R gotcha where 1:0 produces
+  # c(1, 0) instead of an empty sequence when there are no rows.
+  for (i in seq_len(nrow(strata_grid))) {
     stratum <- strata_grid[i, , drop=FALSE]
-    stratum_key <- paste(stratum, collapse="_")
-    if (stratum_key == "") stratum_key <- "" # Handle empty stratum case
+    # unlist() is required to coerce the data.frame row to a plain character vector
+    # before pasting; directly pasting a data.frame can give unexpected results.
+    stratum_key <- paste(unlist(stratum), collapse="_")
     max_subjects_per_stratum <- if (length(stratum_caps) > 0) unname(stratum_caps[stratum_key]) else 0
     if (is.na(max_subjects_per_stratum)) max_subjects_per_stratum <- 0
 
