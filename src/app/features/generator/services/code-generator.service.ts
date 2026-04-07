@@ -5,6 +5,8 @@ import { APP_VERSION } from '../../../../environments/version';
 @Injectable({ providedIn: 'root' })
 export class CodeGeneratorService {
   private hashCode(str: string | undefined): number {
+    // Note: RandomizationService.generateSchema always sets a seed before this runs,
+    // so this fallback path should not be reached in normal usage.
     if (!str) return Math.floor(Math.random() * 1000000);
     const s = String(str);
     let hash = 0;

@@ -70,12 +70,15 @@ export class GeneratorComponent {
   public state = inject(GeneratorStateService);
   private readonly document = inject(DOCUMENT);
 
+  // Delay to allow Angular to render the results section before scrolling
+  private static readonly SCROLL_DELAY_MS = 100;
+
   constructor() {
     effect(() => {
       if (this.state.results()) {
         setTimeout(() => {
           this.document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+        }, GeneratorComponent.SCROLL_DELAY_MS);
       }
     });
   }
