@@ -4,7 +4,7 @@
         <div>
           <h2 class="text-xl font-bold text-gray-900">Generated Schema</h2>
           <p class="text-sm text-gray-500 mt-1">
-            Protocol: {{result()?.metadata?.protocolId}} | Seed: <span class="font-mono bg-gray-100 px-1 rounded">{{result()?.metadata?.seed}}</span>
+            Protocol: {{state.results()?.metadata?.protocolId}} | Seed: <span class="font-mono bg-gray-100 px-1 rounded">{{state.results()?.metadata?.seed}}</span>
           </p>
         </div>
         
@@ -43,7 +43,7 @@
             <tr>
               <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subject ID</th>
               <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Site</th>
-              @for (stratum of result()?.metadata?.strata; track stratum.id) {
+              @for (stratum of state.results()?.metadata?.strata; track stratum.id) {
                 <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{stratum.name || stratum.id}}</th>
               }
               <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Block</th>
@@ -55,7 +55,7 @@
               <tr class="hover:bg-gray-50 transition-colors">
                 <td class="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-900 font-mono">{{row.subjectId}}</td>
                 <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600">{{row.site}}</td>
-                @for (stratum of result()?.metadata?.strata; track stratum.id) {
+                @for (stratum of state.results()?.metadata?.strata; track stratum.id) {
                   <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600">{{row.stratum[stratum.id]}}</td>
                 }
                 <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600">{{row.blockNumber}} (Size: {{row.blockSize}})</td>

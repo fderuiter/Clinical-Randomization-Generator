@@ -1,6 +1,7 @@
-import { Component, EventEmitter, Output, inject, HostListener, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, HostListener, ElementRef, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
 import { RandomizationConfig } from '../../../models/randomization.model';
+import { GeneratorStateService } from '../../../core/services/generator-state.service';
 
 @Component({
   selector: 'app-config-form',
@@ -11,9 +12,7 @@ import { RandomizationConfig } from '../../../models/randomization.model';
 export class ConfigFormComponent {
   private fb = inject(FormBuilder);
   private eRef = inject(ElementRef);
-
-  @Output() generate = new EventEmitter<RandomizationConfig>();
-  @Output() generateCode = new EventEmitter<{config: RandomizationConfig, language: 'R' | 'SAS' | 'Python'}>();
+  private state = inject(GeneratorStateService);
 
   form: FormGroup = this.fb.group({
     protocolId: ['PRT-001', Validators.required],
@@ -261,7 +260,7 @@ export class ConfigFormComponent {
   onGenerateCode(language: 'R' | 'SAS' | 'Python') {
     if (this.form.valid) {
       try {
-        this.generateCode.emit({config: this.getConfig(), language});
+        this.state.openCodeGenerator(this.getConfig(), language);
         this.dropdownOpen = false;
       } catch (e) {
         console.error('Error generating code config:', e);
@@ -273,7 +272,7 @@ export class ConfigFormComponent {
   onSubmit() {
     if (this.form.valid) {
       try {
-        this.generate.emit(this.getConfig());
+        this.state.generateSchema(this.getConfig());
       } catch (e) {
         console.error('Error generating schema config:', e);
         alert('Error generating schema. Please check your configuration.');
