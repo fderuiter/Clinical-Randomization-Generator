@@ -245,7 +245,20 @@
         <div>
           <label for="subjectIdMask" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Subject ID Mask</label>
           <input id="subjectIdMask" type="text" formControlName="subjectIdMask" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border font-mono dark:placeholder-slate-500">
-          <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Use [SiteID], [StratumCode], and [001] for padding.</p>
+          <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">
+            Tokens: <code class="font-mono">&#123;SITE&#125;</code>, <code class="font-mono">&#123;STRATUM&#125;</code>, <code class="font-mono">&#123;SEQ:n&#125;</code> (padded counter), <code class="font-mono">&#123;RND:n&#125;</code> (secure random), <code class="font-mono">&#123;CHECKSUM&#125;</code> (Luhn digit). Legacy tokens <code class="font-mono">[SiteID]</code>, <code class="font-mono">[StratumCode]</code>, <code class="font-mono">[001]</code> are also supported.
+          </p>
+          <!-- Live preview -->
+          @if (maskPreview()?.preview) {
+            <p class="text-xs text-indigo-600 dark:text-indigo-400 mt-1.5 font-mono">
+              <span class="font-sans font-medium">Preview:</span> {{ maskPreview()!.preview }}
+            </p>
+          }
+          @if (maskPreview()?.error) {
+            <p class="text-xs text-red-600 dark:text-rose-400 mt-1.5" role="alert">
+              <span class="font-medium">Invalid mask:</span> {{ maskPreview()!.error }}
+            </p>
+          }
         </div>
       </section>
 

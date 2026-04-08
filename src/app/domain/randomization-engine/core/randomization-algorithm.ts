@@ -5,6 +5,7 @@ import {
   GeneratedSchema,
   RandomizationResult
 } from '../../core/models/randomization.model';
+import { resolveSubjectId } from './subject-id-engine';
 
 /**
  * Pure TypeScript randomization algorithm with no Angular dependencies.
@@ -51,6 +52,9 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
     });
   }
 
+  // Collision-detection Set: guarantees every subject ID is unique within the run
+  const usedIds = new Set<string>();
+
   for (const site of resolvedConfig.sites) {
     let siteSubjectCount = 0;
     for (const stratum of strataCombinations) {
@@ -83,22 +87,15 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
           siteSubjectCount++;
           stratumSubjectCount++;
 
-          let subjectId = resolvedConfig.subjectIdMask;
-          subjectId = subjectId.replace('[SiteID]', site);
-
           const stratumCode = resolvedConfig.strata
             .map(s => (stratum[s.id] || '').substring(0, 3).toUpperCase())
             .join('-');
-          subjectId = subjectId.replace('[StratumCode]', stratumCode);
 
-          const match = subjectId.match(/\[(0+)1\]/);
-          if (match) {
-            const padding = match[1].length + 1;
-            const paddedNum = siteSubjectCount.toString().padStart(padding, '0');
-            subjectId = subjectId.replace(match[0], paddedNum);
-          } else {
-            subjectId = subjectId.replace('[001]', siteSubjectCount.toString().padStart(3, '0'));
-          }
+          const subjectId = resolveSubjectId(
+            resolvedConfig.subjectIdMask,
+            { site, stratumCode, sequence: siteSubjectCount },
+            usedIds
+          );
 
           schema.push({
             subjectId,

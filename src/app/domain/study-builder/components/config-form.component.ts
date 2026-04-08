@@ -1,10 +1,12 @@
 import { Component, DestroyRef, ElementRef, HostListener, inject, OnInit, ViewChild } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { startWith, map } from 'rxjs/operators';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
 import { TagInputComponent } from './tag-input.component';
+import { previewSubjectId } from '../../randomization-engine/core/subject-id-engine';
 
 @Component({
   selector: 'app-config-form',
@@ -37,9 +39,17 @@ export class ConfigFormComponent implements OnInit {
       blockSizesStr: ['4, 6', Validators.required],
       stratumCaps: this.fb.array([]),
       seed: [''],
-      subjectIdMask: ['[SiteID]-[StratumCode]-[001]', Validators.required]
+      subjectIdMask: ['{SITE}-{STRATUM}-{SEQ:3}', Validators.required]
     },
     { validators: this.blockSizesValidator.bind(this) }
+  );
+
+  /** Reactive live preview of the current Subject ID mask. */
+  readonly maskPreview = toSignal(
+    this.form.get('subjectIdMask')!.valueChanges.pipe(
+      startWith(this.form.get('subjectIdMask')!.value as string),
+      map((mask: string) => previewSubjectId(mask))
+    )
   );
 
   ngOnInit(): void {
