@@ -18,6 +18,14 @@
 9. [Full Data-Flow: Form → Results](#9-full-data-flow-form--results)
 10. [Data Model](#10-data-model)
 11. [Code Generation Service](#11-code-generation-service)
+    - [11.1 Why code generation exists](#111-why-code-generation-exists)
+    - [11.2 Seed translation — hashCode](#112-seed-translation--hashcodeseed)
+    - [11.3 Overall pipeline](#113-overall-pipeline)
+    - [11.4 Generated script structure](#114-generated-script-structure--section-by-section)
+    - [11.5 R script](#115-r-script-generater)
+    - [11.6 Python script](#116-python-script-generatepython)
+    - [11.7 SAS script](#117-sas-script-generatesass)
+    - [11.8 PRNG comparison](#118-prng-comparison)
 12. [ESLint Architectural Boundaries](#12-eslint-architectural-boundaries)
 13. [Testing Strategy](#13-testing-strategy)
 14. [Build, Tooling & Versioning](#14-build-tooling--versioning)
@@ -519,38 +527,203 @@ Example: mask `[SiteID]-[StratumCode]-[001]` → `US01-<65-F-003`
 
 ## 11. Code Generation Service
 
-`CodeGeneratorService` (`domain/schema-management/services/`) emits standalone
-scripts in three languages. Each script is **self-contained**: it re-encodes the
-full configuration as literals (sites, arms, strata, caps, block sizes) and uses the
-language-native PRNG seeded from a 31-bit hash of the web app's `seedrandom` seed.
+`CodeGeneratorService` (`domain/schema-management/services/`) is the only part of
+the application that translates a `RandomizationConfig` object into runnable source
+code. It is a pure, stateless service: given the same config, it always produces the
+same script text.
 
-> **Important:** R, SAS, and Python each use a different PRNG algorithm
-> (Mersenne-Twister, Mersenne-Twister, PCG64 respectively). The generated scripts
-> will produce a statistically valid and balanced schema with the same parameters,
-> but the **exact subject-by-subject sequence** will differ from the web tool's
-> output. For a byte-identical reproduction, execute the web tool's algorithm
-> directly (the exported scripts include this caveat as a comment).
+### 11.1 Why code generation exists
 
-```mermaid
-flowchart LR
-    CONFIG2["RandomizationConfig"]
-    HASH["hashCode(seed)\n→ 31-bit integer\n(compatible with all three\nPRNG seed ranges)"]
-    CONFIG2 --> HASH
+The web app's PRNG is `seedrandom` (the Alea algorithm). R, SAS, and Python each
+ship their own incompatible PRNGs (Mersenne-Twister, Mersenne-Twister, PCG64
+respectively). A byte-identical reproduction of the web UI schema inside a validated
+statistical environment is therefore impossible without shipping the Alea PRNG to
+every language — impractical and unsupported.
 
-    HASH --> R["generateR()\nset.seed(N)\nexpand.grid() strata\nFisher-Yates via sample()"]
-    HASH --> SAS["generateSas()\n%let seed = N;\ncall streaminit(seed)\nDATA step blocks"]
-    HASH --> PY["generatePython()\nnp.random.default_rng(N)\nitertools.product() strata\nrng.shuffle(block)"]
+Instead, the generated scripts embed **all study parameters as literals** and use the
+language-native PRNG. The resulting schema is statistically identical in distribution
+(same block sizes, same ratios, same caps, same balance properties) but the
+subject-by-subject sequence differs. This is the intended workflow:
 
-    R --> MODAL4["CodeGeneratorModalComponent\nactiveTab signal\nDownload / Copy buttons"]
-    SAS --> MODAL4
-    PY --> MODAL4
+1. **Design phase** — use the web UI to quickly iterate and validate the study design.
+2. **Execution phase** — download and run the generated script inside your
+   organisation's validated environment to produce the **official** schema.
+
+The exported script becomes the auditable source of truth for the trial.
+
+### 11.2 Seed translation — `hashCode(seed)`
+
+The web app stores seeds as arbitrary strings (e.g. `"abc123"` or a random
+alphanumeric). Statistical software requires a non-negative 32-bit integer for
+`set.seed()` / `call streaminit()` / `np.random.default_rng()`.
+
+`hashCode(seed: string): number` converts the string:
+
+```
+hash = 0
+for each character code c:
+    hash = (hash << 5) - hash + c   // djb2-style multiply-add
+    hash |= 0                        // coerce to signed 32-bit integer
+return (hash >>> 0) % 2_147_483_647  // unsigned right-shift → mod into 31-bit range
 ```
 
-Each generated script includes:
-- Protocol ID, study name, app version, and generation timestamp as comments
-- Block-math failsafe that aborts if a block size is not a multiple of the total ratio
-- QC tables (overall treatment balance, site-level balance, block size distribution)
-- Commented-out CSV export line
+The `>>> 0` unsigned right-shift avoids the `Math.abs(-2147483648) === 2147483648`
+edge case that would exceed the 31-bit limit. The result is always in
+`[0, 2_147_483_646]` — safe for all three language seed ranges.
+
+### 11.3 Overall pipeline
+
+```mermaid
+flowchart TD
+    MODAL_BTN["User clicks 'Generate Code'\n→ selects R / SAS / Python"]
+    FORM4["ConfigFormComponent.onGenerateCode(lang)"]
+    FACADE4["facade.openCodeGenerator(config, lang)"]
+    MODAL4["CodeGeneratorModalComponent\nactiveTab = lang signal"]
+    GETTER["get currentCode()\ncalled on every tab switch / render"]
+
+    MODAL_BTN --> FORM4 --> FACADE4 --> MODAL4 --> GETTER
+
+    GETTER --> CGS["CodeGeneratorService"]
+    CGS --> HASH2["hashCode(config.seed)\n→ integer N"]
+
+    HASH2 --> GR["generateR(config)\nreturns string"]
+    HASH2 --> GSAS["generateSas(config)\nreturns string"]
+    HASH2 --> GPY["generatePython(config)\nreturns string"]
+
+    GR --> DISP["<pre><code>{{ currentCode }}</code></pre>"]
+    GSAS --> DISP
+    GPY --> DISP
+
+    DISP --> DL["downloadCode()\nBlob → <a download> click"]
+    DISP --> CP["copyCode()\nnavigator.clipboard.writeText()"]
+```
+
+### 11.4 Generated script structure — section by section
+
+Every generated script follows the same logical sections regardless of language:
+
+| Section | Purpose |
+|---|---|
+| **File header comments** | Protocol ID, study name, app version, ISO timestamp, PRNG name |
+| **Seed** | Language-native `set.seed()` / `call streaminit()` / `default_rng()` call |
+| **Parameters** | Arms, ratios, sites, block sizes encoded as language literals |
+| **Stratum caps map** | Named vector (R), dataset (SAS), or dict (Python) mapping combo key → max subjects |
+| **Strata levels** | One variable per stratification factor listing its levels |
+| **Cartesian product** | `expand.grid()` / `itertools.product()` / `proc sql cross join` |
+| **Block-math failsafe** | Abort if any block size is not a multiple of total ratio |
+| **Generation loop** | Sites × strata combinations, while loop over cap, random block selection, Fisher-Yates shuffle, subject ID formatting |
+| **QC tables** | Overall balance, site-level balance, block-size distribution |
+| **CSV export (commented)** | `# write.csv(...)` / `# df.to_csv(...)` / `/* proc export */` |
+
+### 11.5 R script (`generateR`)
+
+```mermaid
+flowchart TD
+    R_SEED["set.seed(N)"]
+    R_PARAMS["sites, block_sizes, arms, ratios, total_ratio\nstratum_caps named vector"]
+    R_STRATA["Per-factor level vectors\ne.g. age_levels <- c('<65', '>=65')"]
+    R_GRID["expand.grid(..., stringsAsFactors = FALSE)\n→ strata_grid data.frame\nEmpty grid → 1-row placeholder"]
+    R_LOOP["for site in sites:\n  for i in seq_len(nrow(strata_grid)):\n    stratum_key <- paste(unlist(stratum), collapse='_')\n    max_subjects <- stratum_caps[stratum_key]"]
+    R_BLOCK["generate_block(block_size)\n= rep(arms, ratios*multiplier) then sample()"]
+    R_OUTPUT["rbind schema rows → final data.frame"]
+    R_QC["table(Treatment)\ntable(Site, Treatment)\ntable(BlockSize)"]
+
+    R_SEED --> R_PARAMS --> R_STRATA --> R_GRID --> R_LOOP --> R_BLOCK --> R_OUTPUT --> R_QC
+```
+
+**Key R-specific details:**
+
+- `stringsAsFactors = FALSE` is mandatory in `expand.grid()`. Without it, factor
+  columns emit integer level codes instead of label strings, breaking the named-vector
+  cap lookup.
+- `seq_len(nrow(strata_grid))` is used instead of `1:nrow()` to avoid the `1:0 →
+  c(1,0)` gotcha when there are no strata rows.
+- `unlist(stratum)` coerces the single-row data.frame to a plain character vector
+  before `paste()`.
+- `if (is.null(schema) || nrow(schema) == 0)` guard creates an empty typed
+  data.frame when all caps are zero (e.g. a new user who hasn't set caps yet).
+
+### 11.6 Python script (`generatePython`)
+
+```mermaid
+flowchart TD
+    PY_SEED["rng = np.random.default_rng(N)"]
+    PY_PARAMS["sites, block_sizes, arms list of dicts\ntotal_ratio = sum(arm['ratio'])"]
+    PY_CAPS["stratum_caps dict\n{('Level1','Level2'): cap, ...}"]
+    PY_GRID["strata_combinations = list(itertools.product(*strata_levels))"]
+    PY_FAILSAFE["any(bs % total_ratio != 0) → raise ValueError"]
+    PY_LOOP["for site, combo:\n  stratum = dict(zip(strata_names, combo))\n  max = stratum_caps.get(combo, 0)"]
+    PY_BLOCK["block = [] → extend per arm → rng.shuffle(block)"]
+    PY_DF["pd.DataFrame(schema)"]
+    PY_QC["value_counts()\npd.crosstab(Site, Treatment)\nBlockSize.value_counts()"]
+
+    PY_SEED --> PY_PARAMS --> PY_CAPS --> PY_GRID --> PY_FAILSAFE --> PY_LOOP --> PY_BLOCK --> PY_DF --> PY_QC
+```
+
+**Key Python-specific details:**
+
+- Arms are emitted as a list of dicts: `[{"name": "Active", "ratio": 1}, ...]`. This
+  keeps the data structured and avoids parallel-array synchronisation errors.
+- The stratum caps dict uses a **tuple** key `(level1, level2, ...)` matching the
+  `itertools.product` output exactly — no string join/split needed.
+- `np.random.default_rng(N)` uses PCG64, NumPy's modern default generator, which is
+  statistically superior to the legacy `np.random.seed()` / `np.random.shuffle()`
+  interface.
+
+### 11.7 SAS script (`generateSas`)
+
+The SAS generator is the most complex because SAS uses a macro + DATA step paradigm
+rather than a procedural loop.
+
+```mermaid
+flowchart TD
+    SAS_PARAMS["%let seed / arms / ratios / block_sizes / sites macrovars"]
+    SAS_FAILSAFE["DATA _null_: mod(block_size, total_ratio) != 0 → %abort cancel"]
+    SAS_SITES["DATA _sites: countw(sites) → one row per site"]
+    SAS_STRATA_DS["DATA _strata_N: countw(levels) → one row per level\n(one dataset per factor)"]
+    SAS_CAPS["DATA _caps: hardcoded level combos → max_subjects_per_stratum"]
+    SAS_DESIGN["PROC SQL: cross join sites × strata × caps\n→ _design dataset"]
+    SAS_BLOCKS["DATA _blocks: SET _design\ncall streaminit(seed)\nrand('uniform') block selection\nrand('uniform') sort key _rand_sort"]
+    SAS_SORT["PROC SORT _blocks BY site strata block_num _rand_sort\n→ permutes treatments within each block"]
+    SAS_FINAL["DATA final_schema: BY site strata\nretain counters · truncate at cap\nformat SubjectID = cats(Site, '-', put(n, z3.))"]
+    SAS_QC["PROC FREQ: Treatment / Site*Treatment / block_size\nPROC PRINT: obs=20"]
+
+    SAS_PARAMS --> SAS_FAILSAFE --> SAS_SITES --> SAS_STRATA_DS --> SAS_CAPS --> SAS_DESIGN --> SAS_BLOCKS --> SAS_SORT --> SAS_FINAL --> SAS_QC
+```
+
+**Key SAS-specific details:**
+
+- **Block permutation via sort:** SAS has no built-in in-memory array shuffle inside a
+  DATA step. Instead, a uniform random sort key (`_rand_sort = rand('uniform')`) is
+  assigned to each treatment slot in the block, then `PROC SORT` on that key achieves
+  the Fisher-Yates equivalent.
+- **Macro variables for parameters:** All configuration values are stored as `%let`
+  macro variables so they can be referenced consistently across multiple steps
+  (`&arms.`, `&seed.`, etc.).
+- **`dequote()` for string parsing:** Site and arm names are passed as quoted
+  space-delimited macro variable strings; `dequote(scan(...))` safely strips the
+  surrounding quotes when iterating.
+- **`call streaminit(seed)` is step-scoped:** The seed must be set once at the top of
+  the DATA _blocks step. Calling it in a loop would reset the PRNG on every iteration,
+  destroying reproducibility.
+- **`_caps` LEFT JOIN:** The design matrix is built with a SQL cross join of sites,
+  all strata datasets, and the caps dataset, so every combination has its enrollment
+  limit attached before the generation loop runs.
+- **`retain` counters:** `_site_subj_count` and `_stratum_subj_count` are retained
+  across rows; `first.Site` and `first.<last_stratum>` BY-group triggers reset them
+  at the correct boundaries.
+
+### 11.8 PRNG comparison
+
+| | Web UI | R script | Python script | SAS script |
+|---|---|---|---|---|
+| **Library** | `seedrandom` (Alea) | Base R | NumPy | SAS built-in |
+| **Algorithm** | Alea (Mash) | Mersenne-Twister | PCG64 | Mersenne-Twister |
+| **Seed type** | Arbitrary string | 31-bit integer | 31-bit integer | 31-bit integer |
+| **Seed source** | User input or random string | `hashCode(webSeed)` | `hashCode(webSeed)` | `hashCode(webSeed)` |
+| **Sequence matches web?** | N/A | ❌ Different | ❌ Different | ❌ Different |
+| **Balance properties match?** | N/A | ✅ Same | ✅ Same | ✅ Same |
+| **Reproducible within language?** | ✅ | ✅ | ✅ | ✅ |
 
 ---
 
