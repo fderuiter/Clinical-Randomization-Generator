@@ -3,7 +3,6 @@ import { CodeGeneratorService } from './code-generator.service';
 import { RandomizationConfig } from '../../core/models/randomization.model';
 import {
   ConfigurationValidationError,
-  MissingSeedError,
 } from '../errors/code-generation-errors';
 
 describe('CodeGeneratorService', () => {
@@ -552,21 +551,15 @@ describe('CodeGeneratorService', () => {
     });
   });
 
-  describe('MissingSeedError', () => {
-    it('should throw MissingSeedError when seed is an empty string', () => {
+  describe('empty seed', () => {
+    it('should generate code successfully when seed is an empty string', () => {
       const noSeedConfig = { ...minimalConfig, seed: '' };
-      expect(() => service.generate('R', noSeedConfig)).toThrow(MissingSeedError);
+      expect(() => service.generate('R', noSeedConfig)).not.toThrow();
     });
 
-    it('should include the language name in the MissingSeedError message', () => {
+    it('should generate code successfully when seed is whitespace only', () => {
       const noSeedConfig = { ...minimalConfig, seed: '   ' };
-      try {
-        service.generate('Python', noSeedConfig);
-        throw new Error('Expected MissingSeedError but no error was thrown');
-      } catch (e) {
-        expect(e).toBeInstanceOf(MissingSeedError);
-        expect((e as MissingSeedError).message).toContain('Python');
-      }
+      expect(() => service.generate('Python', noSeedConfig)).not.toThrow();
     });
   });
 });
