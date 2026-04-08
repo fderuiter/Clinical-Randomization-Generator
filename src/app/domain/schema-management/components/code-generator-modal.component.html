@@ -1,24 +1,24 @@
 
     <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
       <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500/75 transition-opacity" aria-hidden="true" (click)="state.closeCodeGenerator()"></div>
+        <div class="fixed inset-0 bg-gray-500/60 dark:bg-slate-900/70 backdrop-blur-sm transition-opacity" aria-hidden="true" (click)="state.closeCodeGenerator()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="relative inline-block align-bottom bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-xl text-left overflow-hidden shadow-xl dark:shadow-slate-900/50 transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl w-full border border-gray-100 dark:border-slate-700">
+          <div class="bg-white/80 dark:bg-slate-800/80 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div class="sm:flex sm:items-start">
               <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
                 <div class="flex justify-between items-center mb-4">
-                  <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                  <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-slate-100" id="modal-title">
                     Code Generator
                   </h3>
                   <div class="flex gap-2">
-                    <button (click)="downloadCode()" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <button (click)="downloadCode()" class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-slate-600 text-xs font-medium rounded-lg shadow-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
                       Download
                     </button>
-                    <button (click)="copyCode()" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <button (click)="copyCode()" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 dark:hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
@@ -27,28 +27,28 @@
                   </div>
                 </div>
 
-                <div class="border-b border-gray-200 mb-4">
+                <div class="border-b border-gray-200 dark:border-slate-700 mb-4">
                   <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                    <button (click)="activeTab.set('R')" [class.border-indigo-500]="activeTab() === 'R'" [class.text-indigo-600]="activeTab() === 'R'" [class.border-transparent]="activeTab() !== 'R'" [class.text-gray-500]="activeTab() !== 'R'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 hover:border-gray-300">
+                    <button (click)="activeTab.set('R')" [class.border-indigo-500]="activeTab() === 'R'" [class.text-indigo-600]="activeTab() === 'R'" [class.dark:text-indigo-400]="activeTab() === 'R'" [class.border-transparent]="activeTab() !== 'R'" [class.text-gray-500]="activeTab() !== 'R'" [class.dark:text-slate-400]="activeTab() !== 'R'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-500 transition-colors">
                       R
                     </button>
-                    <button (click)="activeTab.set('SAS')" [class.border-indigo-500]="activeTab() === 'SAS'" [class.text-indigo-600]="activeTab() === 'SAS'" [class.border-transparent]="activeTab() !== 'SAS'" [class.text-gray-500]="activeTab() !== 'SAS'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 hover:border-gray-300">
+                    <button (click)="activeTab.set('SAS')" [class.border-indigo-500]="activeTab() === 'SAS'" [class.text-indigo-600]="activeTab() === 'SAS'" [class.dark:text-indigo-400]="activeTab() === 'SAS'" [class.border-transparent]="activeTab() !== 'SAS'" [class.text-gray-500]="activeTab() !== 'SAS'" [class.dark:text-slate-400]="activeTab() !== 'SAS'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-500 transition-colors">
                       SAS
                     </button>
-                    <button (click)="activeTab.set('Python')" [class.border-indigo-500]="activeTab() === 'Python'" [class.text-indigo-600]="activeTab() === 'Python'" [class.border-transparent]="activeTab() !== 'Python'" [class.text-gray-500]="activeTab() !== 'Python'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 hover:border-gray-300">
+                    <button (click)="activeTab.set('Python')" [class.border-indigo-500]="activeTab() === 'Python'" [class.text-indigo-600]="activeTab() === 'Python'" [class.dark:text-indigo-400]="activeTab() === 'Python'" [class.border-transparent]="activeTab() !== 'Python'" [class.text-gray-500]="activeTab() !== 'Python'" [class.dark:text-slate-400]="activeTab() !== 'Python'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-500 transition-colors">
                       Python
                     </button>
                   </nav>
                 </div>
 
-                <div class="bg-gray-900 rounded-md p-4 overflow-x-auto max-h-[60vh] overflow-y-auto">
+                <div class="bg-slate-900 dark:bg-slate-950 rounded-xl p-4 overflow-x-auto max-h-[60vh] overflow-y-auto shadow-inner">
                   <pre class="text-gray-100 text-sm font-mono"><code>{{ currentCode }}</code></pre>
                 </div>
               </div>
             </div>
           </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm" (click)="state.closeCodeGenerator()">
+          <div class="bg-gray-50/80 dark:bg-slate-900/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100 dark:border-slate-700">
+            <button type="button" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 dark:border-slate-600 shadow-sm px-4 py-2 bg-white dark:bg-slate-700 text-base font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm transition-colors" (click)="state.closeCodeGenerator()">
               Close
             </button>
           </div>
