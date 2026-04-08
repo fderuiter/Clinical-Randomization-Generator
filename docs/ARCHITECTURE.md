@@ -1,6 +1,6 @@
 # Architecture Overview — Clinical Randomization Generator
 
-> **Version:** v1.1.0  
+> **Version:** v1.3.0  
 > **Stack:** Angular 21 · NgRx Signals · Web Workers · Vitest · Playwright · Tailwind CSS
 
 ---
@@ -26,6 +26,7 @@
     - [11.6 Python script](#116-python-script-generatepython)
     - [11.7 SAS script](#117-sas-script-generatesass)
     - [11.8 PRNG comparison](#118-prng-comparison)
+    - [11.9 Code generation error hierarchy](#119-code-generation-error-hierarchy)
 12. [ESLint Architectural Boundaries](#12-eslint-architectural-boundaries)
 13. [Testing Strategy](#13-testing-strategy)
 14. [Build, Tooling & Versioning](#14-build-tooling--versioning)
@@ -110,6 +111,8 @@ clinical-randomization-generator/
 │           │       └── config-form.component.spec.ts
 │           │
 │           └── schema-management/           Bounded context 3
+│               ├── errors/
+│               │   └── code-generation-errors.ts           Typed error hierarchy (6 classes)
 │               ├── services/
 │               │   ├── code-generator.service.ts           R / SAS / Python emitters
 │               │   └── code-generator.service.spec.ts
@@ -168,8 +171,10 @@ graph TD
     end
 
     subgraph "Bounded Context 3 — Schema Management"
+        ERRORS["errors/\ncode-generation-errors.ts\nCodeGenerationError hierarchy"]
         CODEGEN["services/\ncode-generator.service.ts"]
         GRID["components/\nresults-grid.component\ncode-generator-modal.component"]
+        ERRORS --> CODEGEN
         CODEGEN --> GRID
     end
 
@@ -578,17 +583,16 @@ flowchart TD
     MODAL_BTN["User clicks 'Generate Code'\n→ selects R / SAS / Python"]
     FORM4["ConfigFormComponent.onGenerateCode(lang)"]
     FACADE4["facade.openCodeGenerator(config, lang)"]
-    MODAL4["CodeGeneratorModalComponent\nactiveTab = lang signal"]
-    GETTER["get currentCode()\ncalled on every tab switch / render"]
+    MODAL4["CodeGeneratorModalComponent\nsetActiveTab(lang) → refreshCode()"]
+    ENTRY["CodeGeneratorService.generate(language, config)\n① pre-flight validation\n② dispatch to language method"]
 
-    MODAL_BTN --> FORM4 --> FACADE4 --> MODAL4 --> GETTER
+    MODAL_BTN --> FORM4 --> FACADE4 --> MODAL4 --> ENTRY
 
-    GETTER --> CGS["CodeGeneratorService"]
-    CGS --> HASH2["hashCode(config.seed)\n→ integer N"]
+    ENTRY --> CGS["hashCode(config.seed)\n→ integer N"]
 
-    HASH2 --> GR["generateR(config)\nreturns string"]
-    HASH2 --> GSAS["generateSas(config)\nreturns string"]
-    HASH2 --> GPY["generatePython(config)\nreturns string"]
+    CGS --> GR["generateR(config)\nreturns string"]
+    CGS --> GSAS["generateSas(config)\nreturns string"]
+    CGS --> GPY["generatePython(config)\nreturns string"]
 
     GR --> DISP["<pre><code>{{ currentCode }}</code></pre>"]
     GSAS --> DISP
@@ -596,6 +600,9 @@ flowchart TD
 
     DISP --> DL["downloadCode()\nBlob → <a download> click"]
     DISP --> CP["copyCode()\nnavigator.clipboard.writeText()"]
+
+    ENTRY -- "throws" --> ERR["CodeGenerationError subclass\n→ errorState signal\n→ error banner UI"]
+    ERR --> CPE["copyErrorLog()\nclipboard ← { errorName, message, context }"]
 ```
 
 ### 11.4 Generated script structure — section by section
@@ -725,6 +732,79 @@ flowchart TD
 | **Balance properties match?** | N/A | ✅ Same | ✅ Same | ✅ Same |
 | **Reproducible within language?** | ✅ | ✅ | ✅ | ✅ |
 
+### 11.9 Code generation error hierarchy
+
+All code generation failures are represented by a typed class tree rooted at
+`CodeGenerationError` (in `domain/schema-management/errors/code-generation-errors.ts`).
+Every class carries a `context: Partial<RandomizationConfig> | null` payload so the
+exact configuration that triggered the failure is always available for diagnostics.
+
+```mermaid
+classDiagram
+    class CodeGenerationError {
+        +context: Partial~RandomizationConfig~ | null
+        +name: string
+        +message: string
+    }
+    class ConfigurationValidationError {
+        Thrown by generate() pre-flight
+        when arms or blockSizes are empty
+    }
+    class MissingSeedError {
+        Thrown when config.seed is blank
+        message names the failing language
+    }
+    class StrataParsingError {
+        Thrown in Phase 2 of each language method
+        when strata/stratumCaps are malformed
+    }
+    class TemplateCompilationError {
+        Thrown in Phase 3 of each language method
+        when template string assembly fails
+    }
+    class UnsupportedLanguageError {
+        Thrown by generate() when the language
+        argument is not R, SAS, or Python
+    }
+    CodeGenerationError <|-- ConfigurationValidationError
+    CodeGenerationError <|-- MissingSeedError
+    CodeGenerationError <|-- StrataParsingError
+    CodeGenerationError <|-- TemplateCompilationError
+    CodeGenerationError <|-- UnsupportedLanguageError
+```
+
+**How errors surface in the UI:**
+
+When `CodeGeneratorService.generate()` throws, `CodeGeneratorModalComponent.refreshCode()` catches it and stores it in the `errorState` signal. The modal template replaces the code block with a structured error banner:
+
+- Error class name (e.g. `StrataParsingError`) and full message
+- Collapsible `<details>` block containing the stringified `RandomizationConfig`
+- **"Copy Error Log"** button — calls `copyErrorLog()` which writes
+  `{ errorName, message, context }` to the clipboard for one-click bug reports
+
+**Isolation zones inside each language method:**
+
+```ts
+// Phase 2 — strata parsing (→ StrataParsingError)
+try {
+  capsVector = config.stratumCaps.map(c => ...);
+  strataLevels = config.strata.map(s => ...);
+} catch (e) {
+  throw new StrataParsingError('R', e, config);
+}
+
+// Phase 3 — template compilation (→ TemplateCompilationError)
+try {
+  return `...template string...`;
+} catch (e) {
+  if (this.isKnownError(e)) throw e;
+  throw new TemplateCompilationError('R', e, config);
+}
+```
+
+The `isKnownError()` private helper ensures that a `StrataParsingError` thrown inside
+Phase 2 is re-thrown as-is from Phase 3 rather than being double-wrapped.
+
 ---
 
 ## 12. ESLint Architectural Boundaries
@@ -762,7 +842,7 @@ graph LR
 ```mermaid
 graph BT
     E2E["E2E (Playwright)\ntests_e2e/ — 5 spec files\nChromium only\nRequires ng serve @ :4200\n~37 user-journey tests"]
-    UNIT["Unit (Vitest + Angular TestBed)\nsrc/**/*.spec.ts — 11 spec files\n216 tests\nDirect DOM/class testing"]
+    UNIT["Unit (Vitest + Angular TestBed)\nsrc/**/*.spec.ts — 12 spec files\n251 tests\nDirect DOM/class testing"]
     PARITY["Golden-Master Parity\nrandomization-algorithm-parity.spec.ts\n8 tests across 5 configs\nFixed seeds → deepEqual assertion"]
 
     PARITY --> UNIT
@@ -774,16 +854,17 @@ graph BT
 | File | Tests | What it covers |
 |---|---|---|
 | `app.spec.ts` | 1 | App component renders without error |
-| `randomization-algorithm.spec.ts` | 13 | Algorithm correctness, edge cases, throws |
+| `randomization-algorithm.spec.ts` | 30 | Algorithm correctness, edge cases, throws |
 | `randomization-algorithm-parity.spec.ts` | 8 | Output matches decommissioned legacy service |
 | `randomization.service.spec.ts` | 7 | Observable wrapper, error paths |
 | `randomization-engine.facade.spec.ts` | 22 | Worker dispatch, SSR fallback, signal updates |
 | `study-builder.store.spec.ts` | 19 | SignalStore: strata, Cartesian combinations, presets, buildConfig |
-| `config-form.component.spec.ts` | 29 | Reactive form init, preset loading, add/remove arms & strata, validation |
+| `config-form.component.spec.ts` | 34 | Reactive form init, preset loading, add/remove arms & strata, validation |
+| `tag-input.component.spec.ts` | 21 | Tag-input keyboard/pointer interactions, duplicate rejection, removal |
 | `generator.component.spec.ts` | 15 | Error/loading/results conditional rendering |
-| `results-grid.component.spec.ts` | 24 | Pagination, blinding toggle, CSV/PDF export |
-| `code-generator-modal.component.spec.ts` | 11 | Tab switching, download, copy |
-| `code-generator.service.spec.ts` | 67 | R/SAS/Python code content, seed hashing |
+| `results-grid.component.spec.ts` | 11 | Pagination, blinding toggle, CSV/PDF export |
+| `code-generator-modal.component.spec.ts` | 13 | Tab switching, download, copy, error state handling |
+| `code-generator.service.spec.ts` | 70 | R/SAS/Python code content, seed hashing, `generate()` dispatch, error classes |
 
 ### E2E test files
 
