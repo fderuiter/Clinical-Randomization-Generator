@@ -1,15 +1,19 @@
-import { Component, DestroyRef, ElementRef, HostListener, inject, OnInit, ViewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, inject, OnInit, ViewChild, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DatePipe } from '@angular/common';
+import { debounceTime } from 'rxjs/operators';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
 import { TagInputComponent } from './tag-input.component';
+import { ConfigStorageService, StoredDraft } from '../../../core/services/config-storage.service';
+import { APP_VERSION } from '../../../../environments/version';
 
 @Component({
   selector: 'app-config-form',
   standalone: true,
-  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent],
+  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, DatePipe],
   templateUrl: './config-form.component.html'
 })
 export class ConfigFormComponent implements OnInit {
@@ -17,9 +21,14 @@ export class ConfigFormComponent implements OnInit {
   readonly facade = inject(RandomizationEngineFacade);
   readonly store = inject(StudyBuilderStore);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly storage = inject(ConfigStorageService);
 
   dropdownOpen = false;
+  draftBannerVisible = signal(false);
+  draftSavedAt = signal<string | null>(null);
+
   @ViewChild('dropdownContainer') dropdownContainer!: ElementRef;
+  @ViewChild('importFileInput') importFileInput!: ElementRef<HTMLInputElement>;
 
   form: FormGroup = this.fb.group(
     {
@@ -43,6 +52,13 @@ export class ConfigFormComponent implements OnInit {
   );
 
   ngOnInit(): void {
+    // Check for a stored draft on initialization
+    const draft = this.storage.loadDraft();
+    if (draft) {
+      this.draftSavedAt.set(draft.savedAt);
+      this.draftBannerVisible.set(true);
+    }
+
     this.form.get('strata')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((s: StratumFormValue[]) => { this.store.setStrata(s); this.syncStratumCaps(); });
@@ -51,6 +67,14 @@ export class ConfigFormComponent implements OnInit {
     this.form.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.facade.clearResults());
+
+    // Auto-save pipeline: debounced write to localStorage
+    this.form.valueChanges
+      .pipe(
+        debounceTime(1000),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.storage.saveDraft(this.extractDraftConfig()));
   }
 
   @HostListener('document:click', ['$event'])
@@ -100,6 +124,145 @@ export class ConfigFormComponent implements OnInit {
   parseCommaSeparated(value: string | null | undefined): string[] {
     if (!value) return [];
     return value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  // ── Draft Restore/Discard ──────────────────────────────────────────────────
+
+  restoreDraft(): void {
+    const draft = this.storage.loadDraft();
+    if (!draft) return;
+    this.applyDraftConfig(draft);
+    this.draftBannerVisible.set(false);
+  }
+
+  discardDraft(): void {
+    this.storage.clearDraft();
+    this.draftBannerVisible.set(false);
+  }
+
+  // ── JSON Export ────────────────────────────────────────────────────────────
+
+  exportConfig(): void {
+    const payload = {
+      schemaVersion: APP_VERSION,
+      exportedAt: new Date().toISOString(),
+      config: this.extractDraftConfig()
+    };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const protocolId = this.form.get('protocolId')?.value || 'config';
+    a.href = url;
+    a.download = `config_${protocolId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── JSON Import ────────────────────────────────────────────────────────────
+
+  triggerImport(): void {
+    this.importFileInput?.nativeElement.click();
+  }
+
+  onImportFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const parsed = JSON.parse(text);
+
+        // Structural validation
+        const cfg = parsed?.config ?? parsed;
+        if (
+          !Array.isArray(cfg?.arms) ||
+          !Array.isArray(cfg?.strata) ||
+          !Array.isArray(cfg?.stratumCaps) ||
+          typeof cfg?.protocolId !== 'string' ||
+          typeof cfg?.sitesStr !== 'string'
+        ) {
+          alert('Invalid configuration file. The file does not contain the expected structure (arms, strata, stratumCaps).');
+          return;
+        }
+
+        this.applyDraftConfig({ savedAt: new Date().toISOString(), schemaVersion: parsed.schemaVersion ?? '', config: cfg });
+        this.draftBannerVisible.set(false);
+      } catch {
+        alert('Unable to parse the selected file. Please select a valid JSON configuration file.');
+      } finally {
+        // Reset the input so the same file can be re-imported
+        input.value = '';
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ── Private helpers ────────────────────────────────────────────────────────
+
+  private extractDraftConfig() {
+    const v = this.form.value;
+    return {
+      protocolId: v.protocolId ?? '',
+      studyName: v.studyName ?? '',
+      phase: v.phase ?? '',
+      arms: (v.arms ?? []) as { id: string; name: string; ratio: number }[],
+      strata: (v.strata ?? []) as { id: string; name: string; levelsStr: string }[],
+      sitesStr: v.sitesStr ?? '',
+      blockSizesStr: v.blockSizesStr ?? '',
+      stratumCaps: (v.stratumCaps ?? []) as { levels: string[]; cap: number }[],
+      seed: v.seed ?? '',
+      subjectIdMask: v.subjectIdMask ?? ''
+    };
+  }
+
+  private applyDraftConfig(draft: StoredDraft): void {
+    const cfg = draft.config;
+    this.form.patchValue({
+      protocolId: cfg.protocolId,
+      studyName: cfg.studyName,
+      phase: cfg.phase,
+      sitesStr: cfg.sitesStr,
+      blockSizesStr: cfg.blockSizesStr,
+      seed: cfg.seed,
+      subjectIdMask: cfg.subjectIdMask
+    }, { emitEvent: false });
+
+    this.arms.clear({ emitEvent: false });
+    (cfg.arms ?? []).forEach((a: { id: string; name: string; ratio: number }) =>
+      this.arms.push(
+        this.fb.group({ id: [a.id], name: [a.name], ratio: [a.ratio, [Validators.required, Validators.min(1)]] }),
+        { emitEvent: false }
+      )
+    );
+
+    this.strata.clear({ emitEvent: false });
+    (cfg.strata ?? []).forEach((s: { id: string; name: string; levelsStr: string }) =>
+      this.strata.push(
+        this.fb.group({ id: [s.id], name: [s.name], levelsStr: [s.levelsStr, Validators.required] }),
+        { emitEvent: false }
+      )
+    );
+
+    this.form.updateValueAndValidity();
+    this.store.setStrata(this.strata.value as StratumFormValue[]);
+    this.syncStratumCaps();
+
+    // Rebuild stratumCaps with saved cap values
+    if (cfg.stratumCaps?.length) {
+      const savedCaps = cfg.stratumCaps as { levels: string[]; cap: number }[];
+      const capsArray = this.stratumCaps;
+      for (let i = 0; i < capsArray.length; i++) {
+        const key = (capsArray.at(i).get('levels')?.value as string[]).join('|');
+        const saved = savedCaps.find(c => c.levels.join('|') === key);
+        if (saved) {
+          capsArray.at(i).get('cap')?.setValue(saved.cap, { emitEvent: false });
+        }
+      }
+    }
   }
 
   addArm(): void {

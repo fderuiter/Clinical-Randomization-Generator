@@ -3,6 +3,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { ConfigFormComponent } from './config-form.component';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { StudyBuilderStore } from '../store/study-builder.store';
+import { ConfigStorageService } from '../../../core/services/config-storage.service';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
 
@@ -10,6 +11,7 @@ describe('ConfigFormComponent (domain)', () => {
   let component: ConfigFormComponent;
   let fixture: ComponentFixture<ConfigFormComponent>;
   let mockFacade: any;
+  let mockStorage: any;
 
   beforeEach(async () => {
     mockFacade = {
@@ -25,10 +27,18 @@ describe('ConfigFormComponent (domain)', () => {
       clearResults: vi.fn()
     };
 
+    mockStorage = {
+      saveDraft: vi.fn(),
+      loadDraft: vi.fn().mockReturnValue(null),
+      clearDraft: vi.fn(),
+      hasDraft: vi.fn().mockReturnValue(false)
+    };
+
     await TestBed.configureTestingModule({
       imports: [ReactiveFormsModule, ConfigFormComponent],
       providers: [
         { provide: RandomizationEngineFacade, useValue: mockFacade },
+        { provide: ConfigStorageService, useValue: mockStorage },
         StudyBuilderStore
       ]
     }).compileComponents();
@@ -293,6 +303,159 @@ describe('ConfigFormComponent (domain)', () => {
 
     it('should filter out empty segments created by consecutive commas', () => {
       expect(component.parseCommaSeparated('a,,b')).toEqual(['a', 'b']);
+    });
+  });
+
+  // ── Draft Restore/Discard ──────────────────────────────────────────────────
+
+  describe('Draft restore/discard banner', () => {
+    it('should NOT show the draft banner when no draft is stored', () => {
+      expect(component.draftBannerVisible()).toBe(false);
+    });
+
+    it('should show the draft banner on init when a draft exists', async () => {
+      const draft = {
+        schemaVersion: 'v1.5.1',
+        savedAt: new Date().toISOString(),
+        config: {
+          protocolId: 'SAVED-001', studyName: 'Saved Study', phase: 'II',
+          arms: [{ id: 'A', name: 'Active', ratio: 1 }, { id: 'B', name: 'Placebo', ratio: 1 }],
+          strata: [], sitesStr: '101', blockSizesStr: '4', stratumCaps: [], seed: '', subjectIdMask: '[SiteID]-[001]'
+        }
+      };
+      mockStorage.loadDraft.mockReturnValue(draft);
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [ReactiveFormsModule, ConfigFormComponent],
+        providers: [
+          { provide: RandomizationEngineFacade, useValue: mockFacade },
+          { provide: ConfigStorageService, useValue: mockStorage },
+          StudyBuilderStore
+        ]
+      }).compileComponents();
+
+      const f = TestBed.createComponent(ConfigFormComponent);
+      f.detectChanges();
+      expect(f.componentInstance.draftBannerVisible()).toBe(true);
+    });
+
+    it('should call clearDraft() and hide banner when discardDraft() is called', () => {
+      component.draftBannerVisible.set(true);
+      component.discardDraft();
+      expect(mockStorage.clearDraft).toHaveBeenCalled();
+      expect(component.draftBannerVisible()).toBe(false);
+    });
+
+    it('should restore form values and hide banner when restoreDraft() is called', () => {
+      const draft = {
+        schemaVersion: 'v1.5.1',
+        savedAt: new Date().toISOString(),
+        config: {
+          protocolId: 'RESTORED-001', studyName: 'Restored Study', phase: 'III',
+          arms: [{ id: 'A', name: 'RestoreArm', ratio: 2 }, { id: 'B', name: 'Placebo', ratio: 1 }],
+          strata: [{ id: 'age', name: 'Age', levelsStr: '<65, >=65' }],
+          sitesStr: '101, 102', blockSizesStr: '4, 6', stratumCaps: [], seed: 'myseed', subjectIdMask: '[SiteID]-[001]'
+        }
+      };
+      mockStorage.loadDraft.mockReturnValue(draft);
+      component.draftBannerVisible.set(true);
+      component.restoreDraft();
+
+      expect(component.form.get('protocolId')?.value).toBe('RESTORED-001');
+      expect(component.form.get('studyName')?.value).toBe('Restored Study');
+      expect(component.arms.length).toBe(2);
+      expect((component.arms.at(0).value as { name: string }).name).toBe('RestoreArm');
+      expect(component.strata.length).toBe(1);
+      expect(component.draftBannerVisible()).toBe(false);
+    });
+
+    it('should do nothing when restoreDraft() is called but no draft exists', () => {
+      mockStorage.loadDraft.mockReturnValue(null);
+      const protocolIdBefore = component.form.get('protocolId')?.value;
+      component.restoreDraft();
+      expect(component.form.get('protocolId')?.value).toBe(protocolIdBefore);
+    });
+  });
+
+  // ── JSON Import / Export ───────────────────────────────────────────────────
+
+  describe('onImportFileSelected()', () => {
+    it('should populate the form with a valid config JSON file', () => {
+      const configData = {
+        schemaVersion: 'v1.5.1',
+        exportedAt: new Date().toISOString(),
+        config: {
+          protocolId: 'IMP-001', studyName: 'Imported Study', phase: 'I',
+          arms: [{ id: 'A', name: 'ImportArm', ratio: 1 }, { id: 'B', name: 'Control', ratio: 1 }],
+          strata: [], sitesStr: 'Site A', blockSizesStr: '2', stratumCaps: [], seed: '', subjectIdMask: '[SiteID]-[001]'
+        }
+      };
+      const jsonStr = JSON.stringify(configData);
+      const file = new File([jsonStr], 'config_IMP-001.json', { type: 'application/json' });
+      const event = { target: { files: [file], value: '' } } as unknown as Event;
+
+      return new Promise<void>((resolve) => {
+        // Patch FileReader to synchronously call onload
+        const originalFileReader = window.FileReader;
+        (window as any).FileReader = class {
+          onload: ((e: any) => void) | null = null;
+          readAsText(_file: File) {
+            if (this.onload) {
+              this.onload({ target: { result: jsonStr } });
+            }
+          }
+        };
+        component.onImportFileSelected(event);
+        (window as any).FileReader = originalFileReader;
+        expect(component.form.get('protocolId')?.value).toBe('IMP-001');
+        expect(component.form.get('studyName')?.value).toBe('Imported Study');
+        resolve();
+      });
+    });
+
+    it('should call alert() when the uploaded JSON has invalid structure', () => {
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      const badJson = JSON.stringify({ some: 'garbage', noArms: true });
+      const file = new File([badJson], 'bad.json', { type: 'application/json' });
+      const event = { target: { files: [file], value: '' } } as unknown as Event;
+
+      const originalFileReader = window.FileReader;
+      (window as any).FileReader = class {
+        onload: ((e: any) => void) | null = null;
+        readAsText(_file: File) {
+          if (this.onload) this.onload({ target: { result: badJson } });
+        }
+      };
+      component.onImportFileSelected(event);
+      (window as any).FileReader = originalFileReader;
+      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid configuration file'));
+      alertSpy.mockRestore();
+    });
+
+    it('should call alert() when the uploaded file is not valid JSON', () => {
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      const file = new File(['not-json!!!'], 'bad.txt', { type: 'text/plain' });
+      const event = { target: { files: [file], value: '' } } as unknown as Event;
+
+      const originalFileReader = window.FileReader;
+      (window as any).FileReader = class {
+        onload: ((e: any) => void) | null = null;
+        readAsText(_file: File) {
+          if (this.onload) this.onload({ target: { result: 'not-json!!!' } });
+        }
+      };
+      component.onImportFileSelected(event);
+      (window as any).FileReader = originalFileReader;
+      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Unable to parse'));
+      alertSpy.mockRestore();
+    });
+
+    it('should do nothing when no file is selected', () => {
+      const protocolIdBefore = component.form.get('protocolId')?.value;
+      const event = { target: { files: null, value: '' } } as unknown as Event;
+      component.onImportFileSelected(event);
+      expect(component.form.get('protocolId')?.value).toBe(protocolIdBefore);
     });
   });
 });

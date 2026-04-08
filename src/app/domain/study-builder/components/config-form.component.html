@@ -1,6 +1,35 @@
 
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-8 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
       
+      <!-- Draft Restore Banner -->
+      @if (draftBannerVisible()) {
+        <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 dark:border-amber-400 p-4 rounded-r-md" data-testid="restore-draft-banner">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="flex items-start gap-3">
+              <svg class="h-5 w-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+              <div>
+                <h3 class="text-sm font-semibold text-amber-800 dark:text-amber-200">Unsaved Trial Configuration Found</h3>
+                <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">Would you like to restore your previous session?
+                  @if (draftSavedAt()) {
+                    <span class="opacity-75"> (Last saved: {{ draftSavedAt() | date:'medium' }})</span>
+                  }
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button type="button" (click)="restoreDraft()" data-testid="restore-draft-btn" class="inline-flex items-center px-3 py-1.5 border border-amber-400 dark:border-amber-600 text-xs font-semibold rounded-lg text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-800/30 hover:bg-amber-200 dark:hover:bg-amber-800/50 transition-colors">
+                Restore
+              </button>
+              <button type="button" (click)="discardDraft()" data-testid="discard-draft-btn" class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-slate-600 text-xs font-medium rounded-lg text-gray-600 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
       <div class="mb-2 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 dark:border-blue-400 p-4 rounded-r-md">
         <div class="flex flex-col sm:flex-row sm:items-start">
           <div class="flex-shrink-0 mt-0.5">
@@ -249,7 +278,33 @@
         </div>
       </section>
 
-      <div class="pt-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3">
+      <div class="pt-4 border-t border-gray-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
+        <!-- Import / Export actions -->
+        <div class="flex items-center gap-2">
+          <!-- Hidden file input for import -->
+          <input
+            #importFileInput
+            type="file"
+            accept=".json"
+            class="hidden"
+            (change)="onImportFileSelected($event)"
+            data-testid="import-file-input"
+          >
+          <button type="button" (click)="triggerImport()" data-testid="import-config-btn" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-sm font-medium text-gray-600 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Import Config
+          </button>
+          <button type="button" (click)="exportConfig()" data-testid="export-config-btn" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-sm font-medium text-gray-600 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export Config
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3">
         <div class="relative inline-block text-left" #dropdownContainer>
           <button type="button" (click)="dropdownOpen = !dropdownOpen" [disabled]="!form.valid" class="bg-white dark:bg-slate-700 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 px-6 py-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-slate-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -274,5 +329,6 @@
         <button type="submit" [disabled]="!form.valid" class="bg-indigo-600 dark:bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
           Generate Schema
         </button>
+        </div>
       </div>
     </form>
