@@ -14,16 +14,16 @@ import { Subscription } from 'rxjs';
   standalone: true,
   template: `
     <div
-      class="flex flex-wrap gap-1.5 items-center min-h-[44px] border border-gray-300 rounded-md px-3 py-2 bg-white focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 cursor-text"
+      class="flex flex-wrap gap-1.5 items-center min-h-[44px] border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 cursor-text transition-colors"
       (click)="tagInput.focus()"
     >
       @for (tag of tags; track tag) {
-        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 select-none">
+        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 select-none">
           {{ tag }}
           <button
             type="button"
             (click)="removeTag(tag); $event.stopPropagation()"
-            class="ml-0.5 text-indigo-500 hover:text-indigo-800 focus:outline-none leading-none font-bold"
+            class="ml-0.5 text-indigo-500 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 focus:outline-none leading-none font-bold"
             [attr.aria-label]="'Remove ' + tag"
           >×</button>
         </span>
@@ -36,11 +36,11 @@ import { Subscription } from 'rxjs';
         (keydown)="onKeydown($event)"
         (blur)="onBlur()"
         [placeholder]="tags.length === 0 ? placeholder : ''"
-        class="flex-1 min-w-[80px] outline-none text-sm bg-transparent py-0.5"
+        class="flex-1 min-w-[80px] outline-none text-sm bg-transparent py-0.5 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500"
       />
     </div>
-    <p class="text-xs text-gray-400 mt-1">
-      Press <kbd class="font-mono bg-gray-100 border border-gray-200 rounded px-1">Enter</kbd>
+    <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">
+      Press <kbd class="font-mono bg-gray-100 dark:bg-slate-600 dark:text-slate-300 border border-gray-200 dark:border-slate-500 rounded px-1">Enter</kbd>
       or comma to add · Backspace removes last tag
     </p>
   `

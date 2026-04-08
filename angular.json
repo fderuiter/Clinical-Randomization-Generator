@@ -29,7 +29,15 @@
             ],
             "styles": [
               "src/styles.css"
-            ]
+            ],
+            "optimization": {
+              "scripts": true,
+              "styles": {
+                "minify": true,
+                "inlineCritical": true
+              },
+              "fonts": false
+            }
           },
           "configurations": {
             "production": {

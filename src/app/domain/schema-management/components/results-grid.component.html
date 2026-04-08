@@ -1,10 +1,10 @@
 @if (state.results(); as data) {
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+      <div class="p-6 border-b border-gray-100 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 class="text-xl font-bold text-gray-900">Generated Schema</h2>
-          <p class="text-sm text-gray-500 mt-1">
-            Protocol: {{data.metadata.protocolId}} | Seed: <span class="font-mono bg-gray-100 px-1 rounded">{{data.metadata.seed}}</span>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-slate-100">Generated Schema</h2>
+          <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
+            Protocol: {{data.metadata.protocolId}} | Seed: <span class="font-mono bg-gray-100 dark:bg-slate-700 dark:text-slate-300 px-1 rounded">{{data.metadata.seed}}</span>
           </p>
         </div>
         
@@ -12,23 +12,23 @@
           <label class="flex items-center cursor-pointer">
             <div class="relative">
               <input type="checkbox" class="sr-only" [checked]="isUnblinded()" (change)="toggleBlinding()">
-              <div class="block bg-gray-200 w-10 h-6 rounded-full transition-colors" [class.bg-indigo-500]="isUnblinded()"></div>
+              <div class="block bg-gray-200 dark:bg-slate-600 w-10 h-6 rounded-full transition-colors" [class.bg-indigo-500]="isUnblinded()" [class.dark:bg-indigo-500]="isUnblinded()"></div>
               <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform" [class.translate-x-4]="isUnblinded()"></div>
             </div>
-            <span class="ml-3 text-sm font-medium text-gray-700">
+            <span class="ml-3 text-sm font-medium text-gray-700 dark:text-slate-300">
               {{ isUnblinded() ? 'Unblinded' : 'Blinded' }}
             </span>
           </label>
           
-          <div class="h-6 w-px bg-gray-300 mx-1"></div>
+          <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-1"></div>
           
-          <button (click)="exportCsv()" class="text-sm bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-50 font-medium transition-colors flex items-center gap-1">
+          <button (click)="exportCsv()" class="text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             CSV
           </button>
-          <button (click)="exportPdf()" class="text-sm bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-50 font-medium transition-colors flex items-center gap-1">
+          <button (click)="exportPdf()" class="text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
@@ -38,34 +38,34 @@
       </div>
       
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+          <thead class="bg-gray-50 dark:bg-slate-900/50">
             <tr>
-              <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subject ID</th>
-              <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Site</th>
+              <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Subject ID</th>
+              <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Site</th>
               @for (stratum of data.metadata.strata; track stratum.id) {
-                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{stratum.name || stratum.id}}</th>
+                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">{{stratum.name || stratum.id}}</th>
               }
-              <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Block</th>
-              <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Treatment Arm</th>
+              <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Block</th>
+              <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Treatment Arm</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
+          <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
             @for (row of paginatedData(); track row.subjectId) {
-              <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-900 font-mono">{{row.subjectId}}</td>
-                <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600">{{row.site}}</td>
+              <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                <td class="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-slate-200 font-mono">{{row.subjectId}}</td>
+                <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600 dark:text-slate-400">{{row.site}}</td>
                 @for (stratum of data.metadata.strata; track stratum.id) {
-                  <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600">{{row.stratum[stratum.id]}}</td>
+                  <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600 dark:text-slate-400">{{row.stratum[stratum.id]}}</td>
                 }
-                <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600">{{row.blockNumber}} (Size: {{row.blockSize}})</td>
+                <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600 dark:text-slate-400 tabular-nums">{{row.blockNumber}} (Size: {{row.blockSize}})</td>
                 <td class="px-6 py-5 whitespace-nowrap text-sm">
                   @if (isUnblinded()) {
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300">
                       {{row.treatmentArm}}
                     </span>
                   } @else {
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-400">
                       *** BLINDED ***
                     </span>
                   }
@@ -77,19 +77,19 @@
       </div>
       
       <!-- Pagination -->
-      <div class="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between sm:px-6">
+      <div class="bg-white dark:bg-slate-800 px-4 py-3 border-t border-gray-200 dark:border-slate-700 flex items-center justify-between sm:px-6">
         <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
-            <p class="text-sm text-gray-700">
+            <p class="text-sm text-gray-700 dark:text-slate-400">
               Showing <span class="font-medium">{{startIndex() + 1}}</span> to <span class="font-medium">{{endIndex()}}</span> of <span class="font-medium">{{totalItems()}}</span> results
             </p>
           </div>
           <div>
-            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button (click)="prevPage()" [disabled]="currentPage() === 1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+            <nav class="relative z-0 inline-flex rounded-lg shadow-sm -space-x-px" aria-label="Pagination">
+              <button (click)="prevPage()" [disabled]="currentPage() === 1" class="relative inline-flex items-center px-2 py-2 rounded-l-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 transition-colors">
                 Previous
               </button>
-              <button (click)="nextPage()" [disabled]="currentPage() === totalPages()" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+              <button (click)="nextPage()" [disabled]="currentPage() === totalPages()" class="relative inline-flex items-center px-2 py-2 rounded-r-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm font-medium text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 transition-colors">
                 Next
               </button>
             </nav>
