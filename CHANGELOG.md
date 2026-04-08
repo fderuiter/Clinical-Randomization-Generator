@@ -1,3 +1,16 @@
+# [1.5.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.4.0...v1.5.0) (2026-04-08)
+
+
+### Bug Fixes
+
+* **e2e:** add data-testid to generated code pre element and update E2E selectors with timeouts ([bc6638e](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/bc6638e7dd9b1913c252610ff67ab1b54b964433))
+* **e2e:** fill seed field before opening code generator modal to avoid MissingSeedError ([09d2162](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/09d216253aa13e084b070c94feaf9db8ebaa9c76))
+
+
+### Features
+
+* implement granular error hierarchy and structured error UI for code generation ([ed83edd](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/ed83eddb66079ac3c5a5f54138dd5c3077424128))
+
 # [1.4.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.3.0...v1.4.0) (2026-04-08)
 
 
