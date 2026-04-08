@@ -188,4 +188,34 @@ describe('GeneratorStateService', () => {
       expect(service.codeLanguage()).toBe('SAS');
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // clearResults()
+  // ---------------------------------------------------------------------------
+  describe('clearResults()', () => {
+    it('should set results to null', () => {
+      service.results.set(mockResult);
+      service.clearResults();
+      expect(service.results()).toBeNull();
+    });
+
+    it('should set error to null', () => {
+      service.error.set('some error');
+      service.clearResults();
+      expect(service.error()).toBeNull();
+    });
+
+    it('should not affect config, isGenerating, or showCodeGenerator', () => {
+      service.config.set(mockConfig);
+      service.isGenerating.set(true);
+      service.showCodeGenerator.set(true);
+      service.results.set(mockResult);
+
+      service.clearResults();
+
+      expect(service.config()).toEqual(mockConfig);
+      expect(service.isGenerating()).toBe(true);
+      expect(service.showCodeGenerator()).toBe(true);
+    });
+  });
 });

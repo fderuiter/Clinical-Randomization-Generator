@@ -20,7 +20,8 @@ describe('ConfigFormComponent', () => {
       codeLanguage: signal('R'),
       generateSchema: vi.fn(),
       openCodeGenerator: vi.fn(),
-      closeCodeGenerator: vi.fn()
+      closeCodeGenerator: vi.fn(),
+      clearResults: vi.fn()
     };
 
     await TestBed.configureTestingModule({
@@ -81,6 +82,36 @@ describe('ConfigFormComponent', () => {
     expect(component.arms.length).toBe(3);
     expect(component.strata.length).toBe(3);
     expect(component.stratumCaps.length).toBe(8); // 2 * 2 * 2 = 8 combinations
+  });
+
+  it('should set correct arm names and ratios after loading the complex preset', () => {
+    component.loadPreset('complex');
+
+    const armsValue = component.arms.value as {id: string; name: string; ratio: number}[];
+    expect(armsValue[0].name).toBe('High Dose');
+    expect(armsValue[1].name).toBe('Low Dose');
+    expect(armsValue[2].name).toBe('Placebo');
+    armsValue.forEach(a => expect(a.ratio).toBe(1));
+  });
+
+  it('should overwrite all previous arm names when switching presets', () => {
+    // Start with the default state (Active, Placebo)
+    expect(component.arms.length).toBe(2);
+    expect((component.arms.at(0).value as {name: string}).name).toBe('Active');
+
+    // Load complex preset – must fully replace, not partially patch
+    component.loadPreset('complex');
+
+    expect(component.arms.length).toBe(3);
+    expect((component.arms.at(0).value as {name: string}).name).toBe('High Dose');
+    expect((component.arms.at(1).value as {name: string}).name).toBe('Low Dose');
+    expect((component.arms.at(2).value as {name: string}).name).toBe('Placebo');
+  });
+
+  it('should call clearResults() when a form field value changes', () => {
+    // Simulate an existing schema result
+    component.form.get('protocolId')?.setValue('NEW-ID');
+    expect(mockStateService.clearResults).toHaveBeenCalled();
   });
 
   it('should load the standard preset correctly', () => {

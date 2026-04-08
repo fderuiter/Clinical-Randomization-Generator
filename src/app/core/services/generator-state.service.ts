@@ -16,6 +16,11 @@ export class GeneratorStateService {
   readonly showCodeGenerator = signal(false);
   readonly codeLanguage = signal<'R' | 'SAS' | 'Python'>('R');
 
+  clearResults() {
+    this.results.set(null);
+    this.error.set(null);
+  }
+
   generateSchema(newConfig: RandomizationConfig) {
     this.config.set(newConfig);
     this.isGenerating.set(true);

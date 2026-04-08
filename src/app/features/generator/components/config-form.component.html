@@ -63,7 +63,7 @@
           </button>
         </div>
         <div formArrayName="arms" class="space-y-3">
-          @for (arm of arms.controls; track $index) {
+          @for (arm of arms.controls; track arm) {
             <div [formGroupName]="$index" class="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
               <div class="flex-1">
                 <input type="text" formControlName="name" placeholder="Arm Name (e.g., Placebo)" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border">
@@ -93,7 +93,7 @@
           @if (strata.length === 0) {
             <p class="text-sm text-gray-500 italic">No stratification factors defined. Randomization will be unstratified.</p>
           }
-          @for (stratum of strata.controls; track $index) {
+          @for (stratum of strata.controls; track stratum) {
             <div [formGroupName]="$index" class="bg-gray-50 p-4 rounded-lg border border-gray-100">
               <div class="flex justify-between items-start mb-3">
                 <div class="flex-1 mr-4">
@@ -148,7 +148,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Max Subjects per Stratum</label>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" formArrayName="stratumCaps">
-                @for (capControl of stratumCaps.controls; track i; let i = $index) {
+                @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
                   <div [formGroupName]="i" class="flex flex-col p-3 border border-gray-200 rounded-md bg-gray-50">
                     <span class="text-xs font-semibold text-gray-600 mb-1 truncate" [title]="capControl.get('levels')?.value.join(' | ')">
                       {{ capControl.get('levels')?.value.join(' | ') || 'Overall / Default' }}

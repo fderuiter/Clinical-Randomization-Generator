@@ -94,8 +94,8 @@ export class RandomizationService {
               let subjectId = config.subjectIdMask;
               subjectId = subjectId.replace('[SiteID]', site);
 
-              // Generate StratumCode (e.g., A1, B2, etc. or just join levels)
-              const stratumCode = Object.values(stratum).map(v => v.substring(0, 3).toUpperCase()).join('-');
+              // Generate StratumCode using config.strata order to guarantee stable ordering
+              const stratumCode = config.strata.map(s => (stratum[s.id] || '').substring(0, 3).toUpperCase()).join('-');
               subjectId = subjectId.replace('[StratumCode]', stratumCode);
 
               // Replace [001] with padded number

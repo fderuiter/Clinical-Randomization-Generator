@@ -1,5 +1,6 @@
-import { Component, inject, HostListener, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, HostListener, ElementRef, ViewChild, OnInit, DestroyRef } from '@angular/core';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RandomizationConfig } from '../../../models/randomization.model';
 import { GeneratorStateService } from '../../../core/services/generator-state.service';
 
@@ -9,10 +10,11 @@ import { GeneratorStateService } from '../../../core/services/generator-state.se
   imports: [ReactiveFormsModule],
   templateUrl: './config-form.component.html'
 })
-export class ConfigFormComponent {
+export class ConfigFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private eRef = inject(ElementRef);
   private state = inject(GeneratorStateService);
+  private readonly destroyRef = inject(DestroyRef);
 
   form: FormGroup = this.fb.group({
     protocolId: ['PRT-001', Validators.required],
@@ -88,11 +90,21 @@ export class ConfigFormComponent {
 
   ngOnInit() {
     // Subscribe to changes in strata to dynamically compute stratumCaps form controls
-    this.form.get('strata')?.valueChanges.subscribe(() => {
-      this.updateStratumCaps();
-    });
+    this.form.get('strata')?.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.updateStratumCaps();
+      });
     // Trigger initial calculation
     this.updateStratumCaps();
+
+    // Clear any stale schema results whenever the configuration changes so
+    // the displayed schema is always in sync with the current form state.
+    this.form.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.state.clearResults();
+      });
   }
 
   @HostListener('document:click', ['$event'])
@@ -174,7 +186,7 @@ export class ConfigFormComponent {
 
     this.strataCombinations = combinations;
     const currentCaps = this.stratumCaps.value as {levels: string[], cap: number}[];
-    this.stratumCaps.clear();
+    this.stratumCaps.clear({ emitEvent: false });
 
     combinations.forEach(combo => {
       // Try to preserve existing cap value if combo matches
@@ -184,7 +196,7 @@ export class ConfigFormComponent {
       this.stratumCaps.push(this.fb.group({
         levels: [combo],
         cap: [capValue, [Validators.required, Validators.min(1)]]
-      }));
+      }), { emitEvent: false });
     });
   }
 
