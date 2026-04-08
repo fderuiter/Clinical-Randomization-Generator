@@ -2,14 +2,16 @@ import { Component, DestroyRef, ElementRef, HostListener, inject, OnInit, ViewCh
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
+import { CdkStepperModule, StepperSelectionEvent } from '@angular/cdk/stepper';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
-import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
+import { StudyBuilderStore, StratumFormValue, StudyBuilderFormValue } from '../store/study-builder.store';
 import { TagInputComponent } from './tag-input.component';
+import { WizardStepperComponent } from './wizard-stepper.component';
 
 @Component({
   selector: 'app-config-form',
   standalone: true,
-  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent],
+  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, CdkStepperModule, WizardStepperComponent],
   templateUrl: './config-form.component.html'
 })
 export class ConfigFormComponent implements OnInit {
@@ -19,35 +21,73 @@ export class ConfigFormComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   dropdownOpen = false;
+  /** Set to true when syncStratumCaps() had to discard previously entered caps. */
+  capsWereReset = false;
+
   @ViewChild('dropdownContainer') dropdownContainer!: ElementRef;
 
-  form: FormGroup = this.fb.group(
+  // ── Nested step groups ────────────────────────────────────────────────────
+
+  /** Step 1 – Study Details */
+  studyDetailsGroup: FormGroup = this.fb.group({
+    protocolId: ['PRT-001', Validators.required],
+    studyName: ['Demo Study', Validators.required],
+    phase: ['III', Validators.required],
+    seed: [''],
+    subjectIdMask: ['[SiteID]-[StratumCode]-[001]', Validators.required]
+  });
+
+  /** Step 2 – Treatment Arms & Blocks */
+  treatmentGroup: FormGroup = this.fb.group(
     {
-      protocolId: ['PRT-001', Validators.required],
-      studyName: ['Demo Study', Validators.required],
-      phase: ['III', Validators.required],
       arms: this.fb.array([
         this.fb.group({ id: ['A'], name: ['Active'], ratio: [1, [Validators.required, Validators.min(1)]] }),
         this.fb.group({ id: ['B'], name: ['Placebo'], ratio: [1, [Validators.required, Validators.min(1)]] })
       ]),
-      strata: this.fb.array([
-        this.fb.group({ id: ['age'], name: ['Age Group'], levelsStr: ['<65, >=65', Validators.required] })
-      ]),
-      sitesStr: ['101, 102, 103', Validators.required],
-      blockSizesStr: ['4, 6', Validators.required],
-      stratumCaps: this.fb.array([]),
-      seed: [''],
-      subjectIdMask: ['[SiteID]-[StratumCode]-[001]', Validators.required]
+      blockSizesStr: ['4, 6', Validators.required]
     },
     { validators: this.blockSizesValidator.bind(this) }
   );
 
+  /** Step 3 – Sites & Strata */
+  strataGroup: FormGroup = this.fb.group({
+    sitesStr: ['101, 102, 103', Validators.required],
+    strata: this.fb.array([
+      this.fb.group({ id: ['age'], name: ['Age Group'], levelsStr: ['<65, >=65', Validators.required] })
+    ])
+  });
+
+  /** Step 4 – Caps & Limits */
+  capsGroup: FormGroup = this.fb.group({
+    stratumCaps: this.fb.array([])
+  });
+
+  /** Master form composed of the four nested groups (step 5 is review-only). */
+  form: FormGroup = this.fb.group({
+    studyDetails: this.studyDetailsGroup,
+    treatmentGroup: this.treatmentGroup,
+    strataGroup: this.strataGroup,
+    capsGroup: this.capsGroup
+  });
+
+  // ── Convenience accessors ─────────────────────────────────────────────────
+
+  get arms(): FormArray { return this.treatmentGroup.get('arms') as FormArray; }
+  get strata(): FormArray { return this.strataGroup.get('strata') as FormArray; }
+  get stratumCaps(): FormArray { return this.capsGroup.get('stratumCaps') as FormArray; }
+  get totalRatio(): number { return this.arms.controls.reduce((s, c) => s + (c.get('ratio')?.value || 0), 0); }
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+
   ngOnInit(): void {
-    this.form.get('strata')?.valueChanges
+    // Sync strata store whenever strata definitions change (no cap recalculation here).
+    this.strataGroup.get('strata')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((s: StratumFormValue[]) => { this.store.setStrata(s); this.syncStratumCaps(); });
+      .subscribe((s: StratumFormValue[]) => this.store.setStrata(s));
+
     this.store.setStrata(this.strata.value as StratumFormValue[]);
-    this.syncStratumCaps();
+
+    // Clear results whenever any form value changes.
     this.form.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.facade.clearResults());
@@ -59,15 +99,39 @@ export class ConfigFormComponent implements OnInit {
       this.dropdownOpen = false;
   }
 
-  get arms(): FormArray { return this.form.get('arms') as FormArray; }
-  get strata(): FormArray { return this.form.get('strata') as FormArray; }
-  get stratumCaps(): FormArray { return this.form.get('stratumCaps') as FormArray; }
-  get totalRatio(): number { return this.arms.controls.reduce((s, c) => s + (c.get('ratio')?.value || 0), 0); }
+  // ── Stepper event ─────────────────────────────────────────────────────────
+
+  /**
+   * Called by the wizard's (selectionChange) output.  Triggers the Cartesian
+   * product matrix calculation only when the user enters Step 4 (index 3).
+   */
+  onStepChange(event: StepperSelectionEvent): void {
+    if (event.selectedIndex === 3) {
+      this.store.setStrata(this.strata.value as StratumFormValue[]);
+      this.syncStratumCaps();
+    }
+    if (event.selectedIndex !== 3) {
+      this.capsWereReset = false;
+    }
+  }
+
+  // ── Form helpers ──────────────────────────────────────────────────────────
 
   /** Rebuild stratumCaps from the store's reactive `strataCombinations` computed signal. */
   syncStratumCaps(): void {
     const combinations = this.store.strataCombinations();
     const currentCaps = this.stratumCaps.value as { levels: string[]; cap: number }[];
+
+    // Check if the combination set has changed so we can warn the user.
+    const currentKeys = new Set(currentCaps.map(c => c.levels.join('|')));
+    const newKeys = new Set(combinations.map(c => c.join('|')));
+    const hadCustomCaps = currentCaps.some(c => c.cap !== 20);
+    const structureChanged = currentCaps.length > 0 && (
+      currentKeys.size !== newKeys.size ||
+      [...currentKeys].some(k => !newKeys.has(k))
+    );
+    this.capsWereReset = hadCustomCaps && structureChanged;
+
     this.stratumCaps.clear({ emitEvent: false });
     for (const combo of combinations) {
       const existing = currentCaps.find(c => c.levels.join('|') === combo.join('|'));
@@ -81,17 +145,23 @@ export class ConfigFormComponent implements OnInit {
   loadPreset(type: 'simple' | 'standard' | 'complex'): void {
     const { protocolId, studyName, phase, sitesStr, blockSizesStr, subjectIdMask, arms, strata } =
       this.store.getPreset(type);
-    this.form.patchValue({ protocolId, studyName, phase, sitesStr, blockSizesStr, subjectIdMask, seed: '' }, { emitEvent: false });
+
+    this.studyDetailsGroup.patchValue({ protocolId, studyName, phase, subjectIdMask, seed: '' }, { emitEvent: false });
+    this.treatmentGroup.patchValue({ blockSizesStr }, { emitEvent: false });
+
     this.arms.clear({ emitEvent: false });
     arms.forEach(a => this.arms.push(
       this.fb.group({ id: [a.id], name: [a.name], ratio: [a.ratio, [Validators.required, Validators.min(1)]] }),
       { emitEvent: false }
     ));
+
+    this.strataGroup.patchValue({ sitesStr }, { emitEvent: false });
     this.strata.clear({ emitEvent: false });
     strata.forEach(s => this.strata.push(
       this.fb.group({ id: [s.id], name: [s.name], levelsStr: [s.levelsStr, Validators.required] }),
       { emitEvent: false }
     ));
+
     this.form.updateValueAndValidity();
     this.store.setStrata(this.strata.value as StratumFormValue[]);
     this.syncStratumCaps();
@@ -106,23 +176,23 @@ export class ConfigFormComponent implements OnInit {
     this.arms.push(this.fb.group({
       id: [String.fromCharCode(65 + this.arms.length)], name: [''], ratio: [1, [Validators.required, Validators.min(1)]]
     }));
-    this.form.updateValueAndValidity();
+    this.treatmentGroup.updateValueAndValidity();
   }
 
   removeArm(index: number): void {
-    if (this.arms.length > 2) { this.arms.removeAt(index); this.form.updateValueAndValidity(); }
+    if (this.arms.length > 2) { this.arms.removeAt(index); this.treatmentGroup.updateValueAndValidity(); }
   }
 
   incrementRatio(index: number): void {
     const ctrl = this.arms.at(index).get('ratio');
     if (ctrl) { ctrl.setValue((ctrl.value || 0) + 1); }
-    this.form.updateValueAndValidity();
+    this.treatmentGroup.updateValueAndValidity();
   }
 
   decrementRatio(index: number): void {
     const ctrl = this.arms.at(index).get('ratio');
     if (ctrl && ctrl.value > 1) { ctrl.setValue(ctrl.value - 1); }
-    this.form.updateValueAndValidity();
+    this.treatmentGroup.updateValueAndValidity();
   }
 
   addStratum(): void {
@@ -137,21 +207,44 @@ export class ConfigFormComponent implements OnInit {
     this.strata.removeAt(event.previousIndex, { emitEvent: false });
     this.strata.insert(event.currentIndex, control, { emitEvent: false });
     this.store.setStrata(this.strata.value as StratumFormValue[]);
-    this.syncStratumCaps();
   }
 
   onGenerateCode(language: 'R' | 'SAS' | 'Python'): void {
     if (this.form.valid) {
-      try { this.facade.openCodeGenerator(this.store.buildConfig(this.form.value), language); this.dropdownOpen = false; }
-      catch (e) { console.error('Error generating code config:', e); alert('Error generating code. Please check your configuration.'); }
+      try {
+        this.facade.openCodeGenerator(this.store.buildConfig(this.flatFormValue), language);
+        this.dropdownOpen = false;
+      } catch (e) { console.error('Error generating code config:', e); alert('Error generating code. Please check your configuration.'); }
     }
   }
 
   onSubmit(): void {
     if (this.form.valid) {
-      try { this.facade.generateSchema(this.store.buildConfig(this.form.value)); }
+      try { this.facade.generateSchema(this.store.buildConfig(this.flatFormValue)); }
       catch (e) { console.error('Error generating schema config:', e); alert('Error generating schema. Please check your configuration.'); }
     }
+  }
+
+  // ── Private helpers ───────────────────────────────────────────────────────
+
+  /** Flatten the nested FormGroup value back to the `StudyBuilderFormValue` shape. */
+  get flatFormValue(): StudyBuilderFormValue {
+    const sd = this.studyDetailsGroup.value;
+    const tr = this.treatmentGroup.value;
+    const sg = this.strataGroup.value;
+    const cg = this.capsGroup.value;
+    return {
+      protocolId: sd.protocolId,
+      studyName: sd.studyName,
+      phase: sd.phase,
+      seed: sd.seed,
+      subjectIdMask: sd.subjectIdMask,
+      arms: tr.arms,
+      blockSizesStr: tr.blockSizesStr,
+      sitesStr: sg.sitesStr,
+      strata: sg.strata,
+      stratumCaps: cg.stratumCaps
+    };
   }
 
   private blockSizesValidator(group: FormGroup): { invalidBlockSize: true } | null {

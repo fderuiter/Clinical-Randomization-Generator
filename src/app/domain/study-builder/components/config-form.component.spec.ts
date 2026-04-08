@@ -67,7 +67,7 @@ describe('ConfigFormComponent (domain)', () => {
   it('should load simple preset', () => {
     component.loadPreset('simple');
 
-    expect(component.form.get('protocolId')?.value).toBe('SIMP-001');
+    expect(component.studyDetailsGroup.get('protocolId')?.value).toBe('SIMP-001');
     expect(component.arms.length).toBe(2);
     expect(component.strata.length).toBe(0);
     expect(component.stratumCaps.length).toBe(1); // Default cap (no strata)
@@ -76,7 +76,7 @@ describe('ConfigFormComponent (domain)', () => {
   it('should load complex preset', () => {
     component.loadPreset('complex');
 
-    expect(component.form.get('protocolId')?.value).toBe('CMPX-003');
+    expect(component.studyDetailsGroup.get('protocolId')?.value).toBe('CMPX-003');
     expect(component.arms.length).toBe(3);
     expect(component.strata.length).toBe(3);
     expect(component.stratumCaps.length).toBe(8); // 2 * 2 * 2 = 8 combinations
@@ -105,14 +105,14 @@ describe('ConfigFormComponent (domain)', () => {
   });
 
   it('should call clearResults() when a form field value changes', () => {
-    component.form.get('protocolId')?.setValue('NEW-ID');
+    component.studyDetailsGroup.get('protocolId')?.setValue('NEW-ID');
     expect(mockFacade.clearResults).toHaveBeenCalled();
   });
 
   it('should load the standard preset correctly', () => {
     component.loadPreset('standard');
 
-    expect(component.form.get('protocolId')?.value).toBe('STD-002');
+    expect(component.studyDetailsGroup.get('protocolId')?.value).toBe('STD-002');
     expect(component.arms.length).toBe(2);
     expect(component.strata.length).toBe(1);
     expect(component.stratumCaps.length).toBe(2); // 2 age levels
@@ -123,11 +123,11 @@ describe('ConfigFormComponent (domain)', () => {
       component.onSubmit();
       expect(mockFacade.generateSchema).toHaveBeenCalledTimes(1);
       const arg = mockFacade.generateSchema.mock.calls[0][0];
-      expect(arg.protocolId).toBe(component.form.get('protocolId')?.value);
+      expect(arg.protocolId).toBe(component.studyDetailsGroup.get('protocolId')?.value);
     });
 
     it('should NOT call facade.generateSchema when the form is invalid', () => {
-      component.form.get('protocolId')?.setValue('');
+      component.studyDetailsGroup.get('protocolId')?.setValue('');
       component.onSubmit();
       expect(mockFacade.generateSchema).not.toHaveBeenCalled();
     });
@@ -154,7 +154,7 @@ describe('ConfigFormComponent (domain)', () => {
     });
 
     it('should NOT call facade.openCodeGenerator when the form is invalid', () => {
-      component.form.get('protocolId')?.setValue('');
+      component.studyDetailsGroup.get('protocolId')?.setValue('');
       component.onGenerateCode('Python');
       expect(mockFacade.openCodeGenerator).not.toHaveBeenCalled();
     });
@@ -243,37 +243,37 @@ describe('ConfigFormComponent (domain)', () => {
 
   describe('validateBlockSizes()', () => {
     it('should have no form errors when all block sizes are multiples of the total ratio', () => {
-      expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
+      expect(component.treatmentGroup.errors?.['invalidBlockSize']).toBeFalsy();
     });
 
     it('should set invalidBlockSize error when a block size is not a multiple of total ratio', () => {
-      component.form.get('blockSizesStr')?.setValue('3');
-      component.form.updateValueAndValidity();
-      expect(component.form.errors?.['invalidBlockSize']).toBe(true);
+      component.treatmentGroup.get('blockSizesStr')?.setValue('3');
+      component.treatmentGroup.updateValueAndValidity();
+      expect(component.treatmentGroup.errors?.['invalidBlockSize']).toBe(true);
     });
 
     it('should clear the error once a valid block size is restored', () => {
-      component.form.get('blockSizesStr')?.setValue('3');
-      component.form.updateValueAndValidity();
-      expect(component.form.errors?.['invalidBlockSize']).toBe(true);
+      component.treatmentGroup.get('blockSizesStr')?.setValue('3');
+      component.treatmentGroup.updateValueAndValidity();
+      expect(component.treatmentGroup.errors?.['invalidBlockSize']).toBe(true);
 
-      component.form.get('blockSizesStr')?.setValue('4');
-      component.form.updateValueAndValidity();
-      expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
+      component.treatmentGroup.get('blockSizesStr')?.setValue('4');
+      component.treatmentGroup.updateValueAndValidity();
+      expect(component.treatmentGroup.errors?.['invalidBlockSize']).toBeFalsy();
     });
 
     it('should re-run the validator after loadPreset() changes the total arm ratio', () => {
-      expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
+      expect(component.treatmentGroup.errors?.['invalidBlockSize']).toBeFalsy();
       component.loadPreset('complex');
-      expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
+      expect(component.treatmentGroup.errors?.['invalidBlockSize']).toBeFalsy();
       expect(component.form.valid).toBe(true);
     });
 
     it('should detect an invalid block size immediately after preset loading changes the ratio', () => {
       component.loadPreset('complex');
-      component.form.get('blockSizesStr')?.setValue('4');
-      component.form.updateValueAndValidity();
-      expect(component.form.errors?.['invalidBlockSize']).toBe(true);
+      component.treatmentGroup.get('blockSizesStr')?.setValue('4');
+      component.treatmentGroup.updateValueAndValidity();
+      expect(component.treatmentGroup.errors?.['invalidBlockSize']).toBe(true);
       expect(component.form.valid).toBe(false);
     });
   });
@@ -295,4 +295,28 @@ describe('ConfigFormComponent (domain)', () => {
       expect(component.parseCommaSeparated('a,,b')).toEqual(['a', 'b']);
     });
   });
+
+  describe('onStepChange()', () => {
+    it('should call syncStratumCaps when entering step index 3', () => {
+      const spy = vi.spyOn(component, 'syncStratumCaps');
+      component.onStepChange({ selectedIndex: 3, previouslySelectedIndex: 2 } as any);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT call syncStratumCaps when entering any other step', () => {
+      const spy = vi.spyOn(component, 'syncStratumCaps');
+      component.onStepChange({ selectedIndex: 0, previouslySelectedIndex: 1 } as any);
+      component.onStepChange({ selectedIndex: 1, previouslySelectedIndex: 0 } as any);
+      component.onStepChange({ selectedIndex: 2, previouslySelectedIndex: 1 } as any);
+      component.onStepChange({ selectedIndex: 4, previouslySelectedIndex: 3 } as any);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should clear capsWereReset when leaving step 4', () => {
+      component.capsWereReset = true;
+      component.onStepChange({ selectedIndex: 2, previouslySelectedIndex: 3 } as any);
+      expect(component.capsWereReset).toBe(false);
+    });
+  });
 });
+
