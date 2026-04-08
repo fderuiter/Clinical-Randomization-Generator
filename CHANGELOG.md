@@ -1,3 +1,17 @@
+# [1.7.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.6.0...v1.7.0) (2026-04-08)
+
+
+### Bug Fixes
+
+* add stable data-testid attributes to Monte Carlo modal and fix strict-mode locator collisions in Playwright tests ([07e1fea](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/07e1feade74d0ab3719dda942febe4743a37d1a7))
+* resolve merge conflict with main (v1.6.0 Schema Analytics Dashboard) and remove stray conflict marker ([285cb18](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/285cb18afe88a2235d0ee0fcfebe3a5a1d1e8bcb))
+
+
+### Features
+
+* add Monte Carlo statistical validation feature ([0cd9e96](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/0cd9e9605b37154798f310d97b5b2b275b5f1a71))
+* Monte Carlo Statistical Validation Report Generator ([b05ccc8](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/b05ccc80abfb501717e0979449fbd25ece3ce847))
+
 # [1.6.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.5.1...v1.6.0) (2026-04-08)
 
 
