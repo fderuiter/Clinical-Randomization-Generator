@@ -1,13 +1,15 @@
 import { Component, DestroyRef, ElementRef, HostListener, inject, OnInit, ViewChild } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
+import { TagInputComponent } from './tag-input.component';
 
 @Component({
   selector: 'app-config-form',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent],
   templateUrl: './config-form.component.html'
 })
 export class ConfigFormComponent implements OnInit {
@@ -111,11 +113,32 @@ export class ConfigFormComponent implements OnInit {
     if (this.arms.length > 2) { this.arms.removeAt(index); this.form.updateValueAndValidity(); }
   }
 
+  incrementRatio(index: number): void {
+    const ctrl = this.arms.at(index).get('ratio');
+    if (ctrl) { ctrl.setValue((ctrl.value || 0) + 1); }
+    this.form.updateValueAndValidity();
+  }
+
+  decrementRatio(index: number): void {
+    const ctrl = this.arms.at(index).get('ratio');
+    if (ctrl && ctrl.value > 1) { ctrl.setValue(ctrl.value - 1); }
+    this.form.updateValueAndValidity();
+  }
+
   addStratum(): void {
     this.strata.push(this.fb.group({ id: ['stratum_' + Date.now()], name: [''], levelsStr: ['', Validators.required] }));
   }
 
   removeStratum(index: number): void { this.strata.removeAt(index); }
+
+  onStrataDrop(event: CdkDragDrop<FormGroup[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const control = this.strata.at(event.previousIndex);
+    this.strata.removeAt(event.previousIndex, { emitEvent: false });
+    this.strata.insert(event.currentIndex, control, { emitEvent: false });
+    this.store.setStrata(this.strata.value as StratumFormValue[]);
+    this.syncStratumCaps();
+  }
 
   onGenerateCode(language: 'R' | 'SAS' | 'Python'): void {
     if (this.form.valid) {

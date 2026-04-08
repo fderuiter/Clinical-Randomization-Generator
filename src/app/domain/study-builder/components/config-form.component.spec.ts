@@ -186,6 +186,24 @@ describe('ConfigFormComponent (domain)', () => {
       component.arms.at(0).get('ratio')?.setValue(3);
       expect(component.totalRatio).toBe(4);
     });
+
+    it('should increment the ratio of an arm when incrementRatio() is called', () => {
+      const before = component.arms.at(0).get('ratio')?.value as number;
+      component.incrementRatio(0);
+      expect(component.arms.at(0).get('ratio')?.value).toBe(before + 1);
+    });
+
+    it('should decrement the ratio of an arm when decrementRatio() is called and ratio > 1', () => {
+      component.arms.at(0).get('ratio')?.setValue(3);
+      component.decrementRatio(0);
+      expect(component.arms.at(0).get('ratio')?.value).toBe(2);
+    });
+
+    it('should NOT decrement the ratio below 1', () => {
+      component.arms.at(0).get('ratio')?.setValue(1);
+      component.decrementRatio(0);
+      expect(component.arms.at(0).get('ratio')?.value).toBe(1);
+    });
   });
 
   describe('strata management', () => {
@@ -200,6 +218,26 @@ describe('ConfigFormComponent (domain)', () => {
       const before = component.strata.length;
       component.removeStratum(before - 1);
       expect(component.strata.length).toBe(before - 1);
+    });
+
+    it('should reorder strata via onStrataDrop()', () => {
+      // Load complex preset: 3 strata – age, gender, region
+      component.loadPreset('complex');
+      const firstId = (component.strata.at(0).value as { id: string }).id;
+      const secondId = (component.strata.at(1).value as { id: string }).id;
+
+      // Simulate dragging index 0 to index 1
+      component.onStrataDrop({ previousIndex: 0, currentIndex: 1 } as any);
+
+      expect((component.strata.at(0).value as { id: string }).id).toBe(secondId);
+      expect((component.strata.at(1).value as { id: string }).id).toBe(firstId);
+    });
+
+    it('should not change strata when onStrataDrop() has equal indices', () => {
+      component.loadPreset('standard');
+      const snapshot = component.strata.value;
+      component.onStrataDrop({ previousIndex: 0, currentIndex: 0 } as any);
+      expect(component.strata.value).toEqual(snapshot);
     });
   });
 

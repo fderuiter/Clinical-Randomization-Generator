@@ -4,34 +4,30 @@ test.describe('Code Generator Modal UI', () => {
   test.beforeEach(async ({ page }) => {
     // Add an explicit listener for console errors to catch potential download issues
     page.on('pageerror', err => console.log(`Page Error: ${err.message}`));
-    await page.goto('http://localhost:4200');
+    await page.goto('http://localhost:4200/generator');
   });
 
   test('should generate, display, and download code in all three languages', async ({ page }) => {
-    // Navigate to generator page
-    const getStartedBtn = page.getByRole('link', { name: /Get Started/i });
-    if (await getStartedBtn.isVisible()) {
-      await getStartedBtn.click();
-    }
-
     // Fill required form fields to enable code generation
     await page.getByLabel(/Protocol ID/i).fill('TEST-PRT-123');
     await page.getByLabel(/Study Name/i).fill('End-to-end Test Study');
     await page.locator('#phase').selectOption({ label: 'Phase II' });
 
-    // Fill Arm details
-    const armInputs = page.getByPlaceholder(/Arm Name/i);
-    await expect(armInputs.nth(0)).toBeVisible();
-    await armInputs.nth(0).fill('Placebo');
+    // Arm Name inputs — use stable data-testid to avoid placeholder ambiguity (card-based UI)
+    const armInputs = page.getByTestId('arm-name-input');
+    await expect(armInputs.first()).toBeVisible({ timeout: 10000 });
+    await armInputs.first().fill('Placebo');
 
-    const ratioInputs = page.getByPlaceholder(/Ratio/i);
-    await expect(ratioInputs.nth(0)).toBeVisible();
-    await ratioInputs.nth(0).fill('1');
+    // Ratio is now a stepper — verify it shows the default value of 1
+    const ratioValue = page.locator('span.tabular-nums').first();
+    await expect(ratioValue).toHaveText('1');
 
-    // Fill Site Details
-    const siteInputs = page.locator('#sitesStr');
-    await expect(siteInputs).toBeVisible();
-    await siteInputs.fill('Site-001');
+    // Fill Site Details (now a tag-input component).
+    // The inner <input> placeholder is hidden when chips already exist, so scope via the "Sites" label.
+    const siteInput = page.locator('label:has-text("Sites") + app-tag-input input');
+    await expect(siteInput).toBeVisible();
+    await siteInput.fill('Site-001');
+    await siteInput.press('Enter');
 
     // Fill Block Size Details
     const blockInputs = page.locator('#blockSizesStr');
