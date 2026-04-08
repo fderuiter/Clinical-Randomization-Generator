@@ -1,10 +1,13 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
+import { JsonPipe } from '@angular/common';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { CodeGeneratorService } from '../services/code-generator.service';
+import { CodeGenerationError } from '../errors/code-generation-errors';
 
 @Component({
   selector: 'app-code-generator-modal',
   standalone: true,
+  imports: [JsonPipe],
   templateUrl: './code-generator-modal.component.html'
 })
 export class CodeGeneratorModalComponent implements OnInit {
@@ -13,25 +16,46 @@ export class CodeGeneratorModalComponent implements OnInit {
 
   activeTab = signal<'R' | 'SAS' | 'Python'>('R');
   copied = signal(false);
+  errorState = signal<CodeGenerationError | null>(null);
+  generatedCode = signal<string>('');
 
   ngOnInit() {
     this.activeTab.set(this.state.codeLanguage());
+    this.refreshCode();
   }
 
   get currentCode(): string {
-    const config = this.state.config();
-    if (!config) return '';
+    return this.generatedCode();
+  }
 
+  setActiveTab(tab: 'R' | 'SAS' | 'Python') {
+    this.activeTab.set(tab);
+    this.refreshCode();
+  }
+
+  private refreshCode() {
+    const config = this.state.config();
+    this.errorState.set(null);
+    if (!config) {
+      this.generatedCode.set('');
+      return;
+    }
     try {
-      switch (this.activeTab()) {
-        case 'R': return this.codeGenService.generateR(config);
-        case 'SAS': return this.codeGenService.generateSas(config);
-        case 'Python': return this.codeGenService.generatePython(config);
-        default: return '';
-      }
+      const code = this.codeGenService.generate(this.activeTab(), config);
+      this.generatedCode.set(code);
     } catch (e) {
       console.error('Error generating code:', e);
-      return 'Error generating code. Please check your configuration.';
+      if (e instanceof CodeGenerationError) {
+        this.errorState.set(e);
+      } else {
+        // Wrap unexpected errors in a generic CodeGenerationError so the UI can display them.
+        const wrapped = new CodeGenerationError(
+          e instanceof Error ? e.message : 'An unexpected error occurred during code generation.',
+          config
+        );
+        this.errorState.set(wrapped);
+      }
+      this.generatedCode.set('');
     }
   }
 
@@ -39,6 +63,17 @@ export class CodeGeneratorModalComponent implements OnInit {
     navigator.clipboard.writeText(this.currentCode);
     this.copied.set(true);
     setTimeout(() => this.copied.set(false), 2000);
+  }
+
+  copyErrorLog() {
+    const err = this.errorState();
+    if (!err) return;
+    const payload = {
+      errorName: err.name,
+      message: err.message,
+      context: err.context
+    };
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
   }
 
   downloadCode() {

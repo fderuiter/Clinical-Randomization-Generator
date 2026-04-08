@@ -1,6 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { CodeGeneratorService } from './code-generator.service';
 import { RandomizationConfig } from '../../core/models/randomization.model';
+import {
+  ConfigurationValidationError,
+  MissingSeedError,
+} from '../errors/code-generation-errors';
 
 describe('CodeGeneratorService', () => {
   let service: CodeGeneratorService;
@@ -513,6 +517,56 @@ describe('CodeGeneratorService', () => {
       expect(r).toMatch(/Generated At: \d{4}-\d{2}-\d{2}/);
       expect(py).toMatch(/Generated At: \d{4}-\d{2}-\d{2}/);
       expect(sas).toMatch(/Generated At: \d{4}-\d{2}-\d{2}/);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // generate() dispatcher and error hierarchy
+  // ---------------------------------------------------------------------------
+  describe('generate()', () => {
+    it('should delegate to generateR for language "R"', () => {
+      const code = service.generate('R', minimalConfig);
+      expect(code).toContain('set.seed(');
+    });
+
+    it('should delegate to generatePython for language "Python"', () => {
+      const code = service.generate('Python', minimalConfig);
+      expect(code).toContain('np.random.default_rng(');
+    });
+
+    it('should delegate to generateSas for language "SAS"', () => {
+      const code = service.generate('SAS', minimalConfig);
+      expect(code).toContain('%let seed =');
+    });
+  });
+
+  describe('ConfigurationValidationError', () => {
+    it('should throw ConfigurationValidationError when arms array is empty', () => {
+      const noArmsConfig = { ...minimalConfig, arms: [] };
+      expect(() => service.generate('R', noArmsConfig)).toThrow(ConfigurationValidationError);
+    });
+
+    it('should throw ConfigurationValidationError when blockSizes array is empty', () => {
+      const noBlocksConfig = { ...minimalConfig, blockSizes: [] };
+      expect(() => service.generate('R', noBlocksConfig)).toThrow(ConfigurationValidationError);
+    });
+  });
+
+  describe('MissingSeedError', () => {
+    it('should throw MissingSeedError when seed is an empty string', () => {
+      const noSeedConfig = { ...minimalConfig, seed: '' };
+      expect(() => service.generate('R', noSeedConfig)).toThrow(MissingSeedError);
+    });
+
+    it('should include the language name in the MissingSeedError message', () => {
+      const noSeedConfig = { ...minimalConfig, seed: '   ' };
+      try {
+        service.generate('Python', noSeedConfig);
+        throw new Error('Expected MissingSeedError but no error was thrown');
+      } catch (e) {
+        expect(e).toBeInstanceOf(MissingSeedError);
+        expect((e as MissingSeedError).message).toContain('Python');
+      }
     });
   });
 });
