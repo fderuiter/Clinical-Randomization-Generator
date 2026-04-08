@@ -3,12 +3,13 @@ import { DOCUMENT } from '@angular/common';
 import { ConfigFormComponent } from './config-form.component';
 import { ResultsGridComponent } from '../../schema-management/components/results-grid.component';
 import { CodeGeneratorModalComponent } from '../../schema-management/components/code-generator-modal.component';
+import { SchemaAnalyticsDashboardComponent } from '../../schema-management/components/schema-analytics-dashboard.component';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-generator',
-  imports: [ConfigFormComponent, ResultsGridComponent, CodeGeneratorModalComponent],
+  imports: [ConfigFormComponent, ResultsGridComponent, CodeGeneratorModalComponent, SchemaAnalyticsDashboardComponent],
   template: `
     <div class="space-y-8">
       <!-- Intro -->
@@ -52,9 +53,13 @@ import { RandomizationEngineFacade } from '../../randomization-engine/randomizat
         </div>
       }
 
-      <!-- Results Grid -->
+      <!-- Results Section: Analytics Dashboard + Grid -->
       @if (state.results() && !state.isGenerating()) {
-        <div id="results-section">
+        <div id="results-section" class="space-y-6">
+          <!-- Schema Analytics Dashboard (charts + active-filter HUD) -->
+          <app-schema-analytics-dashboard></app-schema-analytics-dashboard>
+
+          <!-- Results Grid -->
           <app-results-grid></app-results-grid>
         </div>
       }
