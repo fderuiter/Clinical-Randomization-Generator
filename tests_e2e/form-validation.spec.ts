@@ -118,9 +118,11 @@ test.describe('Form Validation and Configuration', () => {
     const strataRows = page.locator('[formArrayName="strata"] > div');
     await expect(strataRows).toHaveCount(1, { timeout: 5000 });
 
-    // Type two levels into the new stratum's levels tag-input using its placeholder
-    // (placeholder is visible because the new factor starts with no chips)
-    const levelsInput = page.getByPlaceholder(/e\.g\., <65/i).first();
+    // Scope to the first stratum row and target the real <input> inside app-tag-input.
+    // getByPlaceholder is avoided here because the placeholder attribute is also set on the
+    // <app-tag-input> host element, causing Playwright to pick up the non-fillable host first.
+    const firstStratumRow = strataRows.first();
+    const levelsInput = firstStratumRow.locator('app-tag-input input').first();
     await levelsInput.waitFor({ state: 'visible', timeout: 10000 });
     await levelsInput.fill('Level1');
     await levelsInput.press('Enter');
