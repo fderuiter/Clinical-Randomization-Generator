@@ -3,7 +3,6 @@ import { RandomizationConfig } from '../../core/models/randomization.model';
 import { APP_VERSION } from '../../../../environments/version';
 import {
   ConfigurationValidationError,
-  MissingSeedError,
   StrataParsingError,
   TemplateCompilationError,
   UnsupportedLanguageError,
@@ -27,18 +26,15 @@ export class CodeGeneratorService {
 
   /**
    * Phase 1 – Pre-flight validation.
-   * Throws {@link ConfigurationValidationError} or {@link MissingSeedError} when the
-   * config is structurally invalid before any template work begins.
+   * Throws {@link ConfigurationValidationError} when the config is structurally
+   * invalid before any template work begins.
    */
-  private validateConfig(language: string, config: RandomizationConfig): void {
+  private validateConfig(_language: string, config: RandomizationConfig): void {
     if (!config.arms || config.arms.length === 0) {
       throw new ConfigurationValidationError('Arms array is empty. At least one treatment arm is required.', config);
     }
     if (!config.blockSizes || config.blockSizes.length === 0) {
       throw new ConfigurationValidationError('Block sizes array is empty. At least one block size is required.', config);
-    }
-    if (!config.seed || config.seed.trim() === '') {
-      throw new MissingSeedError(language, config);
     }
   }
 
@@ -49,14 +45,13 @@ export class CodeGeneratorService {
   private isKnownError(e: unknown): boolean {
     return (
       e instanceof StrataParsingError ||
-      e instanceof MissingSeedError ||
       e instanceof ConfigurationValidationError
     );
   }
 
   private hashCode(str: string | undefined): number {
-    // Note: RandomizationService.generateSchema always sets a seed before this runs,
-    // so this fallback path should not be reached in normal usage.
+    // When no seed is provided the generator picks a random numeric seed, matching the
+    // "Auto-generated if empty" label shown in the UI.
     if (!str) return Math.floor(Math.random() * 1000000);
     const s = String(str);
     let hash = 0;
