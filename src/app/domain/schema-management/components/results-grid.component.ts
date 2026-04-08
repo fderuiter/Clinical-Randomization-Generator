@@ -1,5 +1,6 @@
-import { Component, computed, signal, inject } from '@angular/core';
+import { Component, computed, effect, signal, inject } from '@angular/core';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
+import { SchemaViewStateService } from '../services/schema-view-state.service';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { APP_VERSION } from '../../../../environments/version';
@@ -14,24 +15,52 @@ import { APP_VERSION } from '../../../../environments/version';
 })
 export class ResultsGridComponent {
   public state = inject(RandomizationEngineFacade);
+  public viewState = inject(SchemaViewStateService);
 
-  isUnblinded = signal(false);
+  /**
+   * Expose the shared `isUnblinded` signal directly so existing template
+   * bindings and unit-test assertions (component.isUnblinded()) still work.
+   */
+  get isUnblinded() { return this.viewState.isUnblinded; }
+
   currentPage = signal(1);
   pageSize = 20;
 
-  totalItems = computed(() => this.state.results()?.schema.length || 0);
+  /**
+   * Total items and pagination are derived from the *filtered* dataset so
+   * that applying a chart cross-filter automatically collapses the page count.
+   */
+  totalItems = computed(() => this.viewState.filteredCount());
   totalPages = computed(() => Math.ceil(this.totalItems() / this.pageSize));
 
   startIndex = computed(() => (this.currentPage() - 1) * this.pageSize);
   endIndex = computed(() => Math.min(this.startIndex() + this.pageSize, this.totalItems()));
 
   paginatedData = computed(() => {
-    const data = this.state.results()?.schema || [];
+    const data = this.viewState.filteredSchema();
     return data.slice(this.startIndex(), this.endIndex());
   });
 
+  constructor() {
+    // Keep the SchemaViewStateService in sync whenever new results arrive.
+    effect(() => {
+      this.viewState.syncResults(this.state.results());
+    });
+
+    // Reset to page 1 when a cross-filter is applied (non-null) so the user
+    // always starts at the first page of the filtered subset.
+    // We do NOT reset when the filter is cleared (null) to avoid interfering
+    // with test setups that set currentPage before detectChanges runs.
+    effect(() => {
+      const filter = this.viewState.activeFilter();
+      if (filter !== null) {
+        this.currentPage.set(1);
+      }
+    });
+  }
+
   toggleBlinding() {
-    this.isUnblinded.update(v => !v);
+    this.viewState.toggleBlinding();
   }
 
   prevPage() {

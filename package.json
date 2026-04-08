@@ -1,6 +1,6 @@
 {
   "name": "clinical-randomization-generator",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -27,6 +27,7 @@
     "@angular/router": "^21.0.0",
     "@angular/ssr": "^21.0.0",
     "@ngrx/signals": "^21.1.0",
+    "echarts": "^6.0.0",
     "express": "^5.1.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",

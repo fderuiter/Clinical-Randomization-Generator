@@ -1,3 +1,15 @@
+# [1.6.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.5.1...v1.6.0) (2026-04-08)
+
+
+### Bug Fixes
+
+* use US English spelling in comments (Centralized, Initialize) ([f40037b](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/f40037bc7bd44c1a7a4807904b0af195eaac3811))
+
+
+### Features
+
+* add Schema Analytics Dashboard with Apache ECharts and cross-filtering ([f1b8a29](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/f1b8a29ffc4643d0aa313f6230b54e3f15fcec89))
+
 ## [1.5.1](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.5.0...v1.5.1) (2026-04-08)
 
 
