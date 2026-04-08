@@ -3,7 +3,6 @@ import { RandomizationConfig } from '../../core/models/randomization.model';
 import { APP_VERSION } from '../../../../environments/version';
 import {
   ConfigurationValidationError,
-  MissingSeedError,
   StrataParsingError,
   TemplateCompilationError,
   UnsupportedLanguageError,
@@ -12,11 +11,17 @@ import {
 @Injectable({ providedIn: 'root' })
 export class CodeGeneratorService {
   /**
+   * Upper bound (exclusive) for auto-generated seeds when the user leaves the
+   * seed field empty.  Kept well within R's `set.seed()` / Python's
+   * `SeedSequence` / SAS's `call streaminit` valid range (0..2^31-2).
+   */
+  private static readonly MAX_AUTO_SEED = 1_000_000;
+  /**
    * Phase 0 – Language dispatch entry point.
    * Runs pre-flight config validation, then delegates to the appropriate generator.
    */
   generate(language: 'R' | 'SAS' | 'Python', config: RandomizationConfig): string {
-    this.validateConfig(language, config);
+    this.validateConfig(config);
     switch (language) {
       case 'R':      return this.generateR(config);
       case 'SAS':    return this.generateSas(config);
@@ -27,18 +32,15 @@ export class CodeGeneratorService {
 
   /**
    * Phase 1 – Pre-flight validation.
-   * Throws {@link ConfigurationValidationError} or {@link MissingSeedError} when the
-   * config is structurally invalid before any template work begins.
+   * Throws {@link ConfigurationValidationError} when the config is structurally
+   * invalid before any template work begins.
    */
-  private validateConfig(language: string, config: RandomizationConfig): void {
+  private validateConfig(config: RandomizationConfig): void {
     if (!config.arms || config.arms.length === 0) {
       throw new ConfigurationValidationError('Arms array is empty. At least one treatment arm is required.', config);
     }
     if (!config.blockSizes || config.blockSizes.length === 0) {
       throw new ConfigurationValidationError('Block sizes array is empty. At least one block size is required.', config);
-    }
-    if (!config.seed || config.seed.trim() === '') {
-      throw new MissingSeedError(language, config);
     }
   }
 
@@ -49,15 +51,15 @@ export class CodeGeneratorService {
   private isKnownError(e: unknown): boolean {
     return (
       e instanceof StrataParsingError ||
-      e instanceof MissingSeedError ||
       e instanceof ConfigurationValidationError
     );
   }
 
   private hashCode(str: string | undefined): number {
-    // Note: RandomizationService.generateSchema always sets a seed before this runs,
-    // so this fallback path should not be reached in normal usage.
-    if (!str) return Math.floor(Math.random() * 1000000);
+    // When no seed is provided the generator picks a random numeric seed.
+    // The range [0, MAX_AUTO_SEED) is well within the valid seed range for
+    // R set.seed(), Python SeedSequence, and SAS call streaminit (0..2^31-2).
+    if (!str) return Math.floor(Math.random() * CodeGeneratorService.MAX_AUTO_SEED);
     const s = String(str);
     let hash = 0;
     for (let i = 0; i < s.length; i++) {
