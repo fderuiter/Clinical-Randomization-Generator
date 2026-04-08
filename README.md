@@ -166,5 +166,5 @@ code script via `src/environments/version.ts`.
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+GNU Affero General Public License v3.0 — see [LICENSE](LICENSE) for details.
 
