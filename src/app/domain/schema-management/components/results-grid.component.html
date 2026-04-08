@@ -53,7 +53,7 @@
           <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
             @for (row of paginatedData(); track row.subjectId) {
               <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-                <td class="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-slate-200 font-mono tabular-nums">{{row.subjectId}}</td>
+                <td class="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-slate-200 font-mono">{{row.subjectId}}</td>
                 <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600 dark:text-slate-400">{{row.site}}</td>
                 @for (stratum of data.metadata.strata; track stratum.id) {
                   <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600 dark:text-slate-400">{{row.stratum[stratum.id]}}</td>
