@@ -117,7 +117,7 @@ describe('GeneratorComponent (domain)', () => {
     fixture.detectChanges();
     // The static error banner has been removed; errors are now surfaced via
     // the ToastService overlay, not as inline DOM elements.
-    expect(fixture.nativeElement.querySelector('.bg-red-50')).toBeFalsy();
+    expect(fixture.nativeElement.querySelector('[data-testid="generator-inline-error"]')).toBeFalsy();
     expect(fixture.nativeElement.textContent).not.toContain('Block size error');
   });
 
@@ -126,7 +126,7 @@ describe('GeneratorComponent (domain)', () => {
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     // No red error banner present
-    expect(el.querySelector('.bg-red-50')).toBeFalsy();
+    expect(el.querySelector('[data-testid="generator-inline-error"]')).toBeFalsy();
   });
 
   it('should not render inline error text when the error signal changes reactively', () => {
