@@ -278,6 +278,43 @@ describe('ConfigFormComponent (domain)', () => {
     });
   });
 
+  describe('Advanced Settings accordion', () => {
+    it('should initialize showAdvanced signal to false', () => {
+      expect(component.showAdvanced()).toBe(false);
+    });
+
+    it('should toggle showAdvanced from false to true when toggleAdvanced() is called', () => {
+      expect(component.showAdvanced()).toBe(false);
+      component.toggleAdvanced();
+      expect(component.showAdvanced()).toBe(true);
+    });
+
+    it('should toggle showAdvanced back to false on a second call', () => {
+      component.toggleAdvanced();
+      component.toggleAdvanced();
+      expect(component.showAdvanced()).toBe(false);
+    });
+
+    it('should preserve seed and subjectIdMask values regardless of showAdvanced state', () => {
+      expect(component.form.get('seed')?.value).toBeDefined();
+      expect(component.form.get('subjectIdMask')?.value).toBe('{SITE}-{STRATUM}-{SEQ:3}');
+
+      component.toggleAdvanced(); // open
+      component.form.get('seed')?.setValue('my-custom-seed');
+      component.toggleAdvanced(); // close
+      component.toggleAdvanced(); // re-open
+
+      expect(component.form.get('seed')?.value).toBe('my-custom-seed');
+    });
+
+    it('should keep the form valid regardless of whether the advanced section is open or closed', () => {
+      expect(component.form.valid).toBe(true);
+      component.toggleAdvanced();
+      expect(component.form.valid).toBe(true);
+      component.toggleAdvanced();
+      expect(component.form.valid).toBe(true);
+    });
+  });
   describe('parseCommaSeparated()', () => {
     it('should parse a comma-separated string into a trimmed string array', () => {
       expect(component.parseCommaSeparated(' a, b , c ')).toEqual(['a', 'b', 'c']);

@@ -1,8 +1,9 @@
-import { Component, DestroyRef, ElementRef, HostListener, inject, OnInit, Signal, ViewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs/operators';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
 import { TagInputComponent } from './tag-input.component';
@@ -11,7 +12,7 @@ import { previewSubjectIdMask, validateSubjectIdMask } from '../../randomization
 @Component({
   selector: 'app-config-form',
   standalone: true,
-  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent],
+  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, MatTooltipModule],
   templateUrl: './config-form.component.html'
 })
 export class ConfigFormComponent implements OnInit {
@@ -21,6 +22,8 @@ export class ConfigFormComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   dropdownOpen = false;
+  /** Controls visibility of the Advanced Settings accordion section. */
+  readonly showAdvanced = signal(false);
   @ViewChild('dropdownContainer') dropdownContainer!: ElementRef;
 
   /** Live preview text for the subject ID mask input. Reactive via RxJS → Signal. */
@@ -100,6 +103,8 @@ export class ConfigFormComponent implements OnInit {
       );
     }
   }
+
+  toggleAdvanced(): void { this.showAdvanced.update(v => !v); }
 
   loadPreset(type: 'simple' | 'standard' | 'complex'): void {
     const { protocolId, studyName, phase, sitesStr, blockSizesStr, subjectIdMask, arms, strata } =

@@ -34,8 +34,11 @@ test.describe('Code Generator Modal UI', () => {
     await expect(blockInputs).toBeVisible();
     await blockInputs.fill('2');
 
+    // Open Advanced Settings accordion to reveal the Seed input
+    await page.getByRole('button', { name: /Advanced Settings/i }).click();
+
     // Fill Random Seed (required by code generator to avoid MissingSeedError)
-    const seedInput = page.locator('#seed');
+    const seedInput = page.getByLabel(/Random Seed/i);
     await expect(seedInput).toBeVisible();
     await seedInput.fill('42');
 

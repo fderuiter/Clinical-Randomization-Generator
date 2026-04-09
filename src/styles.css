@@ -34,3 +34,27 @@
     font-feature-settings: "tnum";
   }
 }
+
+/* Advanced Settings accordion entrance animation */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.advanced-settings-panel {
+  animation: slideDown 0.2s ease-out;
+}
+
+/* Angular Material CDK tooltip – dark high-contrast style */
+.app-tooltip.mdc-tooltip .mdc-tooltip__surface {
+  background-color: #1e293b;
+  color: #f1f5f9;
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  max-width: 300px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: normal;
+  text-align: left;
+}

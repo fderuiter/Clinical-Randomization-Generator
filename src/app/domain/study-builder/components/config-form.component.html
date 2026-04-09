@@ -228,41 +228,95 @@
                 }
               </div>
             </div>
-
-            <div class="grid grid-cols-2 gap-4 pt-2">
-              <div>
-                <label for="seed" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Random Seed (Optional)</label>
-                <input id="seed" type="text" formControlName="seed" placeholder="Auto-generated if empty" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500">
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
-      <!-- Advanced -->
+      <!-- Advanced Settings Accordion -->
       <section>
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">Advanced</h2>
-        <div>
-          <label for="subjectIdMask" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Subject ID Mask</label>
-          <input id="subjectIdMask" type="text" formControlName="subjectIdMask" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border font-mono dark:placeholder-slate-500">
-          <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">
-            Tokens: <code class="font-mono">&#123;SITE&#125;</code>, <code class="font-mono">&#123;STRATUM&#125;</code>, <code class="font-mono">&#123;SEQ:n&#125;</code> (padded sequence), <code class="font-mono">&#123;RND:n&#125;</code> (random hash), <code class="font-mono">&#123;CHECKSUM&#125;</code>. Legacy: <code class="font-mono">[SiteID]</code>, <code class="font-mono">[StratumCode]</code>, <code class="font-mono">[001]</code>.
-          </p>
-          <!-- Live Preview -->
-          @if (subjectIdMaskInvalid()) {
-            <p class="mt-1.5 text-xs font-medium text-red-600 dark:text-rose-400 flex items-center gap-1" data-testid="mask-preview-error">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-              </svg>
-              {{ subjectIdPreview() }}
-            </p>
-          } @else {
-            <p class="mt-1.5 text-xs text-gray-500 dark:text-slate-400" data-testid="mask-preview">
-              <span class="font-medium text-gray-600 dark:text-slate-300">Preview:</span>
-              <code class="ml-1 font-mono">{{ subjectIdPreview() }}</code>
-            </p>
-          }
-        </div>
+        <button
+          type="button"
+          (click)="toggleAdvanced()"
+          class="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+          [attr.aria-expanded]="showAdvanced()"
+          aria-controls="advanced-settings-panel"
+        >
+          <span class="text-sm font-medium">Advanced Settings</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 transition-transform duration-200"
+            [class.rotate-180]="showAdvanced()"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        @if (showAdvanced()) {
+          <div id="advanced-settings-panel" class="advanced-settings-panel mt-4 space-y-6">
+
+            <!-- PRNG Seed -->
+            <div>
+              <div class="flex items-center gap-1.5 mb-1">
+                <label for="seed" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Random Seed (Optional)</label>
+                <button
+                  type="button"
+                  class="p-1.5 -m-1.5 rounded-full text-gray-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  aria-label="About the seed field"
+                  matTooltip="Sets the initial state of the random number generator. Save this string to guarantee you can exactly reproduce this specific schema in the future."
+                  matTooltipPosition="above"
+                  matTooltipClass="app-tooltip"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+              </div>
+              <input id="seed" type="text" formControlName="seed" placeholder="Auto-generated if empty" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500">
+            </div>
+
+            <!-- Subject ID Mask -->
+            <div>
+              <div class="flex items-center gap-1.5 mb-1">
+                <label for="subjectIdMask" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Subject ID Mask</label>
+                <button
+                  type="button"
+                  class="p-1.5 -m-1.5 rounded-full text-gray-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  aria-label="About the subject ID mask field"
+                  matTooltip="Defines the format for generated patient IDs. Use {SITE} for the site code and {SEQ:3} for a zero-padded sequential number."
+                  matTooltipPosition="above"
+                  matTooltipClass="app-tooltip"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+              </div>
+              <input id="subjectIdMask" type="text" formControlName="subjectIdMask" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border font-mono dark:placeholder-slate-500">
+              <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                Tokens: <code class="font-mono">&#123;SITE&#125;</code>, <code class="font-mono">&#123;STRATUM&#125;</code>, <code class="font-mono">&#123;SEQ:n&#125;</code> (padded sequence), <code class="font-mono">&#123;RND:n&#125;</code> (random hash), <code class="font-mono">&#123;CHECKSUM&#125;</code>. Legacy: <code class="font-mono">[SiteID]</code>, <code class="font-mono">[StratumCode]</code>, <code class="font-mono">[001]</code>.
+              </p>
+              <!-- Live Preview -->
+              @if (subjectIdMaskInvalid()) {
+                <p class="mt-1.5 text-xs font-medium text-red-600 dark:text-rose-400 flex items-center gap-1" data-testid="mask-preview-error">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                  </svg>
+                  {{ subjectIdPreview() }}
+                </p>
+              } @else {
+                <p class="mt-1.5 text-xs text-gray-500 dark:text-slate-400" data-testid="mask-preview">
+                  <span class="font-medium text-gray-600 dark:text-slate-300">Preview:</span>
+                  <code class="ml-1 font-mono">{{ subjectIdPreview() }}</code>
+                </p>
+              }
+            </div>
+
+          </div>
+        }
       </section>
 
       <div class="pt-4 border-t border-gray-200 dark:border-slate-700 flex flex-wrap justify-end gap-3">
