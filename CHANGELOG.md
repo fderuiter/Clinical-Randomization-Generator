@@ -1,3 +1,15 @@
+# [1.18.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.17.0...v1.18.0) (2026-04-09)
+
+
+### Bug Fixes
+
+* update generator spec selectors to avoid false match on BlockPreview legend ([7fa5fd5](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/7fa5fd57b885572eb5b6d870e046b01d79a0e9c6))
+
+
+### Features
+
+* implement BlockPreviewComponent for visual block allocation preview ([192c93f](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/192c93f7d28ecaf392cd90ca0a68127275bd60be))
+
 # [1.17.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.16.0...v1.17.0) (2026-04-09)
 
 
