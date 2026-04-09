@@ -450,7 +450,7 @@ for site in sites:
             if all(
                 marginal_caps.get(strata_names[i], {}).get(c[i]) is None or
                 marginal_counts.get(strata_names[i], {}).get(c[i], 0) <
-                marginal_caps[strata_names[i]][c[i]]
+                marginal_caps.get(strata_names[i], {}).get(c[i], 0)
                 for i in range(len(strata_names))
             )
         ]
@@ -523,14 +523,14 @@ else:
     const comboFidxArr: number[] = [];
     for (const combo of combos) {
       for (const s of strata) {
-        comboFidxArr.push(levelIndices.get(s.id)?.get(combo[s.id] || s.levels[0]) ?? 1);
+        comboFidxArr.push(levelIndices.get(s.id)?.get(combo[s.id] ?? s.levels[0] ?? '') ?? 1);
       }
     }
 
     // Per-factor character arrays mapping combo index → level name
     const factorLevelArrays = strata.map(s => ({
       id: s.id,
-      values: combos.map(c => (c[s.id] || s.levels[0]).replace(/'/g, "''"))
+      values: combos.map(c => (c[s.id] ?? s.levels[0] ?? '').replace(/'/g, "''"))
     }));
 
     // SAS macro variable strings
