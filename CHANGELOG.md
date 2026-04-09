@@ -1,3 +1,16 @@
+# [1.15.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.14.0...v1.15.0) (2026-04-09)
+
+
+### Bug Fixes
+
+* address code review feedback on crypto hash and clipboard handling ([ed75e6b](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/ed75e6ba6d8d78a8f5cae63d4ef9fa0cfbd4e71a))
+* replace vi.mock relative import with crypto.subtle spy; guard exportPdf spy in test ([a1624d5](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/a1624d59d2cc7257b1af9c4be6d92949c090b3b1))
+
+
+### Features
+
+* add cryptographic audit hash and certificate of generation ([7675222](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/7675222f541bfa5cf2c45aab74d8375930f30405))
+
 # [1.14.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.13.0...v1.14.0) (2026-04-09)
 
 
