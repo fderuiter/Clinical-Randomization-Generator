@@ -8,6 +8,7 @@ import { RandomizationEngineFacade } from '../../randomization-engine/randomizat
 import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
 import { TagInputComponent } from './tag-input.component';
 import { previewSubjectIdMask, validateSubjectIdMask } from '../../randomization-engine/core/subject-id-engine';
+import { RandomizationMethod } from '../../core/models/randomization.model';
 
 @Component({
   selector: 'app-config-form',
@@ -30,12 +31,15 @@ export class ConfigFormComponent implements OnInit {
   readonly subjectIdPreview: Signal<string>;
   /** True when the current mask has a syntax error. */
   readonly subjectIdMaskInvalid: Signal<boolean>;
+  /** Reactive signal for the current randomization method. */
+  readonly randomizationMethod: Signal<RandomizationMethod>;
 
   form: FormGroup = this.fb.group(
     {
       protocolId: ['PRT-001', Validators.required],
       studyName: ['Demo Study', Validators.required],
       phase: ['III', Validators.required],
+      randomizationMethod: ['PERMUTED_BLOCK', Validators.required],
       arms: this.fb.array([
         this.fb.group({ id: ['A'], name: ['Active'], ratio: [1, [Validators.required, Validators.min(1)]] }),
         this.fb.group({ id: ['B'], name: ['Placebo'], ratio: [1, [Validators.required, Validators.min(1)]] })
@@ -45,6 +49,8 @@ export class ConfigFormComponent implements OnInit {
       ]),
       sitesStr: ['101, 102, 103', Validators.required],
       blockSizesStr: ['4, 6', Validators.required],
+      biasedCoinProbability: [0.8, [Validators.required, Validators.min(0.5), Validators.max(1.0)]],
+      targetEnrollment: [60, [Validators.required, Validators.min(1)]],
       stratumCaps: this.fb.array([]),
       seed: [''],
       subjectIdMask: ['{SITE}-{STRATUM}-{SEQ:3}', Validators.required]
@@ -65,6 +71,12 @@ export class ConfigFormComponent implements OnInit {
     this.subjectIdMaskInvalid = toSignal(
       mask$.pipe(map(mask => !validateSubjectIdMask(mask).valid)),
       { initialValue: !validateSubjectIdMask(maskCtrl.value as string).valid }
+    );
+
+    const methodCtrl = this.form.get('randomizationMethod')!;
+    this.randomizationMethod = toSignal(
+      methodCtrl.valueChanges.pipe(startWith(methodCtrl.value as RandomizationMethod)),
+      { initialValue: methodCtrl.value as RandomizationMethod }
     );
   }
 
@@ -105,6 +117,12 @@ export class ConfigFormComponent implements OnInit {
   }
 
   toggleAdvanced(): void { this.showAdvanced.update(v => !v); }
+
+  /** Formats a probability value to exactly 2 decimal places for display. */
+  formatProbability(value: number | null | undefined): string {
+    const n = parseFloat(String(value ?? 0.8));
+    return isNaN(n) ? '0.80' : n.toFixed(2);
+  }
 
   loadPreset(type: 'simple' | 'standard' | 'complex'): void {
     const { protocolId, studyName, phase, sitesStr, blockSizesStr, subjectIdMask, arms, strata } =
@@ -190,6 +208,8 @@ export class ConfigFormComponent implements OnInit {
   }
 
   private blockSizesValidator(group: FormGroup): { invalidBlockSize: true } | null {
+    const method = group.get('randomizationMethod')?.value;
+    if (method === 'MINIMIZATION') return null;
     const arms = group.get('arms') as FormArray;
     const blockSizesStr = group.get('blockSizesStr')?.value as string;
     if (!arms || !blockSizesStr) return null;

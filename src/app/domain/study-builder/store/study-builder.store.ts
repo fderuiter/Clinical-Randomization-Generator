@@ -1,6 +1,6 @@
 import { computed } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
-import { RandomizationConfig } from '../../core/models/randomization.model';
+import { RandomizationConfig, RandomizationMethod } from '../../core/models/randomization.model';
 
 // ---------------------------------------------------------------------------
 // Types used internally by the store
@@ -29,6 +29,9 @@ export interface StudyBuilderFormValue {
   stratumCaps: { levels: string[]; cap: number }[];
   seed: string;
   subjectIdMask: string;
+  randomizationMethod: RandomizationMethod;
+  biasedCoinProbability: number;
+  targetEnrollment: number;
 }
 
 interface StudyBuilderState {
@@ -171,6 +174,7 @@ export const StudyBuilderStore = signalStore(
      * `RandomizationConfig` suitable for passing to the randomization engine.
      */
     buildConfig(formValue: StudyBuilderFormValue): RandomizationConfig {
+      const method: RandomizationMethod = formValue.randomizationMethod ?? 'PERMUTED_BLOCK';
       return {
         protocolId: formValue.protocolId,
         studyName: formValue.studyName,
@@ -194,7 +198,10 @@ export const StudyBuilderStore = signalStore(
           .filter((n: number) => !isNaN(n)),
         stratumCaps: formValue.stratumCaps,
         seed: formValue.seed || '',
-        subjectIdMask: formValue.subjectIdMask
+        subjectIdMask: formValue.subjectIdMask,
+        randomizationMethod: method,
+        biasedCoinProbability: method === 'MINIMIZATION' ? (formValue.biasedCoinProbability ?? 0.8) : undefined,
+        targetEnrollment: method === 'MINIMIZATION' ? (formValue.targetEnrollment ?? 0) : undefined
       };
     }
   }))

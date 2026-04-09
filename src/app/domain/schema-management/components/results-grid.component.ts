@@ -87,11 +87,17 @@ export class ResultsGridComponent {
 
   /** Number of visible table columns (used for colspan in grouped view). */
   columnCount = computed(() => {
-    /** Fixed columns: Subject ID, Site, Block, Treatment Arm, Actions. */
-    const BASE_COLUMNS = 5;
+    /** Fixed columns: Subject ID, Site, Block (hidden for minimization), Treatment Arm, Actions. */
     const data = this.state.results();
+    const isMinimization = data?.metadata.config?.randomizationMethod === 'MINIMIZATION';
+    const BASE_COLUMNS = isMinimization ? 3 : 5; // No Block Number / Block Size for minimization
     return BASE_COLUMNS + (data?.metadata.strata?.length || 0);
   });
+
+  /** True when the current results were generated via Pocock-Simon minimization. */
+  isMinimization = computed(() =>
+    this.state.results()?.metadata.config?.randomizationMethod === 'MINIMIZATION'
+  );
 
   /**
    * Flattened, heterogeneous array of BlockHeader / DataRow / BlockSummary
@@ -238,28 +244,34 @@ export class ResultsGridComponent {
     const data = this.state.results();
     if (!data) return;
 
+    const isMinimization = data.metadata.config?.randomizationMethod === 'MINIMIZATION';
     const strataHeaders = data.metadata.strata?.map(s => s.name || s.id) || [];
-    const headers = ['Subject ID', 'Site', ...strataHeaders, 'Block Number', 'Block Size', 'Treatment Arm'];
+    const blockHeaders = isMinimization ? [] : ['Block Number', 'Block Size'];
+    const headers = ['Subject ID', 'Site', ...strataHeaders, ...blockHeaders, 'Treatment Arm'];
 
     const rows = data.schema.map(r => {
       const strataValues = data.metadata.strata?.map(s => r.stratum[s.id] || '') || [];
+      const blockValues = isMinimization ? [] : [r.blockNumber.toString(), r.blockSize.toString()];
       return [
         r.subjectId,
         r.site,
         ...strataValues,
-        r.blockNumber.toString(),
-        r.blockSize.toString(),
+        ...blockValues,
         this.isUnblinded() ? r.treatmentArm : '*** BLINDED ***'
       ];
     });
 
-  const watermark = "DRAFT SCHEMA - DO NOT USE FOR ENROLLMENT. Execute the generated R/SAS/Python script to generate the official trial schema.";
-  const timestamp = new Date(data.metadata.generatedAt).toISOString();
-  const csvContent = [
-    `"${watermark}"`,
-    `# App Version: ${APP_VERSION}`,
-    `# Generated At: ${timestamp}`,
-    `# PRNG Algorithm: seedrandom (Alea)`,
+    const methodLabel = isMinimization
+      ? `Pocock-Simon Minimization (p=${data.metadata.config?.biasedCoinProbability ?? 0.8})`
+      : 'Permuted Block Randomization';
+    const watermark = "DRAFT SCHEMA - DO NOT USE FOR ENROLLMENT. Execute the generated R/SAS/Python script to generate the official trial schema.";
+    const timestamp = new Date(data.metadata.generatedAt).toISOString();
+    const csvContent = [
+      `"${watermark}"`,
+      `# App Version: ${APP_VERSION}`,
+      `# Generated At: ${timestamp}`,
+      `# PRNG Algorithm: seedrandom (Alea)`,
+      `# Randomization Method: ${methodLabel}`,
       headers.join(','),
       ...rows.map(e => e.join(','))
     ].join('\n');
@@ -278,6 +290,11 @@ export class ResultsGridComponent {
   exportPdf() {
     const data = this.state.results();
     if (!data) return;
+
+    const isMinimization = data.metadata.config?.randomizationMethod === 'MINIMIZATION';
+    const methodLabel = isMinimization
+      ? `Pocock-Simon Minimization (p=${data.metadata.config?.biasedCoinProbability ?? 0.8})`
+      : 'Permuted Block Randomization';
 
     const doc = new jsPDF();
 
@@ -298,25 +315,28 @@ export class ResultsGridComponent {
     doc.text(`App Version: ${APP_VERSION}`, 14, 42);
     doc.text(`Generated At: ${timestamp}`, 14, 48);
     doc.text(`PRNG Algorithm: seedrandom (Alea)`, 14, 54);
-    doc.text(`Random Seed: ${data.metadata.seed}`, 14, 60);
-    doc.text(`Status: ${this.isUnblinded() ? 'UNBLINDED' : 'BLINDED'}`, 14, 66);
+    doc.text(`Method: ${methodLabel}`, 14, 60);
+    doc.text(`Random Seed: ${data.metadata.seed}`, 14, 66);
+    doc.text(`Status: ${this.isUnblinded() ? 'UNBLINDED' : 'BLINDED'}`, 14, 72);
 
     const strataHeaders = data.metadata.strata?.map(s => s.name || s.id) || [];
-    const headers = [['Subject ID', 'Site', ...strataHeaders, 'Block', 'Treatment Arm']];
+    const blockHeaders = isMinimization ? [] : ['Block'];
+    const headers = [['Subject ID', 'Site', ...strataHeaders, ...blockHeaders, 'Treatment Arm']];
 
     const rows = data.schema.map(r => {
       const strataValues = data.metadata.strata?.map(s => r.stratum[s.id] || '') || [];
+      const blockValues = isMinimization ? [] : [`${r.blockNumber} (n=${r.blockSize})`];
       return [
         r.subjectId,
         r.site,
         ...strataValues,
-        `${r.blockNumber} (n=${r.blockSize})`,
+        ...blockValues,
         this.isUnblinded() ? r.treatmentArm : '*** BLINDED ***'
       ];
     });
 
     autoTable(doc, {
-      startY: 72,
+      startY: 78,
       head: headers,
       body: rows,
       theme: 'grid',

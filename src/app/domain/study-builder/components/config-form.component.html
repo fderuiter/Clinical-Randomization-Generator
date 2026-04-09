@@ -52,6 +52,38 @@
             </select>
           </div>
         </div>
+
+        <!-- Randomization Method Selector -->
+        <div class="mt-4">
+          <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Randomization Strategy</label>
+          <div class="inline-flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden text-sm font-medium">
+            <button
+              type="button"
+              (click)="form.get('randomizationMethod')?.setValue('PERMUTED_BLOCK')"
+              class="px-4 py-2 transition-colors"
+              [class]="randomizationMethod() === 'PERMUTED_BLOCK'
+                ? 'bg-indigo-500 text-white'
+                : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600'"
+              data-testid="method-permuted-block">
+              Permuted Block
+            </button>
+            <button
+              type="button"
+              (click)="form.get('randomizationMethod')?.setValue('MINIMIZATION')"
+              class="px-4 py-2 transition-colors border-l border-gray-300 dark:border-slate-600"
+              [class]="randomizationMethod() === 'MINIMIZATION'
+                ? 'bg-indigo-500 text-white'
+                : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600'"
+              data-testid="method-minimization">
+              Minimization
+            </button>
+          </div>
+          @if (randomizationMethod() === 'MINIMIZATION') {
+            <p class="mt-1 text-xs text-indigo-700 dark:text-indigo-300">
+              Pocock-Simon covariate-adaptive method. Assignments are calculated sequentially based on marginal totals.
+            </p>
+          }
+        </div>
       </section>
 
       <!-- Treatment Arms – Card layout with stepper ratio buttons -->
@@ -191,7 +223,7 @@
 
       <!-- Sites & Blocks -->
       <section>
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">Sites & Blocks</h2>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">Sites &amp; {{ randomizationMethod() === 'MINIMIZATION' ? 'Enrollment' : 'Blocks' }}</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Sites Tag Input -->
           <div>
@@ -203,31 +235,70 @@
           </div>
 
           <div class="space-y-4">
-            <div>
-              <label for="blockSizesStr" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Block Sizes (comma-separated)</label>
-              <input id="blockSizesStr" type="text" inputmode="numeric" formControlName="blockSizesStr" placeholder="e.g., 4, 6" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500 tabular-nums">
-              <div class="mt-2 flex flex-wrap gap-2">
-                @for (size of parseCommaSeparated(form.get('blockSizesStr')?.value); track size) {
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300">{{size}}</span>
+            @if (randomizationMethod() === 'PERMUTED_BLOCK') {
+              <div>
+                <label for="blockSizesStr" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Block Sizes (comma-separated)</label>
+                <input id="blockSizesStr" type="text" inputmode="numeric" formControlName="blockSizesStr" placeholder="e.g., 4, 6" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500 tabular-nums">
+                <div class="mt-2 flex flex-wrap gap-2">
+                  @for (size of parseCommaSeparated(form.get('blockSizesStr')?.value); track size) {
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300">{{size}}</span>
+                  }
+                </div>
+                @if (form.errors?.['invalidBlockSize']) {
+                  <p class="text-xs text-red-600 dark:text-rose-400 mt-1">Block sizes must be multiples of the total treatment ratio ({{totalRatio}}).</p>
                 }
               </div>
-              @if (form.errors?.['invalidBlockSize']) {
-                <p class="text-xs text-red-600 dark:text-rose-400 mt-1">Block sizes must be multiples of the total treatment ratio ({{totalRatio}}).</p>
-              }
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Max Subjects per Stratum</label>
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" formArrayName="stratumCaps">
-                @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
-                  <div [formGroupName]="i" class="flex flex-col p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
-                    <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1 truncate" [title]="capControl.get('levels')?.value.join(' | ')">
-                      {{ capControl.get('levels')?.value.join(' | ') || 'Overall / Default' }}
-                    </span>
-                    <input type="number" inputmode="numeric" formControlName="cap" min="1" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-1.5 border dark:placeholder-slate-400 tabular-nums" placeholder="Max subjects">
-                  </div>
-                }
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Max Subjects per Stratum</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" formArrayName="stratumCaps">
+                  @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
+                    <div [formGroupName]="i" class="flex flex-col p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
+                      <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1 truncate" [title]="capControl.get('levels')?.value.join(' | ')">
+                        {{ capControl.get('levels')?.value.join(' | ') || 'Overall / Default' }}
+                      </span>
+                      <input type="number" inputmode="numeric" formControlName="cap" min="1" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-1.5 border dark:placeholder-slate-400 tabular-nums" placeholder="Max subjects">
+                    </div>
+                  }
+                </div>
               </div>
-            </div>
+            }
+
+            @if (randomizationMethod() === 'MINIMIZATION') {
+              <!-- Target Enrollment -->
+              <div>
+                <label for="targetEnrollment" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Target Enrollment (Total Subjects)</label>
+                <input id="targetEnrollment" type="number" inputmode="numeric" formControlName="targetEnrollment" min="1" placeholder="e.g., 60" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500 tabular-nums" data-testid="target-enrollment-input">
+                <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">The algorithm will simulate this many sequential subject enrollments.</p>
+              </div>
+
+              <!-- Biased Coin Probability -->
+              <div>
+                <div class="flex items-center gap-1.5 mb-1">
+                  <label for="biasedCoinProbability" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Biased Coin Probability (p)</label>
+                  <button
+                    type="button"
+                    class="p-1.5 -m-1.5 rounded-full text-gray-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    aria-label="About biased coin probability"
+                    matTooltip="If p=0.8, the algorithm has an 80% chance of assigning the subject to the treatment that best minimizes overall trial imbalance, and a 20% chance of assigning an alternate treatment to preserve randomness. Set p=1.0 for deterministic minimization, p=0.5 for simple randomization."
+                    matTooltipPosition="above"
+                    matTooltipClass="app-tooltip"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </button>
+                </div>
+                <div class="flex items-center gap-4">
+                  <input id="biasedCoinProbability" type="range" formControlName="biasedCoinProbability" min="0.5" max="1.0" step="0.05" class="flex-1 h-2 bg-gray-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer accent-indigo-600" data-testid="biased-coin-slider">
+                  <span class="w-12 text-center text-sm font-mono font-semibold text-gray-800 dark:text-slate-100 tabular-nums">{{ formatProbability(form.get('biasedCoinProbability')?.value) }}</span>
+                </div>
+                <div class="flex justify-between text-xs text-gray-400 dark:text-slate-500 mt-1">
+                  <span>0.5 (Simple)</span>
+                  <span>0.8 (Recommended)</span>
+                  <span>1.0 (Deterministic)</span>
+                </div>
+              </div>
+            }
           </div>
         </div>
       </section>

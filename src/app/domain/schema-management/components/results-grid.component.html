@@ -6,6 +6,11 @@
           <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
             Protocol: {{data.metadata.protocolId}} | Seed: <span class="font-mono bg-gray-100 dark:bg-slate-700 dark:text-slate-300 px-1 rounded">{{data.metadata.seed}}</span>
           </p>
+          @if (isMinimization()) {
+            <p class="text-xs text-indigo-700 dark:text-indigo-300 mt-0.5 font-medium">
+              Method: Pocock-Simon Minimization (p={{data.metadata.config?.biasedCoinProbability ?? 0.8}})
+            </p>
+          }
         </div>
         
         <div class="flex items-center gap-3 flex-wrap">
@@ -96,8 +101,10 @@
                   <dt class="text-gray-500 dark:text-slate-400">{{stratum.name || stratum.id}}</dt>
                   <dd class="text-gray-700 dark:text-slate-300">{{row.stratum[stratum.id]}}</dd>
                 }
-                <dt class="text-gray-500 dark:text-slate-400">Block</dt>
-                <dd class="tabular-nums text-slate-900 dark:text-slate-100">{{row.blockNumber}} <span class="text-gray-400 dark:text-slate-500">(Size: {{row.blockSize}})</span></dd>
+                @if (!isMinimization()) {
+                  <dt class="text-gray-500 dark:text-slate-400">Block</dt>
+                  <dd class="tabular-nums text-slate-900 dark:text-slate-100">{{row.blockNumber}} <span class="text-gray-400 dark:text-slate-500">(Size: {{row.blockSize}})</span></dd>
+                }
                 <dt class="text-gray-500 dark:text-slate-400">Treatment Arm</dt>
                 <dd data-testid="result-arm-cell">
                   @if (isUnblinded()) {
@@ -121,7 +128,9 @@
                 @for (stratum of data.metadata.strata; track stratum.id) {
                   <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">{{stratum.name || stratum.id}}</th>
                 }
-                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Block</th>
+                @if (!isMinimization()) {
+                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Block</th>
+                }
                 <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Treatment Arm</th>
                 <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Actions</th>
               </tr>
@@ -144,10 +153,12 @@
                     @for (stratum of data.metadata.strata; track stratum.id) {
                       <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-400 dark:text-slate-500">{{row.stratum[stratum.id]}}</td>
                     }
-                    <td class="px-6 py-5 whitespace-nowrap text-sm tabular-nums">
-                      <span class="font-semibold text-slate-900 dark:text-slate-100">{{row.blockNumber}}</span>
-                      <span class="text-gray-400 dark:text-slate-500"> (Size: {{row.blockSize}})</span>
-                    </td>
+                    @if (!isMinimization()) {
+                      <td class="px-6 py-5 whitespace-nowrap text-sm tabular-nums">
+                        <span class="font-semibold text-slate-900 dark:text-slate-100">{{row.blockNumber}}</span>
+                        <span class="text-gray-400 dark:text-slate-500"> (Size: {{row.blockSize}})</span>
+                      </td>
+                    }
                     <td data-testid="result-arm-cell" class="px-6 py-5 whitespace-nowrap text-sm">
                       @if (isUnblinded()) {
                         <span class="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
@@ -187,9 +198,17 @@
                       <!-- Block header row: darker background, bold, hard visual break -->
                       <tr class="border-t-2 border-gray-300 dark:border-slate-500 bg-gray-100 dark:bg-slate-900">
                         <td [attr.colspan]="columnCount()" class="px-6 py-3 font-bold text-sm text-gray-800 dark:text-slate-200">
-                          Block {{$any(item).blockNumber}}
-                          @if ($any(item).stratumLabel) {
-                            &nbsp;&mdash;&nbsp;{{$any(item).stratumLabel}}
+                          @if (!isMinimization()) {
+                            Block {{$any(item).blockNumber}}
+                            @if ($any(item).stratumLabel) {
+                              &nbsp;&mdash;&nbsp;{{$any(item).stratumLabel}}
+                            }
+                          } @else {
+                            @if ($any(item).stratumLabel) {
+                              {{$any(item).stratumLabel}}
+                            } @else {
+                              Site: {{$any(item).site}}
+                            }
                           }
                         </td>
                       </tr>
@@ -210,10 +229,12 @@
                         @for (stratum of data.metadata.strata; track stratum.id) {
                           <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-400 dark:text-slate-500">{{$any(item).data.stratum[stratum.id]}}</td>
                         }
-                        <td class="px-6 py-5 whitespace-nowrap text-sm tabular-nums">
-                          <span class="font-semibold text-slate-900 dark:text-slate-100">{{$any(item).data.blockNumber}}</span>
-                          <span class="text-gray-400 dark:text-slate-500"> (Size: {{$any(item).data.blockSize}})</span>
-                        </td>
+                        @if (!isMinimization()) {
+                          <td class="px-6 py-5 whitespace-nowrap text-sm tabular-nums">
+                            <span class="font-semibold text-slate-900 dark:text-slate-100">{{$any(item).data.blockNumber}}</span>
+                            <span class="text-gray-400 dark:text-slate-500"> (Size: {{$any(item).data.blockSize}})</span>
+                          </td>
+                        }
                         <td data-testid="result-arm-cell" class="px-6 py-5 whitespace-nowrap text-sm">
                           @if (isUnblinded()) {
                             <span class="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">

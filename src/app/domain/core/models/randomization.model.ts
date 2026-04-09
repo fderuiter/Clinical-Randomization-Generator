@@ -15,6 +15,8 @@ export interface StratumCap {
   cap: number;
 }
 
+export type RandomizationMethod = 'PERMUTED_BLOCK' | 'MINIMIZATION';
+
 export interface RandomizationConfig {
   protocolId: string;
   studyName: string;
@@ -26,6 +28,12 @@ export interface RandomizationConfig {
   stratumCaps: StratumCap[];
   seed: string;
   subjectIdMask: string;
+  /** Randomization strategy. Defaults to 'PERMUTED_BLOCK' for backward compatibility. */
+  randomizationMethod?: RandomizationMethod;
+  /** Probability (0.5–1.0) of assigning the treatment that minimizes imbalance. Used only for MINIMIZATION. */
+  biasedCoinProbability?: number;
+  /** Total number of subjects to simulate. Used only for MINIMIZATION. */
+  targetEnrollment?: number;
 }
 
 export interface GeneratedSchema {
