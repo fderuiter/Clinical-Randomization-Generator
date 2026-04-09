@@ -1,16 +1,19 @@
-import { ChangeDetectionStrategy, Component, inject, effect } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, effect, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { ConfigFormComponent } from './config-form.component';
 import { ResultsGridComponent } from '../../schema-management/components/results-grid.component';
 import { CodeGeneratorModalComponent } from '../../schema-management/components/code-generator-modal.component';
 import { MonteCarloModalComponent } from '../../randomization-engine/components/monte-carlo-modal.component';
 import { SchemaAnalyticsDashboardComponent } from '../../schema-management/components/schema-analytics-dashboard.component';
+import { BalanceVerificationComponent } from '../../schema-management/components/balance-verification.component';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
+
+type ResultsTab = 'grid' | 'balance';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-generator',
-  imports: [ConfigFormComponent, ResultsGridComponent, CodeGeneratorModalComponent, MonteCarloModalComponent, SchemaAnalyticsDashboardComponent],
+  imports: [ConfigFormComponent, ResultsGridComponent, CodeGeneratorModalComponent, MonteCarloModalComponent, SchemaAnalyticsDashboardComponent, BalanceVerificationComponent],
   template: `
     <div class="space-y-8">
       <!-- Intro -->
@@ -38,14 +41,50 @@ import { RandomizationEngineFacade } from '../../randomization-engine/randomizat
         </div>
       }
 
-      <!-- Results Section: Analytics Dashboard + Grid -->
+      <!-- Results Section -->
       @if (state.results() && !state.isGenerating()) {
-        <div id="results-section" class="space-y-6">
-          <!-- Schema Analytics Dashboard (charts + active-filter HUD) -->
-          <app-schema-analytics-dashboard></app-schema-analytics-dashboard>
+        <div id="results-section" class="space-y-4">
 
-          <!-- Results Grid -->
-          <app-results-grid></app-results-grid>
+          <!-- ── Tab Navigation ──────────────────────────────────────── -->
+          <div class="flex gap-1 border-b border-gray-200 dark:border-slate-700">
+            <button
+              (click)="activeTab.set('grid')"
+              class="px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors"
+              [class]="activeTab() === 'grid'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800'
+                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-500'"
+              aria-label="Schema Grid tab"
+            >
+              Schema Grid
+            </button>
+            <button
+              (click)="activeTab.set('balance')"
+              class="px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors"
+              [class]="activeTab() === 'balance'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800'
+                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-500'"
+              aria-label="Balance Verification tab"
+            >
+              Balance Verification
+            </button>
+          </div>
+
+          <!-- ── Schema Grid tab ─────────────────────────────────────── -->
+          @if (activeTab() === 'grid') {
+            <div class="space-y-6">
+              <!-- Schema Analytics Dashboard (charts + active-filter HUD) -->
+              <app-schema-analytics-dashboard></app-schema-analytics-dashboard>
+
+              <!-- Results Grid -->
+              <app-results-grid></app-results-grid>
+            </div>
+          }
+
+          <!-- ── Balance Verification tab ────────────────────────────── -->
+          @if (activeTab() === 'balance') {
+            <app-balance-verification></app-balance-verification>
+          }
+
         </div>
       }
 
@@ -64,6 +103,9 @@ import { RandomizationEngineFacade } from '../../randomization-engine/randomizat
 export class GeneratorComponent {
   public state = inject(RandomizationEngineFacade);
   private readonly document = inject(DOCUMENT);
+
+  /** Active results tab – 'grid' (default) or 'balance'. */
+  readonly activeTab = signal<ResultsTab>('grid');
 
   private static readonly SCROLL_DELAY_MS = 100;
 
