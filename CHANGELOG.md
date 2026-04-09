@@ -1,3 +1,15 @@
+# [1.17.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.16.0...v1.17.0) (2026-04-09)
+
+
+### Bug Fixes
+
+* restore missing copyAuditHash JSDoc comment removed during refactor ([9d3293e](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/9d3293eb8f42c93de8041a6e053ca37618589e58))
+
+
+### Features
+
+* implement high-performance virtual scroll grid with multi-column filtering and sorting ([bcd5df9](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/bcd5df9a9e9c5def8f55d627b56431d1ab086181)), closes [hi#performance](https://github.com/hi/issues/performance)
+
 # [1.16.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.15.0...v1.16.0) (2026-04-09)
 
 
