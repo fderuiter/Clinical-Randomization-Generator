@@ -42,14 +42,22 @@ function generateIntersections(strata: StratificationFactor[]): string[][] {
 /**
  * Computes per-intersection enrollment caps using the **Largest Remainder Method** (Hare–Niemeyer).
  *
- * The algorithm guarantees that the sum of all returned caps equals exactly `globalCap`,
- * eliminating rounding errors that arise from naively rounding each fractional value.
+ * When `globalCap` is a positive integer and each stratification factor's level percentages
+ * sum to exactly 100, the algorithm guarantees that the sum of all returned caps equals
+ * exactly `globalCap`, eliminating rounding errors that arise from naively rounding each
+ * fractional value.
+ *
+ * For invalid inputs (for example, a non-integer `globalCap` or factor percentages that do
+ * not sum to 100), the function still returns caps for every intersection, but the returned
+ * caps are not guaranteed to sum exactly to `globalCap`. `remainingSeats` is clamped to
+ * `[0, intersections]` to guard against out-of-bounds allocation when percentages are invalid.
  *
  * @param strata - The stratification factors with their levels.
- * @param globalCap - Total enrollment target.
+ * @param globalCap - Total enrollment target. Should be a positive integer for the exact-sum guarantee.
  * @param percentages - Mapping of factorId → (levelName → percentage, 0–100).
- *   Each factor's level percentages must sum to 100.
- * @returns An array of { levels, cap } objects covering every intersection.
+ *   Each factor's level percentages should sum to 100 for the exact-sum guarantee.
+ * @returns An array of { levels, cap } objects covering every intersection. The caps sum to
+ *   `globalCap` only when the input preconditions above are satisfied.
  */
 export function computeProportionalCaps(
   strata: StratificationFactor[],

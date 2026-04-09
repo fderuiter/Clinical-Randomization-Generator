@@ -238,9 +238,10 @@ export class ConfigFormComponent implements OnInit {
 
   /** Parse a raw input string into a marginal cap number or undefined (uncapped). */
   parseMarginalCapInput(raw: string): number | undefined {
-    if (raw === '') return undefined;
-    const n = +raw;
-    return Number.isNaN(n) ? undefined : n;
+    const trimmed = raw.trim();
+    if (trimmed === '') return undefined;
+    const n = Number(trimmed);
+    return Number.isInteger(n) && n >= 0 ? n : undefined;
   }
 
   /**
