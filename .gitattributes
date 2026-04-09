@@ -1,0 +1,36 @@
+# Normalize line endings for all text files on checkout
+* text=auto
+
+# Force LF for source files that must always use Unix line endings
+*.ts   text eol=lf
+*.html text eol=lf
+*.css  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.sh   text eol=lf
+
+# Binary files — prevent diff/merge corruption
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.eot    binary
+*.webp   binary
+
+# Linguist — language statistics overrides
+package-lock.json   linguist-generated=true
+CHANGELOG.md        linguist-generated=true
+docs/**             linguist-documentation=true
+tests_e2e/**        linguist-detectable=false
+
+# Export-archive exclusions (omit from GitHub .zip downloads)
+.github     export-ignore
+docs        export-ignore
+tests_e2e   export-ignore
+*.spec.ts   export-ignore
