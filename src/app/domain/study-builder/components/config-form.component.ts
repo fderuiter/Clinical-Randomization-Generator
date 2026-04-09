@@ -36,6 +36,8 @@ export class ConfigFormComponent implements OnInit, AfterViewInit {
   readonly btnState = signal<'idle' | 'loading' | 'success'>('idle');
   /** Locked pixel width of the Generate button captured on first render. */
   btnLockedWidth = 0;
+  /** Timeout handle for the success-state auto-reset, cleaned up on destroy. */
+  private successTimeout?: ReturnType<typeof setTimeout>;
 
   /** Live preview text for the subject ID mask input. Reactive via RxJS → Signal. */
   readonly subjectIdPreview: Signal<string>;
@@ -84,13 +86,16 @@ export class ConfigFormComponent implements OnInit, AfterViewInit {
       if (!generating && this.btnState() === 'loading') {
         if (this.facade.results()) {
           this.btnState.set('success');
-          setTimeout(() => this.btnState.set('idle'), 1500);
+          this.successTimeout = setTimeout(() => this.btnState.set('idle'), 1500);
         } else {
           // Error path – reset immediately.
           this.btnState.set('idle');
         }
       }
     });
+
+    // Clean up the success-state timeout if the component is destroyed mid-flight.
+    this.destroyRef.onDestroy(() => clearTimeout(this.successTimeout));
   }
 
   ngAfterViewInit(): void {

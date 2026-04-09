@@ -1,5 +1,6 @@
 import { Directive, ElementRef, Input, OnInit } from '@angular/core';
 import { animate } from 'motion/mini';
+import type { AnimationOptions } from 'motion-dom';
 
 /**
  * AnimateEntryDirective
@@ -23,16 +24,13 @@ export class AnimateEntryDirective implements OnInit {
 
   ngOnInit(): void {
     const delay = (this.index ?? 0) * 0.05;
-    animate(
-      this.el.nativeElement,
-      { opacity: [0, 1], y: [-10, 0] },
-      {
-        duration: 0.4,
-        delay,
-        type: 'spring',
-        stiffness: 300,
-        damping: 25,
-      } as Parameters<typeof animate>[2]
-    );
+    const options: AnimationOptions = {
+      duration: 0.4,
+      delay,
+      type: 'spring',
+      stiffness: 300,
+      damping: 25,
+    } as AnimationOptions;
+    animate(this.el.nativeElement, { opacity: [0, 1], y: [-10, 0] }, options);
   }
 }
