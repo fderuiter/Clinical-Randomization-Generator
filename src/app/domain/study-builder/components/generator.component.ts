@@ -176,11 +176,17 @@ export class GeneratorComponent {
   }
 
   /**
+   * The preset type loaded when the user clicks the Zero-State CTA.
+   * Using a named constant guards against typos and makes the intent clear.
+   */
+  private static readonly ONBOARDING_PRESET = 'standard' as const;
+
+  /**
    * Called when the Zero-State CTA is clicked.
    * Hydrates the config form with the standard Phase II trial preset so new
    * users can explore the application without manual data entry.
    */
   onLoadPreset(): void {
-    this.configForm()?.loadPreset('standard');
+    this.configForm()?.loadPreset(GeneratorComponent.ONBOARDING_PRESET);
   }
 }
