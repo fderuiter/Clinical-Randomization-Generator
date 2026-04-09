@@ -19,6 +19,7 @@ import {ThemeService, ThemeMode} from './core/services/theme.service';
           <nav class="flex items-center gap-6 text-indigo-100 dark:text-slate-300 text-sm font-medium">
             <a routerLink="/" routerLinkActive="text-white dark:text-white" [routerLinkActiveOptions]="{exact: true}" class="hover:text-white transition-colors">Home</a>
             <a routerLink="/generator" routerLinkActive="text-white dark:text-white" class="hover:text-white transition-colors">Generator</a>
+            <a routerLink="/verify" routerLinkActive="text-white dark:text-white" class="hover:text-white transition-colors">Verify Schema</a>
             <a routerLink="/about" routerLinkActive="text-white dark:text-white" class="hover:text-white transition-colors">About</a>
 
             <!-- Theme Toggle -->
