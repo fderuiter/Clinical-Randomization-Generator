@@ -1,3 +1,16 @@
+# [1.11.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.10.0...v1.11.0) (2026-04-09)
+
+
+### Bug Fixes
+
+* address code review findings - remove unused import, guard null row in action methods ([1ba86bc](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/1ba86bca4545e920bcf50c3ca0596fde2fce70fb))
+* **e2e:** add stable data-testid attributes and update E2E selectors for arm cell ([b342829](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/b3428299569bb18bec662c6be8f9e4676cf5a27e))
+
+
+### Features
+
+* add Toast system, kebab menu, and remove static error banner ([a5e6cab](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/a5e6cab50ed3cce96e5b487c40fbddcc9b382c89))
+
 # [1.10.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.9.0...v1.10.0) (2026-04-09)
 
 
