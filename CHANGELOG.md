@@ -1,3 +1,16 @@
+# [1.10.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.9.0...v1.10.0) (2026-04-09)
+
+
+### Bug Fixes
+
+* correct hasRnd expression and remove dead else-if branch in subject-id-engine ([f4b2bbb](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/f4b2bbb2848ee07618ed0e8c852f8a0d0b8b2f88))
+* **e2e:** harden Complex preset Monte Carlo test against CI timeout ([5dca61c](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/5dca61c92a1e87ce9bfe2040bce4a6dd526e1b70))
+
+
+### Features
+
+* implement Subject ID generation enhancements with new token engine ([8367969](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/8367969aa94915cd8eaf99c37bb7852025a016b3))
+
 # [1.9.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.8.0...v1.9.0) (2026-04-09)
 
 

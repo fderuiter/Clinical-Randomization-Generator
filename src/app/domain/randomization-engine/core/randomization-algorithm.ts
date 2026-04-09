@@ -5,6 +5,7 @@ import {
   GeneratedSchema,
   RandomizationResult
 } from '../../core/models/randomization.model';
+import { generateSubjectId } from './subject-id-engine';
 
 /**
  * Pure TypeScript randomization algorithm with no Angular dependencies.
@@ -42,6 +43,8 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
   }
 
   const schema: GeneratedSchema[] = [];
+  /** Tracks all assigned subject IDs to prevent duplicates (relevant for {RND:n} tokens). */
+  const usedSubjectIds = new Set<string>();
 
   // Convert caps to a dictionary for easy lookup
   const capsDict: Record<string, number> = {};
@@ -83,22 +86,15 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
           siteSubjectCount++;
           stratumSubjectCount++;
 
-          let subjectId = resolvedConfig.subjectIdMask;
-          subjectId = subjectId.replace('[SiteID]', site);
-
           const stratumCode = resolvedConfig.strata
             .map(s => (stratum[s.id] || '').substring(0, 3).toUpperCase())
             .join('-');
-          subjectId = subjectId.replace('[StratumCode]', stratumCode);
 
-          const match = subjectId.match(/\[(0+)1\]/);
-          if (match) {
-            const padding = match[1].length + 1;
-            const paddedNum = siteSubjectCount.toString().padStart(padding, '0');
-            subjectId = subjectId.replace(match[0], paddedNum);
-          } else {
-            subjectId = subjectId.replace('[001]', siteSubjectCount.toString().padStart(3, '0'));
-          }
+          const subjectId = generateSubjectId(
+            resolvedConfig.subjectIdMask,
+            { site, stratumCode, sequence: siteSubjectCount },
+            usedSubjectIds
+          );
 
           schema.push({
             subjectId,

@@ -245,7 +245,23 @@
         <div>
           <label for="subjectIdMask" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Subject ID Mask</label>
           <input id="subjectIdMask" type="text" formControlName="subjectIdMask" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border font-mono dark:placeholder-slate-500">
-          <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Use [SiteID], [StratumCode], and [001] for padding.</p>
+          <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">
+            Tokens: <code class="font-mono">&#123;SITE&#125;</code>, <code class="font-mono">&#123;STRATUM&#125;</code>, <code class="font-mono">&#123;SEQ:n&#125;</code> (padded sequence), <code class="font-mono">&#123;RND:n&#125;</code> (random hash), <code class="font-mono">&#123;CHECKSUM&#125;</code>. Legacy: <code class="font-mono">[SiteID]</code>, <code class="font-mono">[StratumCode]</code>, <code class="font-mono">[001]</code>.
+          </p>
+          <!-- Live Preview -->
+          @if (subjectIdMaskInvalid()) {
+            <p class="mt-1.5 text-xs font-medium text-red-600 dark:text-rose-400 flex items-center gap-1" data-testid="mask-preview-error">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+              {{ subjectIdPreview() }}
+            </p>
+          } @else {
+            <p class="mt-1.5 text-xs text-gray-500 dark:text-slate-400" data-testid="mask-preview">
+              <span class="font-medium text-gray-600 dark:text-slate-300">Preview:</span>
+              <code class="ml-1 font-mono">{{ subjectIdPreview() }}</code>
+            </p>
+          }
         </div>
       </section>
 

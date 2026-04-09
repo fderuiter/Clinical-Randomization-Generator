@@ -1,10 +1,12 @@
-import { Component, DestroyRef, ElementRef, HostListener, inject, OnInit, ViewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, inject, OnInit, Signal, ViewChild } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { map, startWith } from 'rxjs/operators';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
 import { TagInputComponent } from './tag-input.component';
+import { previewSubjectIdMask, validateSubjectIdMask } from '../../randomization-engine/core/subject-id-engine';
 
 @Component({
   selector: 'app-config-form',
@@ -20,6 +22,11 @@ export class ConfigFormComponent implements OnInit {
 
   dropdownOpen = false;
   @ViewChild('dropdownContainer') dropdownContainer!: ElementRef;
+
+  /** Live preview text for the subject ID mask input. Reactive via RxJS → Signal. */
+  readonly subjectIdPreview: Signal<string>;
+  /** True when the current mask has a syntax error. */
+  readonly subjectIdMaskInvalid: Signal<boolean>;
 
   form: FormGroup = this.fb.group(
     {
@@ -37,10 +44,26 @@ export class ConfigFormComponent implements OnInit {
       blockSizesStr: ['4, 6', Validators.required],
       stratumCaps: this.fb.array([]),
       seed: [''],
-      subjectIdMask: ['[SiteID]-[StratumCode]-[001]', Validators.required]
+      subjectIdMask: ['{SITE}-{STRATUM}-{SEQ:3}', Validators.required]
     },
     { validators: this.blockSizesValidator.bind(this) }
   );
+
+  constructor() {
+    const maskCtrl = this.form.get('subjectIdMask')!;
+    const mask$ = maskCtrl.valueChanges.pipe(
+      startWith(maskCtrl.value as string),
+      map((v: string) => v ?? '')
+    );
+    this.subjectIdPreview = toSignal(
+      mask$.pipe(map(mask => previewSubjectIdMask(mask))),
+      { initialValue: previewSubjectIdMask(maskCtrl.value as string) }
+    );
+    this.subjectIdMaskInvalid = toSignal(
+      mask$.pipe(map(mask => !validateSubjectIdMask(mask).valid)),
+      { initialValue: !validateSubjectIdMask(maskCtrl.value as string).valid }
+    );
+  }
 
   ngOnInit(): void {
     this.form.get('strata')?.valueChanges
