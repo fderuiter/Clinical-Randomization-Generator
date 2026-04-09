@@ -58,6 +58,9 @@ export class ResultsGridComponent {
    */
   activeMenuRow = signal<GeneratedSchema | null>(null);
 
+  /** Signals that the audit hash was just copied; drives the ✓ icon. */
+  hashCopied = signal(false);
+
   /**
    * Expose the shared `isUnblinded` signal directly so existing template
    * bindings and unit-test assertions (component.isUnblinded()) still work.
@@ -234,6 +237,16 @@ export class ResultsGridComponent {
     return id ? id.split('-') : [];
   }
 
+  /** Copies the audit hash to the clipboard and briefly shows a ✓ icon. */
+  copyAuditHash(): void {
+    const hash = this.state.results()?.metadata.auditHash;
+    if (!hash) return;
+    navigator.clipboard.writeText(hash).then(() => {
+      this.hashCopied.set(true);
+      setTimeout(() => this.hashCopied.set(false), 2000);
+    });
+  }
+
   exportCsv() {
     const data = this.state.results();
     if (!data) return;
@@ -253,13 +266,17 @@ export class ResultsGridComponent {
       ];
     });
 
-  const watermark = "DRAFT SCHEMA - DO NOT USE FOR ENROLLMENT. Execute the generated R/SAS/Python script to generate the official trial schema.";
-  const timestamp = new Date(data.metadata.generatedAt).toISOString();
-  const csvContent = [
-    `"${watermark}"`,
-    `# App Version: ${APP_VERSION}`,
-    `# Generated At: ${timestamp}`,
-    `# PRNG Algorithm: seedrandom (Alea)`,
+    const watermark = "DRAFT SCHEMA - DO NOT USE FOR ENROLLMENT. Execute the generated R/SAS/Python script to generate the official trial schema.";
+    const timestamp = new Date(data.metadata.generatedAt).toISOString();
+    const csvContent = [
+      `"${watermark}"`,
+      `# Protocol ID: ${data.metadata.protocolId}`,
+      `# Study Name: ${data.metadata.studyName}`,
+      `# App Version: ${APP_VERSION}`,
+      `# Generated At: ${timestamp}`,
+      `# PRNG Algorithm: seedrandom (Alea)`,
+      `# PRNG Seed: ${data.metadata.seed}`,
+      `# SHA-256 Audit Hash: ${data.metadata.auditHash}`,
       headers.join(','),
       ...rows.map(e => e.join(','))
     ].join('\n');
@@ -280,26 +297,58 @@ export class ResultsGridComponent {
     if (!data) return;
 
     const doc = new jsPDF();
-
-    doc.setFontSize(10);
-    doc.setTextColor(255, 0, 0);
-    doc.text('DRAFT SCHEMA - DO NOT USE FOR ENROLLMENT. Execute the generated R/SAS/Python script to generate the official trial schema.', 14, 12);
-
-    doc.setFontSize(18);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Randomization Schema Report', 14, 22);
-
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Protocol: ${data.metadata.protocolId} - ${data.metadata.studyName}`, 14, 30);
-    doc.text(`Phase: ${data.metadata.phase}`, 14, 36);
-
+    const pageWidth = doc.internal.pageSize.getWidth();
     const timestamp = new Date(data.metadata.generatedAt).toISOString();
-    doc.text(`App Version: ${APP_VERSION}`, 14, 42);
-    doc.text(`Generated At: ${timestamp}`, 14, 48);
-    doc.text(`PRNG Algorithm: seedrandom (Alea)`, 14, 54);
-    doc.text(`Random Seed: ${data.metadata.seed}`, 14, 60);
-    doc.text(`Status: ${this.isUnblinded() ? 'UNBLINDED' : 'BLINDED'}`, 14, 66);
+    const auditHash = data.metadata.auditHash;
+    const truncatedHash = auditHash ? `${auditHash.substring(0, 16)}…${auditHash.substring(48)}` : 'N/A';
+
+    // ── Certificate Header ──────────────────────────────────────────────────
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text('CERTIFICATE OF RANDOMIZATION GENERATION', pageWidth / 2, 18, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    const statement =
+      'This document certifies the algorithmic generation of the clinical randomization schema detailed ' +
+      'below. The integrity of this dataset is mathematically verified by the attached cryptographic hash.';
+    const splitStatement = doc.splitTextToSize(statement, pageWidth - 28);
+    doc.text(splitStatement, 14, 26);
+
+    // ── Metadata Block ─────────────────────────────────────────────────────
+    const metaStartY = 26 + splitStatement.length * 5 + 4;
+    const metaRows: [string, string][] = [
+      ['Protocol ID', data.metadata.protocolId],
+      ['Study Name', data.metadata.studyName],
+      ['Phase', data.metadata.phase],
+      ['App Version', APP_VERSION],
+      ['PRNG Algorithm', 'seedrandom (Alea)'],
+      ['PRNG Seed', data.metadata.seed],
+      ['Generated At (ISO 8601)', timestamp],
+      ['SHA-256 Audit Hash', auditHash],
+    ];
+
+    autoTable(doc, {
+      startY: metaStartY,
+      head: [['Field', 'Value']],
+      body: metaRows,
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229], fontSize: 9 },
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55 }, 1: { cellWidth: 'auto', font: 'courier' } },
+      didParseCell: (hookData) => {
+        // Highlight the SHA-256 row
+        if (hookData.row.index === metaRows.length - 1 && hookData.section === 'body') {
+          hookData.cell.styles.fillColor = [235, 232, 255];
+          hookData.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+
+    // ── Data Table ─────────────────────────────────────────────────────────
+    const tableStartY = (doc as any).lastAutoTable?.finalY + 8 || metaStartY + 60;
 
     const strataHeaders = data.metadata.strata?.map(s => s.name || s.id) || [];
     const headers = [['Subject ID', 'Site', ...strataHeaders, 'Block', 'Treatment Arm']];
@@ -316,12 +365,25 @@ export class ResultsGridComponent {
     });
 
     autoTable(doc, {
-      startY: 72,
+      startY: tableStartY,
       head: headers,
       body: rows,
       theme: 'grid',
       headStyles: { fillColor: [79, 70, 229] },
       styles: { fontSize: 9, cellPadding: 3 },
+      // Footer on every page
+      didDrawPage: (hookData) => {
+        const pageCount = (doc as any).internal.getNumberOfPages();
+        const footerY = doc.internal.pageSize.getHeight() - 8;
+        doc.setFontSize(7);
+        doc.setTextColor(130);
+        doc.text(
+          `Protocol: ${data.metadata.protocolId}  |  Page ${hookData.pageNumber} of ${pageCount}  |  Hash: ${truncatedHash}`,
+          pageWidth / 2,
+          footerY,
+          { align: 'center' }
+        );
+      }
     });
 
     doc.save(`randomization_${data.metadata.protocolId}_${this.isUnblinded() ? 'unblinded' : 'blinded'}.pdf`);

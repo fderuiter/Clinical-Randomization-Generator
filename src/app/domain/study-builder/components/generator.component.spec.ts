@@ -40,6 +40,7 @@ const MOCK_RESULT: RandomizationResult = {
     seed: 'gen_seed',
     generatedAt: '2024-01-01T00:00:00.000Z',
     strata: [],
+    auditHash: 'aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233',
     config: {} as never
   },
   schema: []

@@ -122,7 +122,8 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
       seed: resolvedConfig.seed,
       generatedAt: new Date().toISOString(),
       strata: resolvedConfig.strata,
-      config: resolvedConfig
+      config: resolvedConfig,
+      auditHash: '' // populated asynchronously by the facade after generation
     },
     schema
   };

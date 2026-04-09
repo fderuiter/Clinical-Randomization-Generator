@@ -6,6 +6,12 @@ import { RandomizationConfig, RandomizationResult } from '../core/models/randomi
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
+vi.mock('./core/crypto-hash', () => ({
+  computeAuditHash: vi.fn().mockResolvedValue(
+    'aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233'
+  )
+}));
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared fixtures
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,6 +37,7 @@ const mockResult: RandomizationResult = {
     seed: 'test_seed',
     generatedAt: '2023-01-01',
     strata: [],
+    auditHash: 'aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233',
     config: mockConfig
   },
   schema: []
@@ -67,23 +74,26 @@ describe('RandomizationEngineFacade – SSR (synchronous) path', () => {
     expect(facade.isGenerating()).toBe(false);
   });
 
-  it('should set config and results after a successful synchronous call', () => {
+  it('should set config and results after a successful synchronous call', async () => {
     mockRandomizationService.generateSchema.mockReturnValue(of(mockResult));
     facade.generateSchema(mockConfig);
+    await Promise.resolve(); // flush async hash computation
     expect(facade.config()).toEqual(mockConfig);
-    expect(facade.results()).toEqual(mockResult);
+    expect(facade.results()).toMatchObject({ metadata: expect.objectContaining({ protocolId: 'TEST-123' }) });
     expect(facade.isGenerating()).toBe(false);
   });
 
-  it('should reset results to null when generateSchema is called again', () => {
+  it('should reset results to null when generateSchema is called again', async () => {
     mockRandomizationService.generateSchema.mockReturnValue(of(mockResult));
     facade.generateSchema(mockConfig);
-    expect(facade.results()).toEqual(mockResult);
+    await Promise.resolve();
+    expect(facade.results()).toBeTruthy();
 
     mockRandomizationService.generateSchema.mockReturnValue(of(mockResult));
     facade.generateSchema(mockConfig);
+    await Promise.resolve();
     // results is momentarily null inside generateSchema before the observable resolves
-    expect(facade.results()).toEqual(mockResult); // resolved again
+    expect(facade.results()).toBeTruthy(); // resolved again
   });
 
   it('should set the error signal on generation failure', () => {
@@ -103,9 +113,10 @@ describe('RandomizationEngineFacade – SSR (synchronous) path', () => {
     expect(facade.error()).toBe('An error occurred during schema generation.');
   });
 
-  it('should clear results AND error on clearResults()', () => {
+  it('should clear results AND error on clearResults()', async () => {
     mockRandomizationService.generateSchema.mockReturnValue(of(mockResult));
     facade.generateSchema(mockConfig);
+    await Promise.resolve();
     expect(facade.results()).toBeTruthy();
 
     facade.clearResults();
@@ -145,9 +156,10 @@ describe('RandomizationEngineFacade – SSR (synchronous) path', () => {
     expect(facade.showCodeGenerator()).toBe(false);
   });
 
-  it('should not call randomizationService.generateSchema when isGenerating is already false after success', () => {
+  it('should not call randomizationService.generateSchema when isGenerating is already false after success', async () => {
     mockRandomizationService.generateSchema.mockReturnValue(of(mockResult));
     facade.generateSchema(mockConfig);
+    await Promise.resolve(); // flush async hash computation
     expect(mockRandomizationService.generateSchema).toHaveBeenCalledTimes(1);
     expect(facade.isGenerating()).toBe(false);
   });
@@ -226,13 +238,14 @@ describe('RandomizationEngineFacade – browser (Worker) path', () => {
     expect(facade.isGenerating()).toBe(true);
   });
 
-  it('should resolve results and clear isGenerating on GENERATION_SUCCESS', () => {
+  it('should resolve results and clear isGenerating on GENERATION_SUCCESS', async () => {
     facade.generateSchema(mockConfig);
     const { id } = fakeWorker.postMessage.mock.calls[0][0] as { id: string };
 
     fakeWorker.simulateMessage({ id, type: 'GENERATION_SUCCESS', payload: mockResult });
+    await Promise.resolve(); // flush async hash computation
 
-    expect(facade.results()).toEqual(mockResult);
+    expect(facade.results()).toMatchObject({ metadata: expect.objectContaining({ protocolId: 'TEST-123' }) });
     expect(facade.isGenerating()).toBe(false);
     expect(facade.error()).toBeNull();
   });

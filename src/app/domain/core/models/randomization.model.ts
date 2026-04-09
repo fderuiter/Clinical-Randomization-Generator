@@ -48,6 +48,7 @@ export interface RandomizationResult {
     generatedAt: string;
     strata: StratificationFactor[];
     config: RandomizationConfig;
+    auditHash: string;
   };
   schema: GeneratedSchema[];
 }

@@ -31,6 +31,7 @@ describe('ResultsGridComponent (domain)', () => {
       seed: '12345',
       generatedAt: '2023-01-01T00:00:00.000Z',
       strata: [{ id: 'site', name: 'Site', levels: ['Site 1', 'Site 2', 'Site 3'] }],
+      auditHash: 'aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233',
       config: {
         protocolId: 'TEST-123',
         studyName: 'Test Study',

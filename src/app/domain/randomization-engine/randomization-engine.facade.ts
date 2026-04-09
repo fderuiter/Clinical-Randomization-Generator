@@ -6,6 +6,7 @@ import {
 } from '../core/models/randomization.model';
 import { RandomizationService } from './randomization.service';
 import { ToastService } from '../../core/services/toast.service';
+import { computeAuditHash } from './core/crypto-hash';
 import type {
   GenerationCommand,
   MonteCarloCommand,
@@ -34,7 +35,7 @@ export class RandomizationEngineFacade {
   private worker: Worker | null = null;
   private pendingCallbacks = new Map<
     string,
-    { resolve: (r: RandomizationResult) => void; reject: (e: unknown) => void }
+    { resolve: (r: RandomizationResult) => void | Promise<void>; reject: (e: unknown) => void }
   >();
 
   private pendingMonteCarloCallbacks = new Map<
@@ -86,8 +87,13 @@ export class RandomizationEngineFacade {
     } else {
       // SSR or Worker unavailable – fall back to synchronous in-thread service
       this.randomizationService.generateSchema(newConfig).subscribe({
-        next: res => {
-          this.results.set(res);
+        next: async res => {
+          const hash = await computeAuditHash(res);
+          const resultWithHash: RandomizationResult = {
+            ...res,
+            metadata: { ...res.metadata, auditHash: hash }
+          };
+          this.results.set(resultWithHash);
           this.isGenerating.set(false);
           this.toastService.showSuccess('Schema successfully generated!');
         },
@@ -221,8 +227,13 @@ export class RandomizationEngineFacade {
     const id = Math.random().toString(36).substring(2);
 
     this.pendingCallbacks.set(id, {
-      resolve: result => {
-        this.results.set(result);
+      resolve: async result => {
+        const hash = await computeAuditHash(result);
+        const resultWithHash: RandomizationResult = {
+          ...result,
+          metadata: { ...result.metadata, auditHash: hash }
+        };
+        this.results.set(resultWithHash);
         this.isGenerating.set(false);
         this.toastService.showSuccess('Schema successfully generated!');
       },

@@ -59,6 +59,7 @@ function buildMockResult(overrides: Partial<{
       seed: '42',
       generatedAt: '2024-01-01T00:00:00.000Z',
       strata: stratumFactor ? [stratumFactor] : [],
+      auditHash: 'aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233',
       config: {
         protocolId: 'TEST-001',
         studyName: 'Balance Test',
