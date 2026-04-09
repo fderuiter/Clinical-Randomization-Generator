@@ -75,7 +75,7 @@ export function generateSubjectId(
   usedIds: Set<string>,
   maxRetries = 100
 ): string {
-  const hasRnd = /\{RND:\d+\}/.test(mask) || /\[SiteID\]/.test(mask) === false && false; // only {RND} causes collisions
+  const hasRnd = /\{RND:\d+\}/.test(mask); // only {RND} tokens introduce non-determinism
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const id = applyTokens(mask, context, secureRandomAlphanumeric);
@@ -155,8 +155,6 @@ function applyTokens(
   if (legacySeqMatch) {
     const padding = legacySeqMatch[1].length + 1;
     id = id.replace(legacySeqMatch[0], ctx.sequence.toString().padStart(padding, '0'));
-  } else if (id.includes('[001]')) {
-    id = id.replace('[001]', ctx.sequence.toString().padStart(3, '0'));
   }
 
   // ── Checksum – evaluated last ────────────────────────────────────────────
