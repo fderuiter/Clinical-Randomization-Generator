@@ -12,8 +12,11 @@
 
 # Node
 node_modules/
+*.log
+*.tgz
 npm-debug.log
 yarn-error.log
+pnpm-debug.log
 
 # IDEs and editors
 .idea/
@@ -32,19 +35,31 @@ yarn-error.log
 !.vscode/extensions.json
 .history/*
 
-# Miscellaneous
-/.angular/cache
+# Angular
+/.angular/
 .sass-cache/
 /connect.lock
-/coverage
 /libpeerconnection.log
 testem.log
 /typings
+
+# Coverage
+/coverage
+.nyc_output/
+*.lcov
+
+# Playwright
+.playwright/
+playwright/.cache/
+playwright-report/
+test-results/
 __screenshots__/
 
 # System files
 .DS_Store
+ehthumbs_vista.db
+desktop.ini
 Thumbs.db
-playwright-report/
-test-results/
+
+# Miscellaneous
 sample_output/
