@@ -75,6 +75,15 @@ export class ResultsGridComponent {
     }
   }
 
+  /**
+   * Splits a Subject ID string by hyphens so the template can render
+   * each alphanumeric chunk with primary visual weight and the separators
+   * with a demoted (gray) weight.
+   */
+  splitSubjectId(id: string): string[] {
+    return id ? id.split('-') : [];
+  }
+
   exportCsv() {
     const data = this.state.results();
     if (!data) return;
