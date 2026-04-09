@@ -217,18 +217,198 @@
                   <p class="text-xs text-red-600 dark:text-rose-400 mt-1">Block sizes must be multiples of the total treatment ratio ({{totalRatio}}).</p>
                 }
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Max Subjects per Stratum</label>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" formArrayName="stratumCaps">
-                  @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
-                    <div [formGroupName]="i" class="flex flex-col p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
-                      <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1 truncate" [title]="capControl.get('levels')?.value.join(' | ')">
-                        {{ capControl.get('levels')?.value.join(' | ') || 'Overall / Default' }}
-                      </span>
-                      <input type="number" inputmode="numeric" formControlName="cap" min="1" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-1.5 border dark:placeholder-slate-400 tabular-nums" placeholder="Max subjects">
-                    </div>
-                  }
+              <!-- Cap Strategy Section -->
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Enrollment Cap Strategy</label>
+                  <!-- Strategy Selector: Segmented Control -->
+                  <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="group" aria-label="Cap strategy">
+                    <button
+                      type="button"
+                      (click)="form.get('capStrategy')?.setValue('MANUAL_MATRIX')"
+                      [class.bg-indigo-600]="capStrategy === 'MANUAL_MATRIX'"
+                      [class.text-white]="capStrategy === 'MANUAL_MATRIX'"
+                      [class.bg-white]="capStrategy !== 'MANUAL_MATRIX'"
+                      [class.dark:bg-slate-700]="capStrategy !== 'MANUAL_MATRIX'"
+                      [class.text-gray-700]="capStrategy !== 'MANUAL_MATRIX'"
+                      [class.dark:text-slate-300]="capStrategy !== 'MANUAL_MATRIX'"
+                      class="flex-1 px-3 py-2 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      Manual Matrix
+                    </button>
+                    <button
+                      type="button"
+                      (click)="form.get('capStrategy')?.setValue('PROPORTIONAL')"
+                      [class.bg-indigo-600]="capStrategy === 'PROPORTIONAL'"
+                      [class.text-white]="capStrategy === 'PROPORTIONAL'"
+                      [class.bg-white]="capStrategy !== 'PROPORTIONAL'"
+                      [class.dark:bg-slate-700]="capStrategy !== 'PROPORTIONAL'"
+                      [class.text-gray-700]="capStrategy !== 'PROPORTIONAL'"
+                      [class.dark:text-slate-300]="capStrategy !== 'PROPORTIONAL'"
+                      class="flex-1 px-3 py-2 text-xs font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      Proportional
+                    </button>
+                    <button
+                      type="button"
+                      (click)="form.get('capStrategy')?.setValue('MARGINAL_ONLY')"
+                      [class.bg-indigo-600]="capStrategy === 'MARGINAL_ONLY'"
+                      [class.text-white]="capStrategy === 'MARGINAL_ONLY'"
+                      [class.bg-white]="capStrategy !== 'MARGINAL_ONLY'"
+                      [class.dark:bg-slate-700]="capStrategy !== 'MARGINAL_ONLY'"
+                      [class.text-gray-700]="capStrategy !== 'MARGINAL_ONLY'"
+                      [class.dark:text-slate-300]="capStrategy !== 'MARGINAL_ONLY'"
+                      class="flex-1 px-3 py-2 text-xs font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      Marginal Only
+                    </button>
+                  </div>
                 </div>
+
+                <!-- MANUAL_MATRIX: existing caps grid -->
+                @if (capStrategy === 'MANUAL_MATRIX') {
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Max Subjects per Stratum Intersection</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" formArrayName="stratumCaps">
+                      @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
+                        <div [formGroupName]="i" class="flex flex-col p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
+                          <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1 truncate" [title]="capControl.get('levels')?.value.join(' | ')">
+                            {{ capControl.get('levels')?.value.join(' | ') || 'Overall / Default' }}
+                          </span>
+                          <input type="number" inputmode="numeric" formControlName="cap" min="1" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-1.5 border dark:placeholder-slate-400 tabular-nums" placeholder="Max subjects">
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <!-- PROPORTIONAL: global cap + per-factor percentage inputs -->
+                @if (capStrategy === 'PROPORTIONAL') {
+                  <div class="space-y-4">
+                    <!-- Global Cap input -->
+                    <div>
+                      <label for="globalCap" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Global Enrollment Cap (per site)</label>
+                      <input
+                        id="globalCap"
+                        type="number"
+                        inputmode="numeric"
+                        formControlName="globalCap"
+                        min="1"
+                        class="w-40 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-3 py-2 border tabular-nums"
+                        placeholder="e.g. 100"
+                      >
+                    </div>
+
+                    <!-- Per-factor level percentage inputs -->
+                    @for (factor of strataWithLevels; track factor.id) {
+                      <div class="p-3 border rounded-lg"
+                           [class.border-red-400]="isFactorPercentageInvalid(factor.id)"
+                           [class.border-gray-200]="!isFactorPercentageInvalid(factor.id)"
+                           [class.dark:border-red-500]="isFactorPercentageInvalid(factor.id)"
+                           [class.dark:border-slate-600]="!isFactorPercentageInvalid(factor.id)"
+                           [class.bg-red-50]="isFactorPercentageInvalid(factor.id)"
+                           [class.bg-gray-50]="!isFactorPercentageInvalid(factor.id)"
+                           [class.dark:bg-red-900]="isFactorPercentageInvalid(factor.id)"
+                           [class.dark:bg-slate-700]="!isFactorPercentageInvalid(factor.id)">
+                        <div class="flex justify-between items-center mb-2">
+                          <span class="text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wide">{{ factor.name }}</span>
+                          <span class="text-xs font-mono tabular-nums"
+                                [class.text-red-600]="isFactorPercentageInvalid(factor.id)"
+                                [class.text-green-600]="!isFactorPercentageInvalid(factor.id)"
+                                [class.dark:text-red-400]="isFactorPercentageInvalid(factor.id)"
+                                [class.dark:text-green-400]="!isFactorPercentageInvalid(factor.id)">
+                            {{ getFactorPercentageTotal(factor.id, factor.levels) }}% / 100%
+                          </span>
+                        </div>
+                        @for (level of factor.levels; track level) {
+                          <div class="flex items-center gap-2 mb-1">
+                            <label class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
+                            <input
+                              type="number"
+                              inputmode="numeric"
+                              min="0"
+                              max="100"
+                              [value]="getPercentage(factor.id, level)"
+                              (input)="setPercentage(factor.id, level, +$any($event.target).value)"
+                              class="w-20 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums"
+                              placeholder="%"
+                            >
+                            <span class="text-xs text-gray-500 dark:text-slate-400">%</span>
+                          </div>
+                        }
+                        @if (isFactorPercentageInvalid(factor.id)) {
+                          <p class="text-xs text-red-600 dark:text-rose-400 mt-1">Percentages must sum to exactly 100%.</p>
+                        }
+                      </div>
+                    }
+
+                    <!-- Compute Matrix button -->
+                    <button
+                      type="button"
+                      (click)="computeMatrix()"
+                      [disabled]="!canComputeMatrix"
+                      class="w-full py-2 px-4 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      Compute Matrix
+                    </button>
+
+                    <!-- Hybrid matrix: shown once computed, editable -->
+                    @if (matrixComputed()) {
+                      <div>
+                        <div class="flex items-center gap-2 mb-2">
+                          <label class="block text-sm font-medium text-gray-700 dark:text-slate-300">Computed Intersection Caps</label>
+                          <span class="text-xs text-indigo-600 dark:text-indigo-400">(editable — manual changes shift strategy to Manual Matrix)</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" formArrayName="stratumCaps">
+                          @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
+                            <div [formGroupName]="i" class="flex flex-col p-3 border border-indigo-200 dark:border-indigo-700 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
+                              <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1 truncate" [title]="capControl.get('levels')?.value.join(' | ')">
+                                {{ capControl.get('levels')?.value.join(' | ') || 'Overall / Default' }}
+                              </span>
+                              <input
+                                type="number"
+                                inputmode="numeric"
+                                formControlName="cap"
+                                min="0"
+                                class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-1.5 border dark:placeholder-slate-400 tabular-nums"
+                                placeholder="Cap"
+                              >
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- MARGINAL_ONLY: per-factor per-level marginal cap inputs -->
+                @if (capStrategy === 'MARGINAL_ONLY') {
+                  <div class="space-y-3">
+                    <p class="text-xs text-gray-500 dark:text-slate-400">
+                      Set hard limits per factor level. The engine randomly allocates subjects across intersections until each level's cap is reached.
+                    </p>
+                    @for (factor of strataWithLevels; track factor.id) {
+                      <div class="p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
+                        <span class="block text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wide mb-2">{{ factor.name }}</span>
+                        @for (level of factor.levels; track level) {
+                          <div class="flex items-center gap-2 mb-1">
+                            <label class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
+                            <input
+                              type="number"
+                              inputmode="numeric"
+                              min="0"
+                              [value]="getMarginalCap(factor.id, level)"
+                              (input)="setMarginalCap(factor.id, level, +$any($event.target).value)"
+                              class="w-24 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums"
+                              placeholder="Max"
+                            >
+                            <span class="text-xs text-gray-500 dark:text-slate-400">subjects</span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
               </div>
             </div>
           </div>

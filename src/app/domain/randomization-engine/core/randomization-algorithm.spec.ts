@@ -420,3 +420,55 @@ describe('generateRandomizationSchema – new token syntax', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MARGINAL_ONLY strategy
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('generateRandomizationSchema – MARGINAL_ONLY strategy', () => {
+  const marginalConfig: RandomizationConfig = {
+    ...BASE_CONFIG,
+    capStrategy: 'MARGINAL_ONLY',
+    strata: [
+      {
+        id: 'gender',
+        name: 'Gender',
+        levels: ['Male', 'Female'],
+        levelDetails: [
+          { name: 'Male', marginalCap: 6 },
+          { name: 'Female', marginalCap: 4 }
+        ]
+      }
+    ],
+    stratumCaps: [] // not used in MARGINAL_ONLY
+  };
+
+  it('generates subjects without exceeding any marginal cap', () => {
+    const result = generateRandomizationSchema(marginalConfig);
+    const maleCount = result.schema.filter(r => r.stratum['gender'] === 'Male').length;
+    const femaleCount = result.schema.filter(r => r.stratum['gender'] === 'Female').length;
+    expect(maleCount).toBeLessThanOrEqual(6);
+    expect(femaleCount).toBeLessThanOrEqual(4);
+  });
+
+  it('stops generating once all marginal caps are reached', () => {
+    const result = generateRandomizationSchema(marginalConfig);
+    // Total is bounded by the sum of all marginal caps.
+    expect(result.schema.length).toBeGreaterThan(0);
+    expect(result.schema.length).toBeLessThanOrEqual(10); // 6 + 4 = 10 theoretical max
+  });
+
+  it('produces reproducible output with the same seed', () => {
+    const r1 = generateRandomizationSchema(marginalConfig);
+    const r2 = generateRandomizationSchema(marginalConfig);
+    expect(r1.schema.map(r => r.treatmentArmId)).toEqual(r2.schema.map(r => r.treatmentArmId));
+  });
+
+  it('correctly tags each row with the assigned stratum combination', () => {
+    const result = generateRandomizationSchema(marginalConfig);
+    result.schema.forEach(row => {
+      expect(['Male', 'Female']).toContain(row.stratum['gender']);
+    });
+  });
+});
+
+

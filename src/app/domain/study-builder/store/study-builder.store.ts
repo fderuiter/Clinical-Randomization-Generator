@@ -1,6 +1,6 @@
 import { computed } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
-import { RandomizationConfig } from '../../core/models/randomization.model';
+import { CapStrategy, RandomizationConfig } from '../../core/models/randomization.model';
 
 // ---------------------------------------------------------------------------
 // Types used internally by the store
@@ -18,6 +18,12 @@ export interface ArmFormValue {
   ratio: number;
 }
 
+export interface LevelDetailFormValue {
+  name: string;
+  targetPercentage: number;
+  marginalCap: number;
+}
+
 export interface StudyBuilderFormValue {
   protocolId: string;
   studyName: string;
@@ -29,6 +35,10 @@ export interface StudyBuilderFormValue {
   stratumCaps: { levels: string[]; cap: number }[];
   seed: string;
   subjectIdMask: string;
+  capStrategy: CapStrategy;
+  globalCap: number;
+  /** Per-factor per-level detail values (percentages / marginal caps). Key: factorId. */
+  levelDetails: Record<string, LevelDetailFormValue[]>;
 }
 
 interface StudyBuilderState {
@@ -180,21 +190,34 @@ export const StudyBuilderStore = signalStore(
           .split(',')
           .map((s: string) => s.trim())
           .filter((s: string) => s),
-        strata: formValue.strata.map((s: StratumFormValue) => ({
-          id: s.id,
-          name: s.name,
-          levels: s.levelsStr
+        strata: formValue.strata.map((s: StratumFormValue) => {
+          const levels = s.levelsStr
             .split(',')
             .map((l: string) => l.trim())
-            .filter((l: string) => l)
-        })),
+            .filter((l: string) => l);
+          const details = formValue.levelDetails?.[s.id];
+          return {
+            id: s.id,
+            name: s.name,
+            levels,
+            levelDetails: details?.length
+              ? details.map(d => ({
+                  name: d.name,
+                  targetPercentage: d.targetPercentage,
+                  marginalCap: d.marginalCap
+                }))
+              : undefined
+          };
+        }),
         blockSizes: formValue.blockSizesStr
           .split(',')
           .map((s: string) => parseInt(s.trim(), 10))
           .filter((n: number) => !isNaN(n)),
         stratumCaps: formValue.stratumCaps,
         seed: formValue.seed || '',
-        subjectIdMask: formValue.subjectIdMask
+        subjectIdMask: formValue.subjectIdMask,
+        capStrategy: formValue.capStrategy ?? 'MANUAL_MATRIX',
+        globalCap: formValue.globalCap ?? 100
       };
     }
   }))

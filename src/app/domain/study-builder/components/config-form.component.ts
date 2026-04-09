@@ -9,6 +9,8 @@ import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.stor
 import { TagInputComponent } from './tag-input.component';
 import { previewSubjectIdMask, validateSubjectIdMask } from '../../randomization-engine/core/subject-id-engine';
 import { BlockPreviewComponent, ArmInput } from './block-preview.component';
+import { computeProportionalCaps, validateProportionalPercentages } from '../../randomization-engine/core/cap-strategy';
+import { CapStrategy } from '../../core/models/randomization.model';
 
 @Component({
   selector: 'app-config-form',
@@ -37,6 +39,21 @@ export class ConfigFormComponent implements OnInit {
   /** Live signal of the parsed block sizes for BlockPreviewComponent. */
   readonly blockSizesSignal: Signal<number[]>;
 
+  /**
+   * Reactive signal tracking per-factor per-level percentages for the
+   * Proportional strategy. Shape: { [factorId]: { [levelName]: number } }
+   */
+  readonly proportionalPercentages = signal<Record<string, Record<string, number>>>({});
+
+  /**
+   * Reactive signal tracking per-factor per-level marginal caps for the
+   * Marginal Only strategy. Shape: { [factorId]: { [levelName]: number } }
+   */
+  readonly marginalCaps = signal<Record<string, Record<string, number>>>({});
+
+  /** Whether the computed proportional matrix has been generated and is ready to display. */
+  readonly matrixComputed = signal(false);
+
   form: FormGroup = this.fb.group(
     {
       protocolId: ['PRT-001', Validators.required],
@@ -53,7 +70,9 @@ export class ConfigFormComponent implements OnInit {
       blockSizesStr: ['4, 6', Validators.required],
       stratumCaps: this.fb.array([]),
       seed: [''],
-      subjectIdMask: ['{SITE}-{STRATUM}-{SEQ:3}', Validators.required]
+      subjectIdMask: ['{SITE}-{STRATUM}-{SEQ:3}', Validators.required],
+      capStrategy: ['MANUAL_MATRIX'],
+      globalCap: [100, [Validators.required, Validators.min(1)]]
     },
     { validators: this.blockSizesValidator.bind(this) }
   );
@@ -94,9 +113,15 @@ export class ConfigFormComponent implements OnInit {
   ngOnInit(): void {
     this.form.get('strata')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((s: StratumFormValue[]) => { this.store.setStrata(s); this.syncStratumCaps(); });
+      .subscribe((s: StratumFormValue[]) => {
+        this.store.setStrata(s);
+        this.syncStratumCaps();
+        this.syncLevelDetails(s);
+        this.matrixComputed.set(false);
+      });
     this.store.setStrata(this.strata.value as StratumFormValue[]);
     this.syncStratumCaps();
+    this.syncLevelDetails(this.strata.value as StratumFormValue[]);
     this.form.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.facade.clearResults());
@@ -113,6 +138,99 @@ export class ConfigFormComponent implements OnInit {
   get stratumCaps(): FormArray { return this.form.get('stratumCaps') as FormArray; }
   get totalRatio(): number { return this.arms.controls.reduce((s, c) => s + (c.get('ratio')?.value || 0), 0); }
 
+  /** Current cap strategy value. */
+  get capStrategy(): CapStrategy { return (this.form.get('capStrategy')?.value as CapStrategy) ?? 'MANUAL_MATRIX'; }
+
+  /** Parsed list of strata with their levels for the cap strategy UI. */
+  get strataWithLevels(): { id: string; name: string; levels: string[] }[] {
+    return (this.strata.value as StratumFormValue[]).map(s => ({
+      id: s.id,
+      name: s.name,
+      levels: s.levelsStr.split(',').map(l => l.trim()).filter(l => l)
+    }));
+  }
+
+  /** Percentage validation: per factor, indicates if its levels sum to 100%. */
+  readonly proportionalFactorErrors = computed(() => {
+    const percentages = this.proportionalPercentages();
+    const strataList = this.strataWithLevels;
+    const strata = strataList.map(s => ({ ...s, levelDetails: undefined as undefined }));
+    return validateProportionalPercentages(strata, percentages);
+  });
+
+  /** True when all factor percentages sum to 100 and there is at least one factor. */
+  get canComputeMatrix(): boolean {
+    const errors = this.proportionalFactorErrors();
+    const strataList = this.strataWithLevels;
+    if (strataList.length === 0) return false;
+    return Object.keys(errors).length === 0;
+  }
+
+  /** Retrieve a percentage value for a factor/level. */
+  getPercentage(factorId: string, level: string): number {
+    return this.proportionalPercentages()[factorId]?.[level] ?? 0;
+  }
+
+  /** Retrieve the running total of percentages for a factor. */
+  getFactorPercentageTotal(factorId: string, levels: string[]): number {
+    const percentages = this.proportionalPercentages();
+    return levels.reduce((sum, l) => sum + (percentages[factorId]?.[l] ?? 0), 0);
+  }
+
+  /** True if the factor's percentage total is invalid (not 100). */
+  isFactorPercentageInvalid(factorId: string): boolean {
+    return this.proportionalFactorErrors()[factorId] === true;
+  }
+
+  /** Update a percentage value for a given factor level (called from the template). */
+  setPercentage(factorId: string, level: string, value: number): void {
+    this.proportionalPercentages.update(prev => ({
+      ...prev,
+      [factorId]: { ...(prev[factorId] ?? {}), [level]: value }
+    }));
+    this.matrixComputed.set(false);
+  }
+
+  /** Retrieve a marginal cap for a factor/level. */
+  getMarginalCap(factorId: string, level: string): number {
+    return this.marginalCaps()[factorId]?.[level] ?? 0;
+  }
+
+  /** Update a marginal cap for a given factor level (called from the template). */
+  setMarginalCap(factorId: string, level: string, value: number): void {
+    this.marginalCaps.update(prev => ({
+      ...prev,
+      [factorId]: { ...(prev[factorId] ?? {}), [level]: value }
+    }));
+  }
+
+  /**
+   * Run the Largest Remainder Method and populate `stratumCaps` with the computed values.
+   * Switches the effective strategy to render the hybrid editable matrix.
+   */
+  computeMatrix(): void {
+    const strata = this.strataWithLevels;
+    if (!strata.length) return;
+    const globalCap = this.form.get('globalCap')?.value as number ?? 100;
+    const percentages = this.proportionalPercentages();
+
+    const caps = computeProportionalCaps(
+      strata.map(s => ({ id: s.id, name: s.name, levels: s.levels })),
+      globalCap,
+      percentages
+    );
+
+    // Repopulate stratumCaps with the computed values.
+    this.stratumCaps.clear({ emitEvent: false });
+    for (const cap of caps) {
+      this.stratumCaps.push(
+        this.fb.group({ levels: [cap.levels], cap: [cap.cap, [Validators.required, Validators.min(0)]] }),
+        { emitEvent: false }
+      );
+    }
+    this.matrixComputed.set(true);
+  }
+
   /** Rebuild stratumCaps from the store's reactive `strataCombinations` computed signal. */
   syncStratumCaps(): void {
     const combinations = this.store.strataCombinations();
@@ -125,6 +243,36 @@ export class ConfigFormComponent implements OnInit {
         { emitEvent: false }
       );
     }
+  }
+
+  /**
+   * Synchronise the proportional percentages and marginal caps signals whenever
+   * strata levels change, preserving existing values where level names match.
+   */
+  private syncLevelDetails(strataVals: StratumFormValue[]): void {
+    this.proportionalPercentages.update(prev => {
+      const next: Record<string, Record<string, number>> = {};
+      for (const s of strataVals) {
+        const levels = s.levelsStr.split(',').map(l => l.trim()).filter(l => l);
+        next[s.id] = {};
+        for (const level of levels) {
+          next[s.id][level] = prev[s.id]?.[level] ?? 0;
+        }
+      }
+      return next;
+    });
+
+    this.marginalCaps.update(prev => {
+      const next: Record<string, Record<string, number>> = {};
+      for (const s of strataVals) {
+        const levels = s.levelsStr.split(',').map(l => l.trim()).filter(l => l);
+        next[s.id] = {};
+        for (const level of levels) {
+          next[s.id][level] = prev[s.id]?.[level] ?? 0;
+        }
+      }
+      return next;
+    });
   }
 
   toggleAdvanced(): void { this.showAdvanced.update(v => !v); }
@@ -146,6 +294,8 @@ export class ConfigFormComponent implements OnInit {
     this.form.updateValueAndValidity();
     this.store.setStrata(this.strata.value as StratumFormValue[]);
     this.syncStratumCaps();
+    this.syncLevelDetails(this.strata.value as StratumFormValue[]);
+    this.matrixComputed.set(false);
   }
 
   parseCommaSeparated(value: string | null | undefined): string[] {
@@ -193,23 +343,40 @@ export class ConfigFormComponent implements OnInit {
 
   onGenerateCode(language: 'R' | 'SAS' | 'Python'): void {
     if (this.form.valid) {
-      try { this.facade.openCodeGenerator(this.store.buildConfig(this.form.value), language); this.dropdownOpen = false; }
+      try { this.facade.openCodeGenerator(this.store.buildConfig(this.buildFormValue()), language); this.dropdownOpen = false; }
       catch (e) { console.error('Error generating code config:', e); alert('Error generating code. Please check your configuration.'); }
     }
   }
 
   onRunMonteCarlo(): void {
     if (this.form.valid) {
-      try { this.facade.runMonteCarlo(this.store.buildConfig(this.form.value)); }
+      try { this.facade.runMonteCarlo(this.store.buildConfig(this.buildFormValue())); }
       catch (e) { console.error('Error starting Monte Carlo simulation:', e); alert('Error starting simulation. Please check your configuration.'); }
     }
   }
 
   onSubmit(): void {
     if (this.form.valid) {
-      try { this.facade.generateSchema(this.store.buildConfig(this.form.value)); }
+      try { this.facade.generateSchema(this.store.buildConfig(this.buildFormValue())); }
       catch (e) { console.error('Error generating schema config:', e); alert('Error generating schema. Please check your configuration.'); }
     }
+  }
+
+  /** Build the full form value including levelDetails from signals. */
+  private buildFormValue() {
+    const base = this.form.value;
+    const levelDetails: Record<string, { name: string; targetPercentage: number; marginalCap: number }[]> = {};
+    const percentages = this.proportionalPercentages();
+    const caps = this.marginalCaps();
+    for (const s of (this.strata.value as StratumFormValue[])) {
+      const levels = s.levelsStr.split(',').map((l: string) => l.trim()).filter((l: string) => l);
+      levelDetails[s.id] = levels.map(level => ({
+        name: level,
+        targetPercentage: percentages[s.id]?.[level] ?? 0,
+        marginalCap: caps[s.id]?.[level] ?? 0
+      }));
+    }
+    return { ...base, levelDetails };
   }
 
   private blockSizesValidator(group: FormGroup): { invalidBlockSize: true } | null {
