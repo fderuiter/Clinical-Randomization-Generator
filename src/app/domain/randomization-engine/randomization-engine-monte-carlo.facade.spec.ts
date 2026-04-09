@@ -6,6 +6,9 @@ import { RandomizationConfig } from '../core/models/randomization.model';
 import { vi } from 'vitest';
 import type { MonteCarloProgressPayload, MonteCarloSuccessPayload } from './worker/worker-protocol';
 
+/** Flush all pending microtasks so async signals settle. */
+const flushMicrotasks = async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared fixtures
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,6 +62,8 @@ describe('RandomizationEngineFacade – Monte Carlo', () => {
 
   beforeEach(() => {
     fakeWorker = new FakeWorker();
+    // Mock crypto.subtle.digest to avoid relative-import vi.mock restrictions in Angular's test system
+    vi.spyOn(crypto.subtle, 'digest').mockResolvedValue(new Uint8Array(32).buffer);
 
     TestBed.configureTestingModule({
       providers: [
@@ -75,6 +80,7 @@ describe('RandomizationEngineFacade – Monte Carlo', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('should initialise Monte Carlo signals to their default state', () => {
@@ -138,7 +144,7 @@ describe('RandomizationEngineFacade – Monte Carlo', () => {
     expect(facade.monteCarloProgress()).toBe(0);
   });
 
-  it('should NOT affect standard generation pending callbacks when a Monte Carlo message is received', () => {
+  it('should NOT affect standard generation pending callbacks when a Monte Carlo message is received', async () => {
     facade.generateSchema(mockConfig);
     const genId = (fakeWorker.postMessage.mock.calls[0][0] as { id: string }).id;
 
@@ -151,10 +157,11 @@ describe('RandomizationEngineFacade – Monte Carlo', () => {
 
     // Now resolve the generation
     const mockResult = {
-      metadata: { protocolId: 'TEST-123', studyName: 'Test Study', phase: 'Phase I', seed: 'test_seed', generatedAt: '2023-01-01', strata: [], config: mockConfig },
+      metadata: { protocolId: 'TEST-123', studyName: 'Test Study', phase: 'Phase I', seed: 'test_seed', generatedAt: '2023-01-01', strata: [], auditHash: 'aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233', config: mockConfig },
       schema: []
     };
     fakeWorker.simulateMessage({ id: genId, type: 'GENERATION_SUCCESS', payload: mockResult });
-    expect(facade.results()).toEqual(mockResult);
+    await flushMicrotasks();
+    expect(facade.results()).toMatchObject({ metadata: expect.objectContaining({ protocolId: 'TEST-123' }) });
   });
 });

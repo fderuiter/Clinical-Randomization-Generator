@@ -15,6 +15,7 @@ function buildMockResult(count: number): RandomizationResult {
       seed: '99',
       generatedAt: '2024-01-01T00:00:00.000Z',
       strata: [],
+      auditHash: 'aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233',
       config: {} as never
     },
     schema: Array.from({ length: count }, (_, i) => ({

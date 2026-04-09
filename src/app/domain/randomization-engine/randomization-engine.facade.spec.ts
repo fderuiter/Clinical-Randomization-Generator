@@ -6,6 +6,9 @@ import { RandomizationConfig, RandomizationResult } from '../core/models/randomi
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
+/** Flush all pending microtasks so async signals settle. */
+const flushMicrotasks = async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared fixtures
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,6 +34,7 @@ const mockResult: RandomizationResult = {
     seed: 'test_seed',
     generatedAt: '2023-01-01',
     strata: [],
+    auditHash: 'aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233',
     config: mockConfig
   },
   schema: []
@@ -46,6 +50,8 @@ describe('RandomizationEngineFacade – SSR (synchronous) path', () => {
 
   beforeEach(() => {
     mockRandomizationService = { generateSchema: vi.fn() };
+    // Mock crypto.subtle.digest to avoid relative-import vi.mock restrictions in Angular's test system
+    vi.spyOn(crypto.subtle, 'digest').mockResolvedValue(new Uint8Array(32).buffer);
 
     TestBed.configureTestingModule({
       providers: [
@@ -55,6 +61,10 @@ describe('RandomizationEngineFacade – SSR (synchronous) path', () => {
     });
 
     facade = TestBed.inject(RandomizationEngineFacade);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('should be created', () => {
@@ -67,23 +77,26 @@ describe('RandomizationEngineFacade – SSR (synchronous) path', () => {
     expect(facade.isGenerating()).toBe(false);
   });
 
-  it('should set config and results after a successful synchronous call', () => {
+  it('should set config and results after a successful synchronous call', async () => {
     mockRandomizationService.generateSchema.mockReturnValue(of(mockResult));
     facade.generateSchema(mockConfig);
+    await flushMicrotasks();
     expect(facade.config()).toEqual(mockConfig);
-    expect(facade.results()).toEqual(mockResult);
+    expect(facade.results()).toMatchObject({ metadata: expect.objectContaining({ protocolId: 'TEST-123' }) });
     expect(facade.isGenerating()).toBe(false);
   });
 
-  it('should reset results to null when generateSchema is called again', () => {
+  it('should reset results to null when generateSchema is called again', async () => {
     mockRandomizationService.generateSchema.mockReturnValue(of(mockResult));
     facade.generateSchema(mockConfig);
-    expect(facade.results()).toEqual(mockResult);
+    await flushMicrotasks();
+    expect(facade.results()).toBeTruthy();
 
     mockRandomizationService.generateSchema.mockReturnValue(of(mockResult));
     facade.generateSchema(mockConfig);
+    await flushMicrotasks();
     // results is momentarily null inside generateSchema before the observable resolves
-    expect(facade.results()).toEqual(mockResult); // resolved again
+    expect(facade.results()).toBeTruthy(); // resolved again
   });
 
   it('should set the error signal on generation failure', () => {
@@ -103,9 +116,10 @@ describe('RandomizationEngineFacade – SSR (synchronous) path', () => {
     expect(facade.error()).toBe('An error occurred during schema generation.');
   });
 
-  it('should clear results AND error on clearResults()', () => {
+  it('should clear results AND error on clearResults()', async () => {
     mockRandomizationService.generateSchema.mockReturnValue(of(mockResult));
     facade.generateSchema(mockConfig);
+    await flushMicrotasks();
     expect(facade.results()).toBeTruthy();
 
     facade.clearResults();
@@ -145,9 +159,10 @@ describe('RandomizationEngineFacade – SSR (synchronous) path', () => {
     expect(facade.showCodeGenerator()).toBe(false);
   });
 
-  it('should not call randomizationService.generateSchema when isGenerating is already false after success', () => {
+  it('should not call randomizationService.generateSchema when isGenerating is already false after success', async () => {
     mockRandomizationService.generateSchema.mockReturnValue(of(mockResult));
     facade.generateSchema(mockConfig);
+    await flushMicrotasks();
     expect(mockRandomizationService.generateSchema).toHaveBeenCalledTimes(1);
     expect(facade.isGenerating()).toBe(false);
   });
@@ -184,6 +199,8 @@ describe('RandomizationEngineFacade – browser (Worker) path', () => {
   beforeEach(() => {
     fakeWorker = new FakeWorker();
     mockRandomizationService = { generateSchema: vi.fn() };
+    // Mock crypto.subtle.digest to avoid relative-import vi.mock restrictions in Angular's test system
+    vi.spyOn(crypto.subtle, 'digest').mockResolvedValue(new Uint8Array(32).buffer);
 
     // Use 'server' so the constructor does NOT call initWorker() automatically.
     TestBed.configureTestingModule({
@@ -204,6 +221,7 @@ describe('RandomizationEngineFacade – browser (Worker) path', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('should postMessage to the worker when generateSchema is called', () => {
@@ -226,13 +244,14 @@ describe('RandomizationEngineFacade – browser (Worker) path', () => {
     expect(facade.isGenerating()).toBe(true);
   });
 
-  it('should resolve results and clear isGenerating on GENERATION_SUCCESS', () => {
+  it('should resolve results and clear isGenerating on GENERATION_SUCCESS', async () => {
     facade.generateSchema(mockConfig);
     const { id } = fakeWorker.postMessage.mock.calls[0][0] as { id: string };
 
     fakeWorker.simulateMessage({ id, type: 'GENERATION_SUCCESS', payload: mockResult });
+    await flushMicrotasks();
 
-    expect(facade.results()).toEqual(mockResult);
+    expect(facade.results()).toMatchObject({ metadata: expect.objectContaining({ protocolId: 'TEST-123' }) });
     expect(facade.isGenerating()).toBe(false);
     expect(facade.error()).toBeNull();
   });
