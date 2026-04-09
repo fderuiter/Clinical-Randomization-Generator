@@ -16,13 +16,13 @@
             <!-- Preset Buttons -->
             <div class="mt-3 flex flex-wrap items-center gap-3">
               <span class="text-sm font-semibold text-blue-900 dark:text-blue-100">Load Preset:</span>
-              <button type="button" (click)="loadPreset('simple')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">
+              <button type="button" (click)="loadPreset('simple')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-all duration-200 active:scale-95">
                 Simple (Unstratified)
               </button>
-              <button type="button" (click)="loadPreset('standard')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">
+              <button type="button" (click)="loadPreset('standard')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-all duration-200 active:scale-95">
                 Standard (1 Stratum)
               </button>
-              <button type="button" (click)="loadPreset('complex')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">
+              <button type="button" (click)="loadPreset('complex')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-all duration-200 active:scale-95">
                 Complex (Multi-strata)
               </button>
             </div>
@@ -58,7 +58,7 @@
       <section>
         <div class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Treatment Arms</h2>
-          <button type="button" (click)="addArm()" class="text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium transition-colors">
+          <button type="button" (click)="addArm()" class="text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium transition-all duration-200 active:scale-95">
             + Add Arm
           </button>
         </div>
@@ -70,7 +70,7 @@
                 type="button"
                 (click)="removeArm($index)"
                 [disabled]="arms.length <= 2"
-                class="absolute top-3 right-3 text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                class="absolute top-3 right-3 text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
                 aria-label="Remove arm"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -98,14 +98,14 @@
                     type="button"
                     (click)="decrementRatio($index)"
                     [disabled]="arm.get('ratio')?.value <= 1"
-                    class="w-11 h-11 flex items-center justify-center rounded-full border-2 border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 disabled:opacity-30 disabled:cursor-not-allowed font-bold text-lg leading-none transition-colors"
+                    class="w-11 h-11 flex items-center justify-center rounded-full border-2 border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 disabled:opacity-30 disabled:cursor-not-allowed font-bold text-lg leading-none transition-all duration-200 active:scale-95"
                     aria-label="Decrease ratio"
                   >&#x2212;</button>
                   <span class="w-8 text-center text-xl font-bold text-gray-800 dark:text-slate-100 tabular-nums">{{ arm.get('ratio')?.value }}</span>
                   <button
                     type="button"
                     (click)="incrementRatio($index)"
-                    class="w-11 h-11 flex items-center justify-center rounded-full border-2 border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 font-bold text-lg leading-none transition-colors"
+                    class="w-11 h-11 flex items-center justify-center rounded-full border-2 border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 font-bold text-lg leading-none transition-all duration-200 active:scale-95"
                     aria-label="Increase ratio"
                   >+</button>
                   <span class="ml-2 text-xs text-gray-400 dark:text-slate-500">of {{ totalRatio }} total</span>
@@ -123,7 +123,7 @@
             <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Stratification Factors</h2>
             <p class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Drag cards to reorder — the Cartesian product depends on factor order.</p>
           </div>
-          <button type="button" (click)="addStratum()" class="text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium transition-colors">
+          <button type="button" (click)="addStratum()" class="text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium transition-all duration-200 active:scale-95">
             + Add Factor
           </button>
         </div>
@@ -168,7 +168,7 @@
                 </div>
 
                 <!-- Remove button -->
-                <button type="button" (click)="removeStratum($index)" class="mt-6 text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 transition-colors flex-shrink-0">
+                <button type="button" (click)="removeStratum($index)" class="mt-6 text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 transition-all duration-200 active:scale-95 flex-shrink-0">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                   </svg>
@@ -219,11 +219,11 @@
               <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Max Subjects per Stratum</label>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" formArrayName="stratumCaps">
                 @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
-                  <div [formGroupName]="i" class="flex flex-col p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
+                  <div [formGroupName]="i" [appAnimateEntry]="i" class="flex flex-col p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
                     <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1 truncate" [title]="capControl.get('levels')?.value.join(' | ')">
                       {{ capControl.get('levels')?.value.join(' | ') || 'Overall / Default' }}
                     </span>
-                    <input type="number" inputmode="numeric" formControlName="cap" min="1" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-1.5 border dark:placeholder-slate-400 tabular-nums" placeholder="Max subjects">
+                    <input type="number" inputmode="numeric" formControlName="cap" min="1" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 text-sm px-3 py-1.5 border dark:placeholder-slate-400 tabular-nums" placeholder="Max subjects">
                   </div>
                 }
               </div>
@@ -237,7 +237,7 @@
         <button
           type="button"
           (click)="toggleAdvanced()"
-          class="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+          class="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200 active:scale-[0.99]"
           [attr.aria-expanded]="showAdvanced()"
           aria-controls="advanced-settings-panel"
         >
@@ -320,14 +320,14 @@
       </section>
 
       <div class="pt-4 border-t border-gray-200 dark:border-slate-700 flex flex-wrap justify-end gap-3">
-        <button type="button" (click)="onRunMonteCarlo()" [disabled]="!form.valid" class="min-h-[44px] bg-white dark:bg-slate-700 border border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-lg hover:bg-purple-50 dark:hover:bg-slate-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-2 text-sm">
+        <button type="button" (click)="onRunMonteCarlo()" [disabled]="!form.valid" class="min-h-[44px] bg-white dark:bg-slate-700 border border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-lg hover:bg-purple-50 dark:hover:bg-slate-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 shadow-sm flex items-center gap-2 text-sm">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
           Run Statistical QA (Monte Carlo)
         </button>
         <div class="relative inline-block text-left" #dropdownContainer>
-          <button type="button" (click)="dropdownOpen = !dropdownOpen" [disabled]="!form.valid" class="min-h-[44px] bg-white dark:bg-slate-700 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 px-6 py-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-slate-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-2">
+          <button type="button" (click)="dropdownOpen = !dropdownOpen" [disabled]="!form.valid" class="min-h-[44px] bg-white dark:bg-slate-700 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 px-6 py-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-slate-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95 shadow-sm flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
             </svg>
@@ -340,15 +340,41 @@
           @if (dropdownOpen) {
             <div class="origin-bottom-right absolute right-0 bottom-full mb-2 w-40 rounded-xl shadow-lg bg-white/90 dark:bg-slate-800/90 backdrop-blur-md ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-10 overflow-hidden">
               <div class="py-1" role="menu" aria-orientation="vertical">
-                <button type="button" (click)="onGenerateCode('R')" class="text-gray-700 dark:text-slate-200 block w-full text-left px-4 py-3 min-h-[44px] text-sm hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-colors" role="menuitem">R Script</button>
-                <button type="button" (click)="onGenerateCode('SAS')" class="text-gray-700 dark:text-slate-200 block w-full text-left px-4 py-3 min-h-[44px] text-sm hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-colors" role="menuitem">SAS Script</button>
-                <button type="button" (click)="onGenerateCode('Python')" class="text-gray-700 dark:text-slate-200 block w-full text-left px-4 py-3 min-h-[44px] text-sm hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-colors" role="menuitem">Python Script</button>
+                <button type="button" (click)="onGenerateCode('R')" class="text-gray-700 dark:text-slate-200 block w-full text-left px-4 py-3 min-h-[44px] text-sm hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-all duration-150 active:scale-95" role="menuitem">R Script</button>
+                <button type="button" (click)="onGenerateCode('SAS')" class="text-gray-700 dark:text-slate-200 block w-full text-left px-4 py-3 min-h-[44px] text-sm hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-all duration-150 active:scale-95" role="menuitem">SAS Script</button>
+                <button type="button" (click)="onGenerateCode('Python')" class="text-gray-700 dark:text-slate-200 block w-full text-left px-4 py-3 min-h-[44px] text-sm hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-all duration-150 active:scale-95" role="menuitem">Python Script</button>
               </div>
             </div>
           }
         </div>
-        <button type="submit" [disabled]="!form.valid" class="min-h-[44px] bg-indigo-600 dark:bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
-          Generate Schema
+
+        <!-- Generate Schema – morphing stateful button (idle → loading → success) -->
+        <button
+          #generateBtn
+          type="submit"
+          [disabled]="!form.valid || btnState() !== 'idle'"
+          [style.min-width.px]="btnLockedWidth || null"
+          class="min-h-[44px] px-6 py-2 rounded-lg font-medium shadow-sm transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          [class]="btnState() === 'success'
+            ? 'bg-green-500 hover:bg-green-600 text-white'
+            : 'bg-indigo-600 hover:bg-indigo-700 dark:hover:bg-indigo-500 text-white'"
+        >
+          @if (btnState() === 'idle') {
+            Generate Schema
+          }
+          @if (btnState() === 'loading') {
+            <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="sr-only">Generating…</span>
+          }
+          @if (btnState() === 'success') {
+            <svg class="h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span>Done!</span>
+          }
         </button>
       </div>
     </form>

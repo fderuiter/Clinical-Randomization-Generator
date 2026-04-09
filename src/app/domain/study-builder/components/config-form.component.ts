@@ -1,4 +1,4 @@
-import { Component, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, effect, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs/operators';
@@ -8,14 +8,15 @@ import { RandomizationEngineFacade } from '../../randomization-engine/randomizat
 import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
 import { TagInputComponent } from './tag-input.component';
 import { previewSubjectIdMask, validateSubjectIdMask } from '../../randomization-engine/core/subject-id-engine';
+import { AnimateEntryDirective } from '../../../core/directives/animate-entry.directive';
 
 @Component({
   selector: 'app-config-form',
   standalone: true,
-  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, MatTooltipModule],
+  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, MatTooltipModule, AnimateEntryDirective],
   templateUrl: './config-form.component.html'
 })
-export class ConfigFormComponent implements OnInit {
+export class ConfigFormComponent implements OnInit, AfterViewInit {
   private readonly fb = inject(FormBuilder);
   readonly facade = inject(RandomizationEngineFacade);
   readonly store = inject(StudyBuilderStore);
@@ -25,6 +26,16 @@ export class ConfigFormComponent implements OnInit {
   /** Controls visibility of the Advanced Settings accordion section. */
   readonly showAdvanced = signal(false);
   @ViewChild('dropdownContainer') dropdownContainer!: ElementRef;
+  /** Reference to the Generate Schema button used to lock its width. */
+  @ViewChild('generateBtn') generateBtnRef?: ElementRef<HTMLButtonElement>;
+
+  /**
+   * Button micro-state machine for the "Generate Schema" CTA.
+   * Transitions: idle → loading → success → idle
+   */
+  readonly btnState = signal<'idle' | 'loading' | 'success'>('idle');
+  /** Locked pixel width of the Generate button captured on first render. */
+  btnLockedWidth = 0;
 
   /** Live preview text for the subject ID mask input. Reactive via RxJS → Signal. */
   readonly subjectIdPreview: Signal<string>;
@@ -66,6 +77,26 @@ export class ConfigFormComponent implements OnInit {
       mask$.pipe(map(mask => !validateSubjectIdMask(mask).valid)),
       { initialValue: !validateSubjectIdMask(maskCtrl.value as string).valid }
     );
+
+    // Watch generation completion and drive the button state machine.
+    effect(() => {
+      const generating = this.facade.isGenerating();
+      if (!generating && this.btnState() === 'loading') {
+        if (this.facade.results()) {
+          this.btnState.set('success');
+          setTimeout(() => this.btnState.set('idle'), 1500);
+        } else {
+          // Error path – reset immediately.
+          this.btnState.set('idle');
+        }
+      }
+    });
+  }
+
+  ngAfterViewInit(): void {
+    if (this.generateBtnRef?.nativeElement) {
+      this.btnLockedWidth = this.generateBtnRef.nativeElement.getBoundingClientRect().width;
+    }
   }
 
   ngOnInit(): void {
@@ -184,8 +215,10 @@ export class ConfigFormComponent implements OnInit {
 
   onSubmit(): void {
     if (this.form.valid) {
-      try { this.facade.generateSchema(this.store.buildConfig(this.form.value)); }
-      catch (e) { console.error('Error generating schema config:', e); alert('Error generating schema. Please check your configuration.'); }
+      try {
+        this.btnState.set('loading');
+        this.facade.generateSchema(this.store.buildConfig(this.form.value));
+      } catch (e) { console.error('Error generating schema config:', e); alert('Error generating schema. Please check your configuration.'); this.btnState.set('idle'); }
     }
   }
 
