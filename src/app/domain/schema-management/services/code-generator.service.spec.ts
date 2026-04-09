@@ -452,6 +452,290 @@ describe('CodeGeneratorService', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Cap Strategy: PROPORTIONAL
+  // ---------------------------------------------------------------------------
+  describe('PROPORTIONAL cap strategy', () => {
+    let proportionalConfig: RandomizationConfig;
+
+    beforeEach(() => {
+      proportionalConfig = {
+        ...fullConfig,
+        capStrategy: 'PROPORTIONAL',
+        globalCap: 100,
+        strata: [
+          {
+            id: 'sex', name: 'Sex', levels: ['Male', 'Female'],
+            levelDetails: [
+              { name: 'Male', targetPercentage: 60 },
+              { name: 'Female', targetPercentage: 40 }
+            ]
+          }
+        ],
+        // LRM-computed caps already embedded in stratumCaps
+        stratumCaps: [
+          { levels: ['Male', 'Young'], cap: 36 },
+          { levels: ['Male', 'Old'], cap: 24 },
+          { levels: ['Female', 'Young'], cap: 24 },
+          { levels: ['Female', 'Old'], cap: 16 }
+        ]
+      };
+    });
+
+    it('R: should embed PROPORTIONAL strategy header with global cap', () => {
+      const code = service.generateR(proportionalConfig);
+      expect(code).toContain('Cap Strategy: PROPORTIONAL');
+      expect(code).toContain('Global Enrollment Cap (per site): 100');
+      expect(code).toContain('LRM-computed');
+    });
+
+    it('R: should include per-factor percentages in the header', () => {
+      const code = service.generateR(proportionalConfig);
+      expect(code).toContain('Male=60%');
+      expect(code).toContain('Female=40%');
+    });
+
+    it('R: should still emit intersection stratum_caps (same as MANUAL_MATRIX)', () => {
+      const code = service.generateR(proportionalConfig);
+      expect(code).toContain('stratum_caps');
+    });
+
+    it('Python: should embed PROPORTIONAL strategy header', () => {
+      const code = service.generatePython(proportionalConfig);
+      expect(code).toContain('Cap Strategy: PROPORTIONAL');
+      expect(code).toContain('Global Enrollment Cap (per site): 100');
+    });
+
+    it('SAS: should embed PROPORTIONAL strategy comment', () => {
+      const code = service.generateSas(proportionalConfig);
+      expect(code).toContain('Cap Strategy: PROPORTIONAL');
+      expect(code).toContain('LRM-computed');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Cap Strategy: MARGINAL_ONLY
+  // ---------------------------------------------------------------------------
+  describe('MARGINAL_ONLY cap strategy', () => {
+    let marginalConfig: RandomizationConfig;
+
+    beforeEach(() => {
+      marginalConfig = {
+        protocolId: 'MARG-789',
+        studyName: 'Marginal Study',
+        phase: 'Phase II',
+        arms: [
+          { id: 'A', name: 'Treatment', ratio: 1 },
+          { id: 'B', name: 'Placebo', ratio: 1 }
+        ],
+        sites: ['S1', 'S2'],
+        strata: [
+          {
+            id: 'sex', name: 'Sex', levels: ['Male', 'Female'],
+            levelDetails: [
+              { name: 'Male', marginalCap: 30 },
+              { name: 'Female', marginalCap: 30 }
+            ]
+          },
+          {
+            id: 'age', name: 'Age Group', levels: ['Young', 'Old'],
+            levelDetails: [
+              { name: 'Young', marginalCap: 20 },
+              { name: 'Old', marginalCap: 40 }
+            ]
+          }
+        ],
+        blockSizes: [2, 4],
+        stratumCaps: [],  // not used in MARGINAL_ONLY
+        seed: 'marg_seed',
+        subjectIdMask: '[SiteID]-[001]',
+        capStrategy: 'MARGINAL_ONLY'
+      };
+    });
+
+    // R tests
+    describe('R', () => {
+      it('should declare marginal_caps list with per-level caps', () => {
+        const code = service.generateR(marginalConfig);
+        expect(code).toContain('marginal_caps <- list(');
+        expect(code).toContain('"Male" = 30');
+        expect(code).toContain('"Female" = 30');
+        expect(code).toContain('"Young" = 20');
+        expect(code).toContain('"Old" = 40');
+      });
+
+      it('should include MARGINAL_ONLY header', () => {
+        const code = service.generateR(marginalConfig);
+        expect(code).toContain('Cap Strategy: MARGINAL_ONLY');
+      });
+
+      it('should include active pool management loop', () => {
+        const code = service.generateR(marginalConfig);
+        expect(code).toContain('active_pool');
+        expect(code).toContain('while (nrow(active_pool) > 0)');
+        expect(code).toContain('marginal_counts');
+      });
+
+      it('should include cap enforcement and pruning logic', () => {
+        const code = service.generateR(marginalConfig);
+        expect(code).toContain('can_add');
+        expect(code).toContain('keep_flags');
+      });
+
+      it('should embed the seed', () => {
+        const code = service.generateR(marginalConfig);
+        expect(code).toMatch(/set\.seed\(\d+\)/);
+      });
+
+      it('should embed site and block_sizes parameters', () => {
+        const code = service.generateR(marginalConfig);
+        expect(code).toContain('sites <- c("S1", "S2")');
+        expect(code).toContain('block_sizes <- c(2, 4)');
+      });
+
+      it('should embed strata expand.grid for combination enumeration', () => {
+        const code = service.generateR(marginalConfig);
+        expect(code).toContain('expand.grid');
+        expect(code).toContain('sex_levels');
+        expect(code).toContain('age_levels');
+      });
+
+      it('should omit intersection stratum_caps (not needed in MARGINAL_ONLY)', () => {
+        const code = service.generateR(marginalConfig);
+        expect(code).not.toContain('stratum_caps <- c(');
+      });
+
+      it('should include QC checks', () => {
+        const code = service.generateR(marginalConfig);
+        expect(code).toContain('QC Check: Overall Allocation');
+      });
+
+      it('should handle levels without a marginalCap (uncapped levels omitted from list)', () => {
+        const uncappedConfig: RandomizationConfig = {
+          ...marginalConfig,
+          strata: [{
+            id: 'sex', name: 'Sex', levels: ['Male', 'Female'],
+            levelDetails: [
+              { name: 'Male', marginalCap: 30 },
+              { name: 'Female' }  // no cap → uncapped
+            ]
+          }]
+        };
+        const code = service.generateR(uncappedConfig);
+        expect(code).toContain('"Male" = 30');
+        expect(code).not.toContain('"Female" =');
+      });
+    });
+
+    // Python tests
+    describe('Python', () => {
+      it('should declare marginal_caps dict with per-level caps', () => {
+        const code = service.generatePython(marginalConfig);
+        expect(code).toContain('marginal_caps = {');
+        expect(code).toContain('"Male": 30');
+        expect(code).toContain('"Female": 30');
+        expect(code).toContain('"Young": 20');
+        expect(code).toContain('"Old": 40');
+      });
+
+      it('should include MARGINAL_ONLY header', () => {
+        const code = service.generatePython(marginalConfig);
+        expect(code).toContain('Cap Strategy: MARGINAL_ONLY');
+      });
+
+      it('should include active pool management loop', () => {
+        const code = service.generatePython(marginalConfig);
+        expect(code).toContain('active_pool');
+        expect(code).toContain('while active_pool:');
+        expect(code).toContain('marginal_counts');
+      });
+
+      it('should include cap enforcement and pruning', () => {
+        const code = service.generatePython(marginalConfig);
+        expect(code).toContain('can_add');
+        expect(code).toContain('active_pool = [');
+      });
+
+      it('should embed the seed', () => {
+        const code = service.generatePython(marginalConfig);
+        expect(code).toMatch(/default_rng\(\d+\)/);
+      });
+
+      it('should embed sites and block_sizes', () => {
+        const code = service.generatePython(marginalConfig);
+        expect(code).toContain('sites = ["S1", "S2"]');
+        expect(code).toContain('block_sizes = [2, 4]');
+      });
+
+      it('should omit intersection stratum_caps', () => {
+        const code = service.generatePython(marginalConfig);
+        expect(code).not.toContain('stratum_caps = {');
+      });
+    });
+
+    // SAS tests
+    describe('SAS', () => {
+      it('should include MARGINAL_ONLY comment', () => {
+        const code = service.generateSas(marginalConfig);
+        expect(code).toContain('Cap Strategy: MARGINAL_ONLY');
+      });
+
+      it('should declare _caps array with marginal cap values', () => {
+        const code = service.generateSas(marginalConfig);
+        expect(code).toContain('array _caps[');
+        // 4 levels total: Male=30, Female=30, Young=20, Old=40
+        expect(code).toContain('(30 30 20 40)');
+      });
+
+      it('should declare combo-to-factor-index mapping array', () => {
+        const code = service.generateSas(marginalConfig);
+        expect(code).toContain('_combo_fidx');
+      });
+
+      it('should declare active pool and count arrays', () => {
+        const code = service.generateSas(marginalConfig);
+        expect(code).toContain('array _active[');
+        expect(code).toContain('array _counts[');
+      });
+
+      it('should include per-factor character arrays for stratum assignment', () => {
+        const code = service.generateSas(marginalConfig);
+        expect(code).toContain('_cvl_sex');
+        expect(code).toContain('_cvl_age');
+      });
+
+      it('should include the while loop and pruning logic', () => {
+        const code = service.generateSas(marginalConfig);
+        expect(code).toContain('do while (_n_active > 0)');
+        expect(code).toContain('_can_add');
+        expect(code).toContain('_exhausted');
+      });
+
+      it('should embed the seed as %let seed macro variable', () => {
+        const code = service.generateSas(marginalConfig);
+        expect(code).toMatch(/%let seed = \d+;/);
+      });
+
+      it('should embed sites and block_sizes as macro variables', () => {
+        const code = service.generateSas(marginalConfig);
+        expect(code).toContain('%let sites = "S1" "S2";');
+        expect(code).toContain('%let block_sizes = 2 4;');
+      });
+
+      it('should include QC proc freq steps', () => {
+        const code = service.generateSas(marginalConfig);
+        expect(code).toContain('proc freq data=_schema_marginal;');
+        expect(code).toContain('tables Treatment / nocum;');
+      });
+
+      it('should not use the standard _caps / left join approach', () => {
+        const code = service.generateSas(marginalConfig);
+        expect(code).not.toContain('left join _caps');
+        expect(code).not.toContain('max_subjects_per_stratum');
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Cross-language consistency
   // ---------------------------------------------------------------------------
   describe('cross-language consistency', () => {
