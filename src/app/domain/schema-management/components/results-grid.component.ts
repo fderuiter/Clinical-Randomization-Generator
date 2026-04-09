@@ -1,9 +1,40 @@
 import { Component, computed, effect, signal, inject } from '@angular/core';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { SchemaViewStateService } from '../services/schema-view-state.service';
+import { GeneratedSchema } from '../../core/models/randomization.model';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { APP_VERSION } from '../../../../environments/version';
+
+// ---------------------------------------------------------------------------
+// Grouped-view row types
+// ---------------------------------------------------------------------------
+
+export interface BlockHeader {
+  type: 'header';
+  groupKey: string;
+  blockNumber: number;
+  site: string;
+  stratum: Record<string, string>;
+  stratumLabel: string;
+}
+
+export interface DataRow {
+  type: 'data';
+  data: GeneratedSchema;
+}
+
+export interface BlockSummary {
+  type: 'summary';
+  blockSize: number;
+  totalSubjects: number;
+  tallies: Record<string, number>;
+  isIncomplete: boolean;
+}
+
+export type GridRow = BlockHeader | DataRow | BlockSummary;
+
+// ---------------------------------------------------------------------------
 
 @Component({
   selector: 'app-results-grid',
@@ -23,6 +54,9 @@ export class ResultsGridComponent {
    */
   get isUnblinded() { return this.viewState.isUnblinded; }
 
+  /** Toggle between flat (paginated) view and grouped-by-block view. */
+  viewMode = signal<'flat' | 'grouped'>('flat');
+
   currentPage = signal(1);
   pageSize = 20;
 
@@ -39,6 +73,85 @@ export class ResultsGridComponent {
   paginatedData = computed(() => {
     const data = this.viewState.filteredSchema();
     return data.slice(this.startIndex(), this.endIndex());
+  });
+
+  /** Number of visible table columns (used for colspan in grouped view). */
+  columnCount = computed(() => {
+    /** Fixed columns: Subject ID, Site, Block, Treatment Arm. */
+    const BASE_COLUMNS = 4;
+    const data = this.state.results();
+    return BASE_COLUMNS + (data?.metadata.strata?.length || 0);
+  });
+
+  /**
+   * Flattened, heterogeneous array of BlockHeader / DataRow / BlockSummary
+   * objects used to power the grouped-by-block view.
+   *
+   * Groups are formed by the compound key (site | stratumCode | blockNumber)
+   * so that Block 1 for "Site A" and Block 1 for "Site B" are kept distinct.
+   */
+  groupedRows = computed<GridRow[]>(() => {
+    const schema = this.viewState.filteredSchema();
+    const result = this.state.results();
+    const strataInfo = result?.metadata.strata || [];
+    const strataNameMap = new Map(strataInfo.map(s => [s.id, s.name || s.id]));
+
+    const rows: GridRow[] = [];
+
+    // Use a Map to group rows and preserve insertion order.
+    const groups = new Map<string, {
+      header: BlockHeader;
+      dataRows: GeneratedSchema[];
+      blockSize: number;
+    }>();
+
+    for (const row of schema) {
+      const key = `${row.site}|${row.stratumCode}|${row.blockNumber}`;
+
+      if (!groups.has(key)) {
+        const stratumLabel = Object.entries(row.stratum)
+          .map(([k, v]) => `${strataNameMap.get(k) || k}: ${v}`)
+          .join(' | ');
+
+        groups.set(key, {
+          header: {
+            type: 'header',
+            groupKey: key,
+            blockNumber: row.blockNumber,
+            site: row.site,
+            stratum: row.stratum,
+            stratumLabel,
+          },
+          dataRows: [],
+          blockSize: row.blockSize,
+        });
+      }
+
+      groups.get(key)!.dataRows.push(row);
+    }
+
+    for (const [, group] of groups) {
+      rows.push(group.header);
+
+      for (const row of group.dataRows) {
+        rows.push({ type: 'data', data: row });
+      }
+
+      const tallies: Record<string, number> = {};
+      for (const row of group.dataRows) {
+        tallies[row.treatmentArm] = (tallies[row.treatmentArm] || 0) + 1;
+      }
+
+      rows.push({
+        type: 'summary',
+        blockSize: group.blockSize,
+        totalSubjects: group.dataRows.length,
+        tallies,
+        isIncomplete: group.dataRows.length !== group.blockSize,
+      });
+    }
+
+    return rows;
   });
 
   constructor() {
@@ -61,6 +174,16 @@ export class ResultsGridComponent {
 
   toggleBlinding() {
     this.viewState.toggleBlinding();
+  }
+
+  /**
+   * Formats treatment-arm tallies for the unblinded summary row.
+   * e.g. { Active: 2, Placebo: 2 } → "2 Active, 2 Placebo"
+   */
+  getSummaryBalanceText(tallies: Record<string, number>): string {
+    return Object.entries(tallies)
+      .map(([arm, count]) => `${count} ${arm}`)
+      .join(', ');
   }
 
   prevPage() {

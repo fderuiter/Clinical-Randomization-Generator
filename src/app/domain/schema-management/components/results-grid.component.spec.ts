@@ -228,4 +228,242 @@ describe('ResultsGridComponent (domain)', () => {
       expect(spy).toHaveBeenCalled();
     });
   });
+
+  describe('Group by Block view', () => {
+    it('should default to flat view mode', () => {
+      fixture.detectChanges();
+      expect(component.viewMode()).toBe('flat');
+    });
+
+    it('should toggle to grouped mode when "Group by Block" button is clicked', () => {
+      const mockResult = generateMockData(8);
+      mockFacade.results.set(mockResult);
+      fixture.detectChanges();
+
+      const buttons = fixture.debugElement.queryAll(By.css('button'));
+      const groupButton = buttons.find(b => b.nativeElement.textContent.trim() === 'Group by Block');
+      expect(groupButton).toBeTruthy();
+      groupButton?.triggerEventHandler('click', null);
+      fixture.detectChanges();
+
+      expect(component.viewMode()).toBe('grouped');
+    });
+
+    it('should toggle back to flat mode when "Flat List" button is clicked', () => {
+      const mockResult = generateMockData(8);
+      mockFacade.results.set(mockResult);
+      component.viewMode.set('grouped');
+      fixture.detectChanges();
+
+      const buttons = fixture.debugElement.queryAll(By.css('button'));
+      const flatButton = buttons.find(b => b.nativeElement.textContent.trim() === 'Flat List');
+      expect(flatButton).toBeTruthy();
+      flatButton?.triggerEventHandler('click', null);
+      fixture.detectChanges();
+
+      expect(component.viewMode()).toBe('flat');
+    });
+
+    describe('groupedRows computed signal', () => {
+      const makeSchema = (overrides: Array<Partial<{
+        subjectId: string; site: string; stratum: Record<string, string>;
+        stratumCode: string; blockNumber: number; blockSize: number;
+        treatmentArmId: string; treatmentArm: string;
+      }>>) => {
+        const baseRow = {
+          subjectId: 'S1', site: 'Site 1', stratum: { site: 'Site 1' },
+          stratumCode: 'SC1', blockNumber: 1, blockSize: 4,
+          treatmentArmId: 'a1', treatmentArm: 'Active'
+        };
+        return overrides.map(o => ({ ...baseRow, ...o }));
+      };
+
+      it('should produce header, data rows, and summary for a single block', () => {
+        const schema = makeSchema([
+          { subjectId: 'S1', treatmentArm: 'Active' },
+          { subjectId: 'S2', treatmentArm: 'Placebo', treatmentArmId: 'a2' },
+          { subjectId: 'S3', treatmentArm: 'Active' },
+          { subjectId: 'S4', treatmentArm: 'Placebo', treatmentArmId: 'a2' },
+        ]);
+        mockFacade.results.set({ ...generateMockData(0), schema });
+        fixture.detectChanges();
+
+        const rows = component.groupedRows();
+        expect(rows[0].type).toBe('header');
+        expect(rows[1].type).toBe('data');
+        expect(rows[2].type).toBe('data');
+        expect(rows[3].type).toBe('data');
+        expect(rows[4].type).toBe('data');
+        expect(rows[5].type).toBe('summary');
+        expect(rows.length).toBe(6);
+      });
+
+      it('should group distinct blocks into separate header/data/summary triplets', () => {
+        const schema = makeSchema([
+          { subjectId: 'S1', blockNumber: 1, site: 'Site 1', stratumCode: 'SC1', treatmentArm: 'Active' },
+          { subjectId: 'S2', blockNumber: 1, site: 'Site 1', stratumCode: 'SC1', treatmentArm: 'Placebo', treatmentArmId: 'a2' },
+          { subjectId: 'S3', blockNumber: 2, site: 'Site 1', stratumCode: 'SC1', treatmentArm: 'Active' },
+          { subjectId: 'S4', blockNumber: 2, site: 'Site 1', stratumCode: 'SC1', treatmentArm: 'Placebo', treatmentArmId: 'a2' },
+        ]);
+        mockFacade.results.set({ ...generateMockData(0), schema });
+        fixture.detectChanges();
+
+        const rows = component.groupedRows();
+        // Block 1: header + 2 data rows + summary = 4
+        // Block 2: header + 2 data rows + summary = 4
+        expect(rows.length).toBe(8);
+        expect(rows[0].type).toBe('header');
+        expect(rows[3].type).toBe('summary');
+        expect(rows[4].type).toBe('header');
+        expect(rows[7].type).toBe('summary');
+      });
+
+      it('should use a compound key so blocks with same number but different sites stay separate', () => {
+        const schema = makeSchema([
+          { subjectId: 'S1', blockNumber: 1, site: 'Site 1', stratumCode: 'SC1', treatmentArm: 'Active' },
+          { subjectId: 'S2', blockNumber: 1, site: 'Site 2', stratumCode: 'SC2', treatmentArm: 'Active' },
+        ]);
+        mockFacade.results.set({ ...generateMockData(0), schema });
+        fixture.detectChanges();
+
+        const rows = component.groupedRows();
+        // Two separate groups: 1 header + 1 data + 1 summary each = 6
+        expect(rows.length).toBe(6);
+        const headers = rows.filter(r => r.type === 'header') as any[];
+        expect(headers[0].site).toBe('Site 1');
+        expect(headers[1].site).toBe('Site 2');
+      });
+
+      it('summary tallies should be correct', () => {
+        const schema = makeSchema([
+          { subjectId: 'S1', treatmentArm: 'Active' },
+          { subjectId: 'S2', treatmentArm: 'Placebo', treatmentArmId: 'a2' },
+          { subjectId: 'S3', treatmentArm: 'Active' },
+          { subjectId: 'S4', treatmentArm: 'Placebo', treatmentArmId: 'a2' },
+        ]);
+        mockFacade.results.set({ ...generateMockData(0), schema });
+        fixture.detectChanges();
+
+        const rows = component.groupedRows();
+        const summary = rows[rows.length - 1] as any;
+        expect(summary.type).toBe('summary');
+        expect(summary.tallies['Active']).toBe(2);
+        expect(summary.tallies['Placebo']).toBe(2);
+        expect(summary.totalSubjects).toBe(4);
+        expect(summary.isIncomplete).toBe(false);
+      });
+
+      it('should flag incomplete blocks when totalSubjects < blockSize', () => {
+        const schema = makeSchema([
+          { subjectId: 'S1', blockSize: 4, treatmentArm: 'Active' },
+          { subjectId: 'S2', blockSize: 4, treatmentArm: 'Placebo', treatmentArmId: 'a2' },
+          // only 2 of 4 subjects enrolled
+        ]);
+        mockFacade.results.set({ ...generateMockData(0), schema });
+        fixture.detectChanges();
+
+        const rows = component.groupedRows();
+        const summary = rows[rows.length - 1] as any;
+        expect(summary.isIncomplete).toBe(true);
+        expect(summary.totalSubjects).toBe(2);
+        expect(summary.blockSize).toBe(4);
+      });
+    });
+
+    describe('getSummaryBalanceText', () => {
+      it('should format tallies correctly', () => {
+        expect(component.getSummaryBalanceText({ Active: 2, Placebo: 2 })).toBe('2 Active, 2 Placebo');
+        expect(component.getSummaryBalanceText({ Active: 3 })).toBe('3 Active');
+      });
+    });
+
+    describe('columnCount', () => {
+      it('should count 4 fixed columns plus strata columns', () => {
+        const data = generateMockData(1); // has 1 stratum ('site')
+        mockFacade.results.set(data);
+        fixture.detectChanges();
+        // 4 fixed (Subject ID, Site, Block, Treatment Arm) + 1 stratum = 5
+        expect(component.columnCount()).toBe(5);
+      });
+
+      it('should return 4 when no strata are defined', () => {
+        const data = generateMockData(1);
+        data.metadata.strata = [];
+        mockFacade.results.set(data);
+        fixture.detectChanges();
+        expect(component.columnCount()).toBe(4);
+      });
+    });
+
+    describe('grouped view DOM rendering', () => {
+      it('should render header and summary rows in grouped mode (blinded)', () => {
+        const mockResult = generateMockData(4); // 4 subjects, all block 1
+        // Ensure all in same block
+        mockResult.schema.forEach(r => { r.blockNumber = 1; r.stratumCode = 'SC1'; r.site = 'Site 1'; r.stratum = { site: 'Site 1' }; });
+        mockFacade.results.set(mockResult);
+        component.viewMode.set('grouped');
+        fixture.detectChanges();
+
+        const rows = fixture.debugElement.queryAll(By.css('tbody tr'));
+        // 1 header + 4 data + 1 summary = 6
+        expect(rows.length).toBe(6);
+
+        // Summary row should show blinded text
+        const summaryRow = rows[rows.length - 1];
+        expect(summaryRow.nativeElement.textContent).toContain('Subjects (Blinded)');
+      });
+
+      it('should render unblinded tallies in summary row when unblinded', () => {
+        const mockResult = generateMockData(4);
+        mockResult.schema.forEach(r => { r.blockNumber = 1; r.stratumCode = 'SC1'; r.site = 'Site 1'; r.stratum = { site: 'Site 1' }; });
+        mockFacade.results.set(mockResult);
+        component.viewMode.set('grouped');
+        component.toggleBlinding();
+        fixture.detectChanges();
+
+        const rows = fixture.debugElement.queryAll(By.css('tbody tr'));
+        const summaryRow = rows[rows.length - 1];
+        expect(summaryRow.nativeElement.textContent).toContain('Balance:');
+        expect(summaryRow.nativeElement.textContent).not.toContain('Blinded');
+      });
+
+      it('should show an incomplete block warning when block has fewer subjects than blockSize', () => {
+        const mockResult = generateMockData(2); // only 2 subjects but blockSize is 4
+        mockResult.schema.forEach(r => { r.blockNumber = 1; r.stratumCode = 'SC1'; r.site = 'Site 1'; r.stratum = { site: 'Site 1' }; });
+        mockFacade.results.set(mockResult);
+        component.viewMode.set('grouped');
+        fixture.detectChanges();
+
+        const rows = fixture.debugElement.queryAll(By.css('tbody tr'));
+        const summaryRow = rows[rows.length - 1];
+        expect(summaryRow.nativeElement.textContent).toContain('Incomplete Block');
+      });
+
+      it('should not show pagination controls in grouped mode', () => {
+        const mockResult = generateMockData(25);
+        mockFacade.results.set(mockResult);
+        component.viewMode.set('grouped');
+        fixture.detectChanges();
+
+        const buttons = fixture.debugElement.queryAll(By.css('button'));
+        const prevBtn = buttons.find(b => b.nativeElement.textContent.trim() === 'Previous');
+        const nextBtn = buttons.find(b => b.nativeElement.textContent.trim() === 'Next');
+        expect(prevBtn).toBeFalsy();
+        expect(nextBtn).toBeFalsy();
+      });
+
+      it('should show pagination controls in flat mode', () => {
+        const mockResult = generateMockData(25);
+        mockFacade.results.set(mockResult);
+        component.viewMode.set('flat');
+        fixture.detectChanges();
+
+        const buttons = fixture.debugElement.queryAll(By.css('button'));
+        const prevBtn = buttons.find(b => b.nativeElement.textContent.trim() === 'Previous');
+        const nextBtn = buttons.find(b => b.nativeElement.textContent.trim() === 'Next');
+        expect(prevBtn).toBeTruthy();
+        expect(nextBtn).toBeTruthy();
+      });
+    });
+  });
 });

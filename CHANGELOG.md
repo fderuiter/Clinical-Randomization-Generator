@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.7.0...v1.8.0) (2026-04-09)
+
+
+### Features
+
+* add Group by Block view mode to ResultsGridComponent ([9ab0388](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/9ab038885a9c97f650cae144b37256cc483518b3))
+
 # [1.7.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.6.0...v1.7.0) (2026-04-08)
 
 
