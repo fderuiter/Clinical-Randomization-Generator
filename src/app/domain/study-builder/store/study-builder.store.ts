@@ -62,7 +62,7 @@ const PRESETS: Record<'simple' | 'standard' | 'complex', PresetConfig> = {
     strata: [],
     sitesStr: 'Site A, Site B',
     blockSizesStr: '2, 4',
-    subjectIdMask: '[SiteID]-[001]'
+    subjectIdMask: '{SITE}-{SEQ:3}'
   },
   standard: {
     protocolId: 'STD-002',
@@ -75,7 +75,7 @@ const PRESETS: Record<'simple' | 'standard' | 'complex', PresetConfig> = {
     strata: [{ id: 'age', name: 'Age Group', levelsStr: '<65, >=65' }],
     sitesStr: '101, 102, 103',
     blockSizesStr: '4, 6',
-    subjectIdMask: '[SiteID]-[StratumCode]-[001]'
+    subjectIdMask: '{SITE}-{STRATUM}-{SEQ:3}'
   },
   complex: {
     protocolId: 'CMPX-003',
@@ -93,7 +93,7 @@ const PRESETS: Record<'simple' | 'standard' | 'complex', PresetConfig> = {
     ],
     sitesStr: 'US-01, US-02, UK-01, DE-01',
     blockSizesStr: '3, 6, 9',
-    subjectIdMask: '[SiteID]-[StratumCode]-[001]'
+    subjectIdMask: '{SITE}-{STRATUM}-{SEQ:3}-{RND:4}'
   }
 };
 

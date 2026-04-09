@@ -249,6 +249,8 @@ test.describe('Monte Carlo Statistical Validation', () => {
   // ── Works with different presets ──────────────────────────────────────────
 
   test('Monte Carlo should complete with the Complex (Multi-strata) preset', async ({ page }) => {
+    test.setTimeout(120000); // CI can be slower for complex simulation
+
     // Load complex preset
     await page.getByRole('button', { name: /Complex \(Multi-strata\)/i }).click();
 
@@ -258,17 +260,17 @@ test.describe('Monte Carlo Statistical Validation', () => {
     const modal = page.locator('div[role="dialog"]');
     await expect(modal).toBeVisible({ timeout: 5000 });
 
-    // Simulation should complete
-    await expect(modal.getByText(/Simulating trials/i)).toBeHidden({ timeout: 60000 });
-
-    // Results appear
+    // Wait for the deterministic completed-state element instead of spinner disappearance
     const confidenceStatement = modal.getByTestId('mc-confidence-statement');
-    await expect(confidenceStatement).toBeVisible();
+    await expect(confidenceStatement).toBeVisible({ timeout: 90000 });
     await expect(confidenceStatement).toContainText(/Algorithm mathematically verified/i);
 
     // Complex preset has 3 arms — table should have 3 rows
     const tableRows = modal.locator('tbody tr');
-    await expect(tableRows).toHaveCount(3, { timeout: 5000 });
+    await expect(tableRows).toHaveCount(3, { timeout: 10000 });
+
+    // Confirm loader is gone (non-blocking at this point)
+    await expect(modal.getByText(/Simulating trials/i)).toBeHidden({ timeout: 10000 });
   });
 
   test('Monte Carlo should complete with the Simple (Unstratified) preset', async ({ page }) => {

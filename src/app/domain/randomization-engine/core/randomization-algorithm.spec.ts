@@ -336,3 +336,87 @@ describe('generateRandomizationSchema – multi-site', () => {
     expect(betaRows.length).toBe(2);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// New-style token syntax  {SITE}, {STRATUM}, {SEQ:n}, {RND:n}, {CHECKSUM}
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('generateRandomizationSchema – new token syntax', () => {
+  it('{SITE} resolves to the site identifier', () => {
+    const config: RandomizationConfig = { ...BASE_CONFIG, subjectIdMask: '{SITE}-001' };
+    const result = generateRandomizationSchema(config);
+    expect(result.schema[0].subjectId.startsWith('Site1-')).toBe(true);
+  });
+
+  it('{SEQ:3} produces a 3-digit zero-padded counter', () => {
+    const config: RandomizationConfig = { ...BASE_CONFIG, subjectIdMask: '{SITE}-{SEQ:3}' };
+    const result = generateRandomizationSchema(config);
+    expect(result.schema[0].subjectId).toBe('Site1-001');
+    expect(result.schema[3].subjectId).toBe('Site1-004');
+  });
+
+  it('{SEQ:5} produces a 5-digit zero-padded counter', () => {
+    const config: RandomizationConfig = { ...BASE_CONFIG, subjectIdMask: '{SEQ:5}' };
+    const result = generateRandomizationSchema(config);
+    expect(result.schema[0].subjectId).toBe('00001');
+    expect(result.schema[3].subjectId).toBe('00004');
+  });
+
+  it('{STRATUM} resolves to the computed stratum code', () => {
+    const config: RandomizationConfig = {
+      ...BASE_CONFIG,
+      strata: [{ id: 'age', name: 'Age', levels: ['<65'] }],
+      stratumCaps: [{ levels: ['<65'], cap: 2 }],
+      subjectIdMask: '{SITE}-{STRATUM}-{SEQ:3}'
+    };
+    const result = generateRandomizationSchema(config);
+    expect(result.schema[0].subjectId).toContain('-<65-');
+  });
+
+  it('{RND:4} generates a 4-character uppercase alphanumeric segment', () => {
+    const config: RandomizationConfig = { ...BASE_CONFIG, subjectIdMask: '{SITE}-{RND:4}' };
+    const result = generateRandomizationSchema(config);
+    const rndPart = result.schema[0].subjectId.replace('Site1-', '');
+    expect(rndPart).toHaveLength(4);
+    expect(rndPart).toMatch(/^[A-Z0-9]{4}$/);
+  });
+
+  it('{RND:n} produces no duplicate subject IDs across the schema', () => {
+    const config: RandomizationConfig = {
+      ...BASE_CONFIG,
+      sites: ['S1', 'S2'],
+      stratumCaps: [{ levels: [], cap: 4 }],
+      subjectIdMask: '{SITE}-{RND:8}'
+    };
+    const result = generateRandomizationSchema(config);
+    const ids = result.schema.map(r => r.subjectId);
+    const unique = new Set(ids);
+    expect(unique.size).toBe(ids.length);
+  });
+
+  it('{CHECKSUM} appends a single check digit computed from the rest of the ID', () => {
+    const config: RandomizationConfig = {
+      ...BASE_CONFIG,
+      subjectIdMask: '{SITE}-{SEQ:3}-{CHECKSUM}'
+    };
+    const result = generateRandomizationSchema(config);
+    expect(result.schema[0].subjectId).toMatch(/^Site1-001-\d$/);
+  });
+
+  it('{CHECKSUM} produces the same digit for the same base string', () => {
+    const config: RandomizationConfig = {
+      ...BASE_CONFIG,
+      subjectIdMask: '{SITE}-{SEQ:3}-{CHECKSUM}'
+    };
+    const r1 = generateRandomizationSchema(config);
+    const r2 = generateRandomizationSchema(config);
+    expect(r1.schema[0].subjectId).toBe(r2.schema[0].subjectId);
+  });
+
+  it('plain text outside tokens is preserved verbatim', () => {
+    const config: RandomizationConfig = { ...BASE_CONFIG, subjectIdMask: 'TRIAL-{SITE}-END' };
+    const result = generateRandomizationSchema(config);
+    expect(result.schema[0].subjectId).toBe('TRIAL-Site1-END');
+  });
+});
+
