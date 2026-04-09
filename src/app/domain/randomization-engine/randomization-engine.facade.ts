@@ -5,6 +5,7 @@ import {
   RandomizationResult
 } from '../core/models/randomization.model';
 import { RandomizationService } from './randomization.service';
+import { ToastService } from '../../core/services/toast.service';
 import type {
   GenerationCommand,
   MonteCarloCommand,
@@ -28,6 +29,7 @@ import type {
 export class RandomizationEngineFacade {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly randomizationService = inject(RandomizationService);
+  private readonly toastService = inject(ToastService);
 
   private worker: Worker | null = null;
   private pendingCallbacks = new Map<
@@ -87,10 +89,13 @@ export class RandomizationEngineFacade {
         next: res => {
           this.results.set(res);
           this.isGenerating.set(false);
+          this.toastService.showSuccess('Schema successfully generated!');
         },
         error: err => {
-          this.error.set(err.error?.error ?? 'An error occurred during schema generation.');
+          const message = err.error?.error ?? 'An error occurred during schema generation.';
+          this.error.set(message);
           this.isGenerating.set(false);
+          this.toastService.showError(message);
         }
       });
     }
@@ -219,13 +224,15 @@ export class RandomizationEngineFacade {
       resolve: result => {
         this.results.set(result);
         this.isGenerating.set(false);
+        this.toastService.showSuccess('Schema successfully generated!');
       },
       reject: err => {
         const errPayload = err as { error?: { error?: string } };
-        this.error.set(
-          errPayload?.error?.error ?? 'An error occurred during schema generation.'
-        );
+        const message =
+          errPayload?.error?.error ?? 'An error occurred during schema generation.';
+        this.error.set(message);
         this.isGenerating.set(false);
+        this.toastService.showError(message);
       }
     });
 

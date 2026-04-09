@@ -181,7 +181,8 @@ describe('ResultsGridComponent (domain)', () => {
       expect(rows.length).toBe(5);
 
       const firstRowCols = rows[0].queryAll(By.css('td'));
-      const treatmentCol = firstRowCols[firstRowCols.length - 1];
+      // Treatment Arm is second-to-last; last column is now the Actions kebab cell.
+      const treatmentCol = firstRowCols[firstRowCols.length - 2];
       expect(treatmentCol.nativeElement.textContent.trim()).toBe('*** BLINDED ***');
     });
 
@@ -196,7 +197,8 @@ describe('ResultsGridComponent (domain)', () => {
       expect(component.isUnblinded()).toBe(true);
       const rows = fixture.debugElement.queryAll(By.css('tbody tr'));
       const firstRowCols = rows[0].queryAll(By.css('td'));
-      const treatmentCol = firstRowCols[firstRowCols.length - 1];
+      // Treatment Arm is second-to-last; last column is now the Actions kebab cell.
+      const treatmentCol = firstRowCols[firstRowCols.length - 2];
       expect(treatmentCol.nativeElement.textContent.trim()).toBe('Active');
     });
   });
@@ -378,20 +380,20 @@ describe('ResultsGridComponent (domain)', () => {
     });
 
     describe('columnCount', () => {
-      it('should count 4 fixed columns plus strata columns', () => {
+      it('should count 5 fixed columns plus strata columns', () => {
         const data = generateMockData(1); // has 1 stratum ('site')
         mockFacade.results.set(data);
         fixture.detectChanges();
-        // 4 fixed (Subject ID, Site, Block, Treatment Arm) + 1 stratum = 5
-        expect(component.columnCount()).toBe(5);
+        // 5 fixed (Subject ID, Site, Block, Treatment Arm, Actions) + 1 stratum = 6
+        expect(component.columnCount()).toBe(6);
       });
 
-      it('should return 4 when no strata are defined', () => {
+      it('should return 5 when no strata are defined', () => {
         const data = generateMockData(1);
         data.metadata.strata = [];
         mockFacade.results.set(data);
         fixture.detectChanges();
-        expect(component.columnCount()).toBe(4);
+        expect(component.columnCount()).toBe(5);
       });
     });
 

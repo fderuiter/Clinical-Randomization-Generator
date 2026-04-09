@@ -1,4 +1,5 @@
 import { Component, computed, effect, signal, inject } from '@angular/core';
+import { CdkMenuModule } from '@angular/cdk/menu';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { SchemaViewStateService } from '../services/schema-view-state.service';
 import { GeneratedSchema } from '../../core/models/randomization.model';
@@ -39,6 +40,7 @@ export type GridRow = BlockHeader | DataRow | BlockSummary;
 @Component({
   selector: 'app-results-grid',
   standalone: true,
+  imports: [CdkMenuModule],
   templateUrl: './results-grid.component.html',
   styles: [`
     .dot { transition: transform 0.2s ease-in-out; }
@@ -47,6 +49,12 @@ export type GridRow = BlockHeader | DataRow | BlockSummary;
 export class ResultsGridComponent {
   public state = inject(RandomizationEngineFacade);
   public viewState = inject(SchemaViewStateService);
+
+  /**
+   * Tracks the row whose kebab menu is currently open so the shared menu
+   * template can reference the correct data payload.
+   */
+  activeMenuRow = signal<GeneratedSchema | null>(null);
 
   /**
    * Expose the shared `isUnblinded` signal directly so existing template
@@ -77,8 +85,8 @@ export class ResultsGridComponent {
 
   /** Number of visible table columns (used for colspan in grouped view). */
   columnCount = computed(() => {
-    /** Fixed columns: Subject ID, Site, Block, Treatment Arm. */
-    const BASE_COLUMNS = 4;
+    /** Fixed columns: Subject ID, Site, Block, Treatment Arm, Actions. */
+    const BASE_COLUMNS = 5;
     const data = this.state.results();
     return BASE_COLUMNS + (data?.metadata.strata?.length || 0);
   });
@@ -174,6 +182,21 @@ export class ResultsGridComponent {
 
   toggleBlinding() {
     this.viewState.toggleBlinding();
+  }
+
+  /** Opens the kebab context menu for a specific data row. */
+  openRowMenu(row: GeneratedSchema): void {
+    this.activeMenuRow.set(row);
+  }
+
+  /** Placeholder: marks a subject as dropped from the trial. */
+  markAsDropped(row: GeneratedSchema): void {
+    console.info('[ResultsGrid] Mark as Dropped – Subject:', row.subjectId);
+  }
+
+  /** Placeholder: displays stratum detail for a subject. */
+  viewStratumDetails(row: GeneratedSchema): void {
+    console.info('[ResultsGrid] View Stratum Details – Subject:', row.subjectId, 'Stratum:', row.stratum);
   }
 
   /**

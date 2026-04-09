@@ -102,11 +102,14 @@ describe('GeneratorComponent (domain)', () => {
 
   // ── Error state ────────────────────────────────────────────────────────────
 
-  it('should show error message when error signal has a value', () => {
+  it('should NOT show an inline error banner when error signal has a value (errors use the Toast system)', () => {
     mockFacade.error.set('Block size error');
     const fixture = TestBed.createComponent(GeneratorComponent);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Block size error');
+    // The static error banner has been removed; errors are now surfaced via
+    // the ToastService overlay, not as inline DOM elements.
+    expect(fixture.nativeElement.querySelector('.bg-red-50')).toBeFalsy();
+    expect(fixture.nativeElement.textContent).not.toContain('Block size error');
   });
 
   it('should NOT show error banner when error signal is null', () => {
@@ -117,13 +120,14 @@ describe('GeneratorComponent (domain)', () => {
     expect(el.querySelector('.bg-red-50')).toBeFalsy();
   });
 
-  it('should update the error message reactively', () => {
+  it('should not render inline error text when the error signal changes reactively', () => {
     const fixture = TestBed.createComponent(GeneratorComponent);
     fixture.detectChanges();
 
     mockFacade.error.set('New validation error');
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('New validation error');
+    // Errors are handled by the Toast overlay, not the component template.
+    expect(fixture.nativeElement.textContent).not.toContain('New validation error');
   });
 
   // ── Results section ────────────────────────────────────────────────────────

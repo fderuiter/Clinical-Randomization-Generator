@@ -71,6 +71,7 @@
               }
               <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Block</th>
               <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Treatment Arm</th>
+              <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
@@ -105,6 +106,23 @@
                         *** BLINDED ***
                       </span>
                     }
+                  </td>
+                  <!-- Kebab context menu -->
+                  <td class="px-4 py-5 whitespace-nowrap text-center">
+                    <button
+                      type="button"
+                      [cdkMenuTriggerFor]="rowMenu"
+                      (click)="openRowMenu(row)"
+                      class="inline-flex items-center justify-center w-8 h-8 rounded-full text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      [attr.aria-label]="'Actions for subject ' + row.subjectId"
+                    >
+                      <!-- Vertical three-dot (kebab) icon -->
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <circle cx="12" cy="5" r="1.5"/>
+                        <circle cx="12" cy="12" r="1.5"/>
+                        <circle cx="12" cy="19" r="1.5"/>
+                      </svg>
+                    </button>
                   </td>
                 </tr>
               }
@@ -154,6 +172,22 @@
                             *** BLINDED ***
                           </span>
                         }
+                      </td>
+                      <!-- Kebab context menu -->
+                      <td class="px-4 py-5 whitespace-nowrap text-center">
+                        <button
+                          type="button"
+                          [cdkMenuTriggerFor]="rowMenu"
+                          (click)="openRowMenu($any(item).data)"
+                          class="inline-flex items-center justify-center w-8 h-8 rounded-full text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          [attr.aria-label]="'Actions for subject ' + $any(item).data.subjectId"
+                        >
+                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <circle cx="12" cy="5" r="1.5"/>
+                            <circle cx="12" cy="12" r="1.5"/>
+                            <circle cx="12" cy="19" r="1.5"/>
+                          </svg>
+                        </button>
                       </td>
                     </tr>
                   }
@@ -208,3 +242,41 @@
       }
     </div>
 }
+
+<!-- Shared CDK context menu template for row-level kebab actions.
+     `cdkMenuTriggerFor` references this template by the #rowMenu variable.
+     The `activeMenuRow()` signal provides the currently targeted row's data. -->
+<ng-template #rowMenu>
+  <div
+    cdkMenu
+    role="menu"
+    class="min-w-40 rounded-xl bg-white dark:bg-slate-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 border border-gray-100 dark:border-slate-700 py-1 backdrop-blur-sm"
+  >
+    <button
+      cdkMenuItem
+      type="button"
+      role="menuitem"
+      class="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 focus:bg-gray-50 dark:focus:bg-slate-700 focus:outline-none transition-colors"
+      (click)="viewStratumDetails(activeMenuRow()!)"
+    >
+      <svg class="h-4 w-4 text-gray-400 dark:text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
+        <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+      </svg>
+      View Stratum Details
+    </button>
+
+    <button
+      cdkMenuItem
+      type="button"
+      role="menuitem"
+      class="w-full flex items-center gap-2 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 focus:bg-rose-50 dark:focus:bg-rose-900/20 focus:outline-none transition-colors"
+      (click)="markAsDropped(activeMenuRow()!)"
+    >
+      <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+      </svg>
+      Mark as Dropped
+    </button>
+  </div>
+</ng-template>
