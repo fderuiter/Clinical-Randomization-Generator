@@ -2,8 +2,8 @@ import { test, expect, Page } from '@playwright/test';
 
 /**
  * Helper: navigate to the generator page and generate a schema using the
- * Complex (Multi-strata) preset, which reliably produces > 20 rows so that
- * the pagination controls are visible.
+ * Complex (Multi-strata) preset, which reliably produces many rows for
+ * virtual-scroll verification.
  */
 async function generateComplexSchema(page: Page) {
   await page.goto('http://localhost:4200');
@@ -34,7 +34,7 @@ test.describe('Results Grid Operations', () => {
   // Basic grid rendering
   // ---------------------------------------------------------------------------
   test('should display the results grid with at least one data row', async ({ page }) => {
-    const rows = page.locator('#results-section tbody tr');
+    const rows = page.locator('#results-section [data-testid="result-row"]');
     await expect(rows.first()).toBeVisible();
     expect(await rows.count()).toBeGreaterThan(0);
   });
@@ -43,6 +43,37 @@ test.describe('Results Grid Operations', () => {
     const header = page.locator('#results-section').first();
     await expect(header.getByText(/Protocol:/i)).toBeVisible();
     await expect(header.getByText(/Seed:/i)).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Virtual scroll verification
+  // ---------------------------------------------------------------------------
+  test('virtual scroll viewport should be present in flat view', async ({ page }) => {
+    const viewport = page.locator('#results-section cdk-virtual-scroll-viewport');
+    await expect(viewport).toBeVisible();
+  });
+
+  test('DOM should contain far fewer rows than total items (virtual scroll active)', async ({ page }) => {
+    // The virtual scroll should render only visible rows, not all rows.
+    // The Complex preset generates many rows; only a small window should be in the DOM.
+    const totalRows = await page.locator('#results-section [data-testid="result-row"]').count();
+    // Virtual scroll viewport is 600px, itemSize 48px → max ~12-14 rows + buffer
+    // We just verify it's finite and reasonable (< 100 in flat mode = virtual scroll working)
+    expect(totalRows).toBeGreaterThan(0);
+    expect(totalRows).toBeLessThan(100);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Column headers and sorting
+  // ---------------------------------------------------------------------------
+  test('should show sortable column headers in flat view', async ({ page }) => {
+    const subjectIdHeader = page.locator('#results-section thead th').first();
+    await expect(subjectIdHeader.getByRole('button', { name: /Sort by Subject ID/i })).toBeVisible();
+  });
+
+  test('should show filter icon on Site column', async ({ page }) => {
+    const filterBtn = page.locator('#results-section thead').getByRole('button', { name: /Filter Site/i });
+    await expect(filterBtn).toBeVisible();
   });
 
   // ---------------------------------------------------------------------------
@@ -74,37 +105,6 @@ test.describe('Results Grid Operations', () => {
 
     await toggleLabel.click(); // re-blind
     await expect(armCell).toContainText('*** BLINDED ***');
-  });
-
-  // ---------------------------------------------------------------------------
-  // Pagination
-  // ---------------------------------------------------------------------------
-  test('"Previous" button should be disabled on the first page', async ({ page }) => {
-    const prevBtn = page.locator('#results-section').getByRole('button', { name: /Previous/i });
-    await expect(prevBtn).toBeDisabled();
-  });
-
-  test('clicking "Next" should enable the "Previous" button', async ({ page }) => {
-    const resultsSection = page.locator('#results-section');
-    const nextBtn = resultsSection.getByRole('button', { name: /Next/i });
-    const prevBtn = resultsSection.getByRole('button', { name: /Previous/i });
-
-    // The Complex preset reliably produces > 20 rows; assert Next is enabled
-    await expect(nextBtn).toBeEnabled();
-    await nextBtn.click();
-    await expect(prevBtn).toBeEnabled();
-  });
-
-  test('clicking "Previous" after "Next" should return to the first page', async ({ page }) => {
-    const resultsSection = page.locator('#results-section');
-    const nextBtn = resultsSection.getByRole('button', { name: /Next/i });
-    const prevBtn = resultsSection.getByRole('button', { name: /Previous/i });
-
-    await expect(nextBtn).toBeEnabled();
-    await nextBtn.click();
-    await expect(prevBtn).toBeEnabled();
-    await prevBtn.click();
-    await expect(prevBtn).toBeDisabled();
   });
 
   // ---------------------------------------------------------------------------

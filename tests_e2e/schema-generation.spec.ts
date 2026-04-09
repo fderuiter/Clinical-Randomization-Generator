@@ -30,18 +30,14 @@ test.describe('Schema Generation Flow', () => {
     const resultsSection = page.locator('#results-section');
     await expect(resultsSection).toBeVisible({ timeout: 10000 });
 
-    // Assert that the grid contains rows and the pagination controls are visible
-    const tableRows = resultsSection.locator('tbody tr');
-    // Ensure we have at least one row
-    await expect(tableRows.first()).toBeVisible();
-    const rowCount = await tableRows.count();
-    expect(rowCount).toBeGreaterThan(0);
+    // Assert that the grid contains rows via the virtual scroll viewport
+    const firstRow = page.locator('[data-testid="result-row"]').first();
+    await expect(firstRow).toBeVisible();
 
-    const paginationControls = resultsSection.locator('nav[aria-label="Pagination"]');
-    await expect(paginationControls).toBeVisible();
+    const virtualViewport = resultsSection.locator('cdk-virtual-scroll-viewport');
+    await expect(virtualViewport).toBeVisible();
 
     // Verify initial state is blinded
-    const firstRow = page.locator('[data-testid="result-row"]').first();
     const armCell = firstRow.locator('[data-testid="result-arm-cell"]');
     await expect(armCell).toContainText('*** BLINDED ***');
 

@@ -1,5 +1,7 @@
 import { Component, computed, effect, signal, inject } from '@angular/core';
+import { KeyValuePipe } from '@angular/common';
 import { CdkMenuModule } from '@angular/cdk/menu';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { SchemaViewStateService } from '../services/schema-view-state.service';
 import { GeneratedSchema } from '../../core/models/randomization.model';
@@ -7,6 +9,13 @@ import { ViewportService } from '../../../core/services/viewport.service';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { APP_VERSION } from '../../../../environments/version';
+
+export type SortDirection = 'asc' | 'desc' | 'none';
+
+export interface SortState {
+  column: string;
+  direction: SortDirection;
+}
 
 // ---------------------------------------------------------------------------
 // Grouped-view row types
@@ -41,7 +50,7 @@ export type GridRow = BlockHeader | DataRow | BlockSummary;
 @Component({
   selector: 'app-results-grid',
   standalone: true,
-  imports: [CdkMenuModule],
+  imports: [CdkMenuModule, ScrollingModule, KeyValuePipe],
   templateUrl: './results-grid.component.html',
   styles: [`
     .dot { transition: transform 0.2s ease-in-out; }
@@ -67,25 +76,71 @@ export class ResultsGridComponent {
    */
   get isUnblinded() { return this.viewState.isUnblinded; }
 
-  /** Toggle between flat (paginated) view and grouped-by-block view. */
+  /** Toggle between flat (virtual-scroll) view and grouped-by-block view. */
   viewMode = signal<'flat' | 'grouped'>('flat');
 
-  currentPage = signal(1);
-  pageSize = 20;
+  // ── Multi-column sort / filter state ────────────────────────────────────
+
+  /** Active sort column and direction. */
+  sortState = signal<SortState>({ column: '', direction: 'none' });
+
+  /** Map of column key → active filter string. */
+  filterState = signal<Record<string, string>>({});
+
+  /** Which column's filter dropdown is currently open. */
+  activeFilterColumn = signal<string | null>(null);
 
   /**
-   * Total items and pagination are derived from the *filtered* dataset so
-   * that applying a chart cross-filter automatically collapses the page count.
+   * Reactive data pipeline for the flat view:
+   * 1. Start from the cross-filtered schema (chart clicks / service-level filter).
+   * 2. Apply any per-column text filters from `filterState`.
+   * 3. Apply the active sort from `sortState`.
    */
-  totalItems = computed(() => this.viewState.filteredCount());
-  totalPages = computed(() => Math.ceil(this.totalItems() / this.pageSize));
+  processedData = computed<GeneratedSchema[]>(() => {
+    let data = this.viewState.filteredSchema();
 
-  startIndex = computed(() => (this.currentPage() - 1) * this.pageSize);
-  endIndex = computed(() => Math.min(this.startIndex() + this.pageSize, this.totalItems()));
+    // Step 2 – column-level text filters
+    const filters = this.filterState();
+    for (const [key, value] of Object.entries(filters)) {
+      if (!value) continue;
+      const lowerValue = value.toLowerCase();
+      data = data.filter(row => {
+        if (key === 'site') return row.site.toLowerCase().includes(lowerValue);
+        if (key === 'treatmentArm') return row.treatmentArm.toLowerCase().includes(lowerValue);
+        if (key.startsWith('stratum_')) {
+          const stratumId = key.replace('stratum_', '');
+          return (row.stratum[stratumId] || '').toLowerCase().includes(lowerValue);
+        }
+        return true;
+      });
+    }
 
-  paginatedData = computed(() => {
-    const data = this.viewState.filteredSchema();
-    return data.slice(this.startIndex(), this.endIndex());
+    // Step 3 – sorting
+    const sort = this.sortState();
+    if (sort.direction !== 'none' && sort.column) {
+      data = [...data].sort((a, b) => {
+        let aVal: string | number = '';
+        let bVal: string | number = '';
+
+        if (sort.column === 'subjectId') { aVal = a.subjectId; bVal = b.subjectId; }
+        else if (sort.column === 'site') { aVal = a.site; bVal = b.site; }
+        else if (sort.column === 'blockNumber') { aVal = a.blockNumber; bVal = b.blockNumber; }
+        else if (sort.column === 'treatmentArm') { aVal = a.treatmentArm; bVal = b.treatmentArm; }
+        else if (sort.column.startsWith('stratum_')) {
+          const stratumId = sort.column.replace('stratum_', '');
+          aVal = a.stratum[stratumId] || '';
+          bVal = b.stratum[stratumId] || '';
+        }
+
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+        const cmp = String(aVal).localeCompare(String(bVal), undefined, { numeric: true });
+        return sort.direction === 'asc' ? cmp : -cmp;
+      });
+    }
+
+    return data;
   });
 
   /** Number of visible table columns (used for colspan in grouped view). */
@@ -172,17 +227,6 @@ export class ResultsGridComponent {
     effect(() => {
       this.viewState.syncResults(this.state.results());
     });
-
-    // Reset to page 1 when a cross-filter is applied (non-null) so the user
-    // always starts at the first page of the filtered subset.
-    // We do NOT reset when the filter is cleared (null) to avoid interfering
-    // with test setups that set currentPage before detectChanges runs.
-    effect(() => {
-      const filter = this.viewState.activeFilter();
-      if (filter !== null) {
-        this.currentPage.set(1);
-      }
-    });
   }
 
   toggleBlinding() {
@@ -216,18 +260,6 @@ export class ResultsGridComponent {
       .join(', ');
   }
 
-  prevPage() {
-    if (this.currentPage() > 1) {
-      this.currentPage.update(p => p - 1);
-    }
-  }
-
-  nextPage() {
-    if (this.currentPage() < this.totalPages()) {
-      this.currentPage.update(p => p + 1);
-    }
-  }
-
   /**
    * Splits a Subject ID string by hyphens so the template can render
    * each alphanumeric chunk with primary visual weight and the separators
@@ -237,7 +269,52 @@ export class ResultsGridComponent {
     return id ? id.split('-') : [];
   }
 
-  /** Copies the audit hash to the clipboard and briefly shows a ✓ icon. */
+  // ── Virtual-scroll trackBy ───────────────────────────────────────────────
+
+  trackBySubjectId(_index: number, row: GeneratedSchema): string {
+    return row.subjectId;
+  }
+
+  // ── Sort / Filter helpers ────────────────────────────────────────────────
+
+  /**
+   * Cycles the sort direction for a column: none → asc → desc → none.
+   * Switching to a different column always resets to 'asc'.
+   */
+  toggleSort(column: string): void {
+    this.sortState.update(current => {
+      if (current.column !== column) return { column, direction: 'asc' };
+      if (current.direction === 'asc') return { column, direction: 'desc' };
+      if (current.direction === 'desc') return { column: '', direction: 'none' };
+      return { column, direction: 'asc' };
+    });
+  }
+
+  /** Records which column's filter panel is currently active. */
+  openColumnFilter(column: string): void {
+    this.activeFilterColumn.set(column);
+  }
+
+  /** Updates the filter value for `activeFilterColumn`. */
+  updateColumnFilter(value: string): void {
+    const column = this.activeFilterColumn();
+    if (!column) return;
+    this.filterState.update(state => ({ ...state, [column]: value }));
+  }
+
+  /** Removes the filter for the given column. */
+  clearColumnFilter(column: string): void {
+    this.filterState.update(state => {
+      const next = { ...state };
+      delete next[column];
+      return next;
+    });
+  }
+
+  /** Returns true when the given column has a non-empty active filter. */
+  hasActiveFilter(column: string): boolean {
+    return !!(this.filterState()[column]);
+  }
   copyAuditHash(): void {
     const hash = this.state.results()?.metadata.auditHash;
     if (!hash) return;
