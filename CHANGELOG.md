@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.11.0...v1.12.0) (2026-04-09)
+
+
+### Features
+
+* add Balance Verification tab with statistical aggregation engine ([f6b9fbe](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/f6b9fbe38a9f9e1d2ec16aebcb9e54d10dcba566))
+
 # [1.11.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.10.0...v1.11.0) (2026-04-09)
 
 
