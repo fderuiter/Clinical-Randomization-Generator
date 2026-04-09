@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, effect, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, effect, signal, viewChild } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { ConfigFormComponent } from './config-form.component';
+import { ZeroStateComponent } from './zero-state.component';
+import { SkeletonGridComponent } from './skeleton-grid.component';
 import { ResultsGridComponent } from '../../schema-management/components/results-grid.component';
 import { CodeGeneratorModalComponent } from '../../schema-management/components/code-generator-modal.component';
 import { MonteCarloModalComponent } from '../../randomization-engine/components/monte-carlo-modal.component';
@@ -14,7 +16,16 @@ type ResultsTab = 'grid' | 'balance';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-generator',
-  imports: [ConfigFormComponent, ResultsGridComponent, CodeGeneratorModalComponent, MonteCarloModalComponent, SchemaAnalyticsDashboardComponent, BalanceVerificationComponent],
+  imports: [
+    ConfigFormComponent,
+    ZeroStateComponent,
+    SkeletonGridComponent,
+    ResultsGridComponent,
+    CodeGeneratorModalComponent,
+    MonteCarloModalComponent,
+    SchemaAnalyticsDashboardComponent,
+    BalanceVerificationComponent,
+  ],
   template: `
     <div class="space-y-8">
       <!-- Intro -->
@@ -29,21 +40,26 @@ type ResultsTab = 'grid' | 'balance';
       </div>
 
       <!-- Configuration Form -->
-      <app-config-form></app-config-form>
+      <app-config-form #configForm></app-config-form>
 
-      <!-- Loading State -->
+      <!-- ── Deterministic Results State Machine ───────────────────── -->
+      <!--
+        Exactly ONE of these three states is visible at any given time:
+          1. isGenerating  → Skeleton Grid (pulsing placeholder)
+          2. has results   → Populated Results section
+          3. fallback      → Zero-State welcome screen
+      -->
+
       @if (state.isGenerating()) {
-        <div class="flex flex-col items-center justify-center py-12 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
-          <svg class="animate-spin h-10 w-10 text-indigo-600 dark:text-indigo-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p class="text-gray-600 dark:text-slate-400 font-medium">Generating schema...</p>
-        </div>
-      }
 
-      <!-- Results Section -->
-      @if (state.results() && !state.isGenerating()) {
+        <!-- State 1: Generating – Skeleton Grid -->
+        <div id="skeleton-section">
+          <app-skeleton-grid></app-skeleton-grid>
+        </div>
+
+      } @else if (state.results()) {
+
+        <!-- State 2: Results available -->
         <div id="results-section" class="space-y-4">
 
           <!-- ── Tab Navigation ──────────────────────────────────────── -->
@@ -105,6 +121,12 @@ type ResultsTab = 'grid' | 'balance';
           }
 
         </div>
+
+      } @else {
+
+        <!-- State 3: Zero-State – initial load / no results yet -->
+        <app-zero-state (loadPreset)="onLoadPreset()"></app-zero-state>
+
       }
 
       <!-- Code Generator Modal -->
@@ -127,15 +149,44 @@ export class GeneratorComponent {
   /** Active results tab – 'grid' (default) or 'balance'. */
   readonly activeTab = signal<ResultsTab>('grid');
 
+  /** Reference to the embedded config form so we can drive preset loading. */
+  private readonly configForm = viewChild<ConfigFormComponent>('configForm');
+
   private static readonly SCROLL_DELAY_MS = 100;
 
   constructor() {
+    // Scroll to the skeleton as soon as generation starts, giving the user
+    // immediate tactile feedback that work has begun.
     effect(() => {
-      if (this.state.results()) {
+      if (this.state.isGenerating()) {
+        setTimeout(() => {
+          this.document.getElementById('skeleton-section')?.scrollIntoView({ behavior: 'smooth' });
+        }, GeneratorComponent.SCROLL_DELAY_MS);
+      }
+    });
+
+    // Scroll to results once generation is complete.
+    effect(() => {
+      if (this.state.results() && !this.state.isGenerating()) {
         setTimeout(() => {
           this.document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
         }, GeneratorComponent.SCROLL_DELAY_MS);
       }
     });
+  }
+
+  /**
+   * The preset type loaded when the user clicks the Zero-State CTA.
+   * Using a named constant guards against typos and makes the intent clear.
+   */
+  private static readonly ONBOARDING_PRESET = 'standard' as const;
+
+  /**
+   * Called when the Zero-State CTA is clicked.
+   * Hydrates the config form with the standard Phase II trial preset so new
+   * users can explore the application without manual data entry.
+   */
+  onLoadPreset(): void {
+    this.configForm()?.loadPreset(GeneratorComponent.ONBOARDING_PRESET);
   }
 }

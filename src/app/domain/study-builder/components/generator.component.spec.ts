@@ -74,29 +74,37 @@ describe('GeneratorComponent (domain)', () => {
     expect(fixture.componentInstance.state).toBe(mockFacade as unknown as RandomizationEngineFacade);
   });
 
-  // ── Loading state ──────────────────────────────────────────────────────────
+  // ── Loading state (Skeleton Grid replaces the legacy spinner) ─────────────
 
-  it('should show loading spinner when isGenerating is true', () => {
+  it('should show skeleton grid when isGenerating is true', () => {
     mockFacade.isGenerating.set(true);
     const fixture = TestBed.createComponent(GeneratorComponent);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.animate-spin')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="skeleton-grid"]')).toBeTruthy();
   });
 
-  it('should NOT show loading spinner when isGenerating is false', () => {
+  it('should NOT show skeleton grid when isGenerating is false', () => {
     const fixture = TestBed.createComponent(GeneratorComponent);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.animate-spin')).toBeFalsy();
+    expect(fixture.nativeElement.querySelector('[data-testid="skeleton-grid"]')).toBeFalsy();
   });
 
-  it('should hide the spinner once isGenerating transitions back to false', () => {
+  it('should hide the skeleton once isGenerating transitions back to false', () => {
     mockFacade.isGenerating.set(true);
     const fixture = TestBed.createComponent(GeneratorComponent);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.animate-spin')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="skeleton-grid"]')).toBeTruthy();
 
     mockFacade.isGenerating.set(false);
     fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="skeleton-grid"]')).toBeFalsy();
+  });
+
+  it('should NOT show the legacy spinner SVG at any point', () => {
+    mockFacade.isGenerating.set(true);
+    const fixture = TestBed.createComponent(GeneratorComponent);
+    fixture.detectChanges();
+    // The old animate-spin spinner has been removed; only skeleton is used.
     expect(fixture.nativeElement.querySelector('.animate-spin')).toBeFalsy();
   });
 
@@ -152,6 +160,75 @@ describe('GeneratorComponent (domain)', () => {
     const fixture = TestBed.createComponent(GeneratorComponent);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('#results-section')).toBeFalsy();
+  });
+
+  // ── Zero-State ─────────────────────────────────────────────────────────────
+
+  it('should render the zero-state when there are no results and not generating', () => {
+    const fixture = TestBed.createComponent(GeneratorComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="zero-state"]')).toBeTruthy();
+  });
+
+  it('should NOT render the zero-state when results are available', () => {
+    mockFacade.results.set(MOCK_RESULT);
+    const fixture = TestBed.createComponent(GeneratorComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="zero-state"]')).toBeFalsy();
+  });
+
+  it('should NOT render the zero-state while generating', () => {
+    mockFacade.isGenerating.set(true);
+    const fixture = TestBed.createComponent(GeneratorComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="zero-state"]')).toBeFalsy();
+  });
+
+  it('zero-state Load Preset button should call configForm.loadPreset("standard") when clicked', () => {
+    const fixture = TestBed.createComponent(GeneratorComponent);
+    fixture.detectChanges();
+
+    // Spy on the embedded ConfigFormComponent instance
+    const configForm = fixture.componentInstance['configForm']();
+    if (configForm) {
+      const spy = vi.spyOn(configForm, 'loadPreset');
+      const btn: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="load-preset-btn"]');
+      btn.click();
+      fixture.detectChanges();
+      expect(spy).toHaveBeenCalledWith('standard');
+    }
+  });
+
+  // ── State machine mutual exclusivity ───────────────────────────────────────
+
+  it('state machine: only skeleton visible while generating', () => {
+    mockFacade.isGenerating.set(true);
+    const fixture = TestBed.createComponent(GeneratorComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-testid="skeleton-grid"]')).toBeTruthy();
+    expect(el.querySelector('#results-section')).toBeFalsy();
+    expect(el.querySelector('[data-testid="zero-state"]')).toBeFalsy();
+  });
+
+  it('state machine: only results section visible when results exist and not generating', () => {
+    mockFacade.results.set(MOCK_RESULT);
+    mockFacade.isGenerating.set(false);
+    const fixture = TestBed.createComponent(GeneratorComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-testid="skeleton-grid"]')).toBeFalsy();
+    expect(el.querySelector('#results-section')).toBeTruthy();
+    expect(el.querySelector('[data-testid="zero-state"]')).toBeFalsy();
+  });
+
+  it('state machine: only zero-state visible on initial load', () => {
+    const fixture = TestBed.createComponent(GeneratorComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-testid="skeleton-grid"]')).toBeFalsy();
+    expect(el.querySelector('#results-section')).toBeFalsy();
+    expect(el.querySelector('[data-testid="zero-state"]')).toBeTruthy();
   });
 
   // ── Code generator modal ───────────────────────────────────────────────────
