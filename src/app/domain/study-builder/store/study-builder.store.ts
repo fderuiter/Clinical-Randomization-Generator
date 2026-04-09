@@ -35,10 +35,10 @@ export interface StudyBuilderFormValue {
   stratumCaps: { levels: string[]; cap: number }[];
   seed: string;
   subjectIdMask: string;
-  capStrategy: CapStrategy;
-  globalCap: number;
+  capStrategy?: CapStrategy;
+  globalCap?: number;
   /** Per-factor per-level detail values (percentages / marginal caps). Key: factorId. */
-  levelDetails: Record<string, LevelDetailFormValue[]>;
+  levelDetails?: Record<string, LevelDetailFormValue[]>;
 }
 
 interface StudyBuilderState {

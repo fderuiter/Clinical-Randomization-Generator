@@ -79,6 +79,24 @@ export class CodeGeneratorService {
   // ---------------------------------------------------------------------------
 
   /**
+   * Validates that a MARGINAL_ONLY config has at least one finite marginal cap,
+   * which is needed to guarantee the active-pool loop terminates.
+   * Throws {@link ConfigurationValidationError} when the guard is not met.
+   */
+  private validateMarginalOnlyConfig(config: RandomizationConfig): void {
+    const hasFiniteCap = (config.strata || []).some(s =>
+      (s.levelDetails || []).some(d => d.marginalCap !== undefined)
+    );
+    if (!hasFiniteCap) {
+      throw new ConfigurationValidationError(
+        'MARGINAL_ONLY cap strategy requires at least one finite marginal cap to guarantee loop termination. ' +
+        'Set a marginalCap on at least one stratum level.',
+        config
+      );
+    }
+  }
+
+  /**
    * Returns a comment block describing the active cap strategy, formatted
    * with the given line-comment prefix (hash for R/Python; the SAS caller
    * wraps each line in slash-star delimiters separately).
@@ -786,6 +804,7 @@ title;
 
     // Branch to the marginal-only template which has entirely different generation logic.
     if (capStrategy === 'MARGINAL_ONLY') {
+      this.validateMarginalOnlyConfig(config);
       return this.buildRMarginalOnly(config);
     }
 
@@ -967,6 +986,7 @@ if (nrow(schema) > 0) {
 
     // Branch to the marginal-only template which has entirely different generation logic.
     if (capStrategy === 'MARGINAL_ONLY') {
+      this.validateMarginalOnlyConfig(config);
       return this.buildPythonMarginalOnly(config);
     }
 
@@ -1103,6 +1123,7 @@ print(df['BlockSize'].value_counts())
 
     // Branch to the marginal-only template which has entirely different generation logic.
     if (capStrategy === 'MARGINAL_ONLY') {
+      this.validateMarginalOnlyConfig(config);
       return this.buildSasMarginalOnly(config);
     }
 

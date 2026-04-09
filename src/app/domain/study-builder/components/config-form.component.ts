@@ -138,6 +138,11 @@ export class ConfigFormComponent implements OnInit {
           this.matrixComputed.set(false);
         }
       });
+
+    // When the global cap changes, the computed matrix is stale — reset it.
+    this.form.get('globalCap')?.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.matrixComputed.set(false));
   }
 
   @HostListener('document:click', ['$event'])
@@ -171,11 +176,19 @@ export class ConfigFormComponent implements OnInit {
     return validateProportionalPercentages(strata, percentages);
   });
 
-  /** True when all factor percentages sum to 100 and there is at least one factor. */
+  /** True when the global cap control is valid and its value is an integer. */
+  private get isGlobalCapValidForCompute(): boolean {
+    const globalCapControl = this.form.get('globalCap');
+    if (!globalCapControl?.valid) return false;
+    return Number.isInteger(Number(globalCapControl.value));
+  }
+
+  /** True when all factor percentages sum to 100, there is at least one factor, and the global cap is valid. */
   get canComputeMatrix(): boolean {
     const errors = this.proportionalFactorErrors();
     const strataList = this.strataWithLevels;
     if (strataList.length === 0) return false;
+    if (!this.isGlobalCapValidForCompute) return false;
     return Object.keys(errors).length === 0;
   }
 
@@ -378,16 +391,19 @@ export class ConfigFormComponent implements OnInit {
   /** Build the full form value including levelDetails from signals. */
   private buildFormValue() {
     const base = this.form.value;
-    const levelDetails: Record<string, { name: string; targetPercentage: number; marginalCap: number }[]> = {};
+    const levelDetails: Record<string, { name: string; targetPercentage: number; marginalCap?: number }[]> = {};
     const percentages = this.proportionalPercentages();
     const caps = this.marginalCaps();
     for (const s of (this.strata.value as StratumFormValue[])) {
       const levels = s.levelsStr.split(',').map((l: string) => l.trim()).filter((l: string) => l);
-      levelDetails[s.id] = levels.map(level => ({
-        name: level,
-        targetPercentage: percentages[s.id]?.[level] ?? 0,
-        marginalCap: caps[s.id]?.[level] ?? 0
-      }));
+      levelDetails[s.id] = levels.map(level => {
+        const marginalCap = caps[s.id]?.[level];
+        return {
+          name: level,
+          targetPercentage: percentages[s.id]?.[level] ?? 0,
+          ...(marginalCap !== undefined ? { marginalCap } : {})
+        };
+      });
     }
     return { ...base, levelDetails };
   }

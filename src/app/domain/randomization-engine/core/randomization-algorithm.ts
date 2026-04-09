@@ -96,6 +96,8 @@ function generateStandard(
  * (from `factor.levelDetails[].marginalCap`). The engine maintains a running count
  * per level and rejects any combination whose levels would breach their caps.
  * Combinations are drawn at random until no valid combination remains.
+ *
+ * @throws {Error} When no finite marginal cap is defined (the pool would never shrink).
  */
 function generateMarginalOnly(
   resolvedConfig: RandomizationConfig,
@@ -108,18 +110,30 @@ function generateMarginalOnly(
   // Use Map to avoid prototype-pollution risks when level names are user-controlled.
   // Lookup: factorId → (levelName → marginalCap); undefined = uncapped.
   const marginalCapMap = new Map<string, Map<string, number | undefined>>();
+  let hasFiniteCap = false;
   for (const factor of resolvedConfig.strata) {
     const levelMap = new Map<string, number | undefined>();
     if (factor.levelDetails) {
       for (const detail of factor.levelDetails) {
         levelMap.set(detail.name, detail.marginalCap);
+        if (detail.marginalCap !== undefined) hasFiniteCap = true;
       }
     }
     marginalCapMap.set(factor.id, levelMap);
   }
 
+  // Guard: if every level is uncapped the active pool never shrinks and the while-loop
+  // would run indefinitely. Require at least one finite marginal cap.
+  if (!hasFiniteCap) {
+    throw new Error(
+      'MARGINAL_ONLY randomization requires at least one finite marginal cap to guarantee termination. ' +
+      'Set a marginalCap on at least one stratum level.'
+    );
+  }
+
   for (const site of resolvedConfig.sites) {
     let siteSubjectCount = 0;
+    let blockNumber = 0;
 
     // Marginal enrollment counts are tracked per-site (each site is independent).
     const marginalCounts = new Map<string, Map<string, number>>();
@@ -144,6 +158,7 @@ function generateMarginalOnly(
       const blockSize = resolvedConfig.blockSizes[blockSizeIndex];
       const block = buildBlock(resolvedConfig.arms, blockSize, totalRatio, rng);
       const stratumCode = computeStratumCode(resolvedConfig.strata, stratum);
+      blockNumber++;
 
       for (const arm of block) {
         // Check if adding this subject would breach any marginal cap.
@@ -170,7 +185,7 @@ function generateMarginalOnly(
 
         schema.push({
           subjectId, site, stratum, stratumCode,
-          blockNumber: 0, // block numbering is not meaningful in marginal mode
+          blockNumber,
           blockSize,
           treatmentArm: arm.name,
           treatmentArmId: arm.id

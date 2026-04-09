@@ -469,6 +469,13 @@ describe('CodeGeneratorService', () => {
               { name: 'Male', targetPercentage: 60 },
               { name: 'Female', targetPercentage: 40 }
             ]
+          },
+          {
+            id: 'age', name: 'Age Group', levels: ['Young', 'Old'],
+            levelDetails: [
+              { name: 'Young', targetPercentage: 60 },
+              { name: 'Old', targetPercentage: 40 }
+            ]
           }
         ],
         // LRM-computed caps already embedded in stratumCaps
