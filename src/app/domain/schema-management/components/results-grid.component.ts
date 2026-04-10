@@ -7,6 +7,7 @@ import { SchemaViewStateService } from '../services/schema-view-state.service';
 import { GeneratedSchema } from '../../core/models/randomization.model';
 import { ViewportService } from '../../../core/services/viewport.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { MethodologySpecificationService } from '../services/methodology-specification.service';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { APP_VERSION } from '../../../../environments/version';
@@ -62,6 +63,7 @@ export class ResultsGridComponent {
   public viewState = inject(SchemaViewStateService);
   public readonly viewport = inject(ViewportService);
   private readonly toast = inject(ToastService);
+  private readonly methodologySpec = inject(MethodologySpecificationService);
 
   /**
    * Tracks the row whose kebab menu is currently open so the shared menu
@@ -350,6 +352,9 @@ export class ResultsGridComponent {
 
     const watermark = "DRAFT SCHEMA - DO NOT USE FOR ENROLLMENT. Execute the generated R/SAS/Python script to generate the official trial schema.";
     const timestamp = new Date(data.metadata.generatedAt).toISOString();
+    const methodologyComments = this.methodologySpec.formatForCsv(
+      this.methodologySpec.generateNarrative(data.metadata.config)
+    );
     const csvContent = [
       `"${watermark}"`,
       `# Protocol ID: ${data.metadata.protocolId}`,
@@ -359,6 +364,7 @@ export class ResultsGridComponent {
       `# PRNG Algorithm: seedrandom (Alea)`,
       `# PRNG Seed: ${data.metadata.seed}`,
       `# SHA-256 Audit Hash: ${data.metadata.auditHash}`,
+      methodologyComments,
       headers.join(','),
       ...rows.map(e => e.join(','))
     ].join('\n');
@@ -389,7 +395,15 @@ export class ResultsGridComponent {
     const safeProtocol = sanitize(data.metadata.protocolId);
     const safeSeed = sanitize(data.metadata.seed);
 
-    const json = JSON.stringify(data, null, 2);
+    const exportPayload = {
+      ...data,
+      metadata: {
+        ...data.metadata,
+        methodologySpecification: this.methodologySpec.generateNarrative(data.metadata.config),
+      }
+    };
+
+    const json = JSON.stringify(exportPayload, null, 2);
     const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -459,8 +473,26 @@ export class ResultsGridComponent {
       }
     });
 
+    // ── Randomization Plan & Specifications ────────────────────────────────
+    const planStartY = (doc as any).lastAutoTable?.finalY + 8 || metaStartY + 60;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text('Randomization Plan & Specifications', 14, planStartY);
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+
+    const narrative = this.methodologySpec.generateNarrative(data.metadata.config);
+    const narrativeLines = doc.splitTextToSize(narrative, pageWidth - 28);
+    doc.text(narrativeLines, 14, planStartY + 6);
+
+    const planEndY = planStartY + 6 + narrativeLines.length * 4.5;
+
     // ── Data Table ─────────────────────────────────────────────────────────
-    const tableStartY = (doc as any).lastAutoTable?.finalY + 8 || metaStartY + 60;
+    const tableStartY = planEndY + 6;
 
     const strataHeaders = data.metadata.strata?.map(s => s.name || s.id) || [];
     const headers = [['Subject ID', 'Site', ...strataHeaders, 'Block', 'Treatment Arm']];

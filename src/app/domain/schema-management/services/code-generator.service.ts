@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { RandomizationConfig, StratificationFactor } from '../../core/models/randomization.model';
 import { APP_VERSION } from '../../../../environments/version';
 import {
@@ -7,9 +7,11 @@ import {
   TemplateCompilationError,
   UnsupportedLanguageError,
 } from '../errors/code-generation-errors';
+import { MethodologySpecificationService } from './methodology-specification.service';
 
 @Injectable({ providedIn: 'root' })
 export class CodeGeneratorService {
+  private readonly methodologySpec = inject(MethodologySpecificationService);
   /**
    * Upper bound (exclusive) for auto-generated seeds when the user leaves the
    * seed field empty.  Kept well within R's `set.seed()` / Python's
@@ -229,6 +231,9 @@ export class CodeGeneratorService {
 
     try {
       const blockStrategySection = this.buildBlockStrategySection('#', config);
+      const methodologyBlock = this.methodologySpec.formatAsLineComments(
+        this.methodologySpec.generateNarrative(config), '#'
+      );
       return `# Randomization Schema Generation in R
 # Protocol: ${config.protocolId || 'Unknown'}
 # Study: ${config.studyName || 'Unknown'}
@@ -237,6 +242,7 @@ export class CodeGeneratorService {
 # Generated At: ${generatedAt}
 # PRNG Algorithm: Mersenne-Twister
 ${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
+${methodologyBlock}
 # Subjects are allocated by randomly selecting valid stratum combinations
 # until no combination can accept additional subjects.
 
@@ -418,6 +424,9 @@ if (nrow(schema) > 0) {
 
     try {
       const blockStrategySection = this.buildBlockStrategySection('#', config);
+      const methodologyBlock = this.methodologySpec.formatAsLineComments(
+        this.methodologySpec.generateNarrative(config), '#'
+      );
       return `# Randomization Schema Generation in Python
 # Protocol: ${config.protocolId || 'Unknown'}
 # Study: ${config.studyName || 'Unknown'}
@@ -425,6 +434,7 @@ if (nrow(schema) > 0) {
 # Generated At: ${generatedAt}
 # PRNG Algorithm: PCG64
 ${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
+${methodologyBlock}
 # Subjects are allocated by randomly selecting valid stratum combinations
 # until no combination can accept additional subjects.
 
@@ -653,6 +663,10 @@ else:
       return `/* ${s.name}: ${entries} */`;
     }).join('\n');
 
+    const sasMethodologyBlock = this.methodologySpec.formatAsSasComment(
+      this.methodologySpec.generateNarrative(config)
+    );
+
     let code = `/* Randomization Schema Generation in SAS */
 /* Protocol: ${config.protocolId || 'Unknown'} */
 /* Study: ${config.studyName || 'Unknown'} */
@@ -664,6 +678,7 @@ else:
 /* Implementation: SAS DATA step with temporary arrays (base SAS 9.2+). */
 ${this.buildBlockStrategySection('#', config).split('\n').map(l => l.replace(/^#/, '/*') + ' */').join('\n').replace(/\/\*  \*\//g, '')}
 ${capAnnotations}
+${sasMethodologyBlock}
 
 %let seed = ${this.hashCode(config.seed)};
 %let total_ratio = ${totalRatio};
@@ -883,6 +898,9 @@ title;
     // Phase 3 – Template compilation (localized catch)
     try {
       const blockStrategySection = this.buildBlockStrategySection('#', config);
+      const methodologyBlock = this.methodologySpec.formatAsLineComments(
+        this.methodologySpec.generateNarrative(config), '#'
+      );
       return `# Randomization Schema Generation in R
 # Protocol: ${config.protocolId || 'Unknown'}
 # Study: ${config.studyName || 'Unknown'}
@@ -891,6 +909,7 @@ title;
 # Generated At: ${generatedAt}
 # PRNG Algorithm: Mersenne-Twister
 ${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
+${methodologyBlock}
 
 # Set seed for reproducibility
 # Note: R uses a different PRNG than the web tool, so the exact sequence will differ,
@@ -1066,6 +1085,9 @@ if (nrow(schema) > 0) {
     // Phase 3 – Template compilation (localized catch)
     try {
       const blockStrategySection = this.buildBlockStrategySection('#', config);
+      const methodologyBlock = this.methodologySpec.formatAsLineComments(
+        this.methodologySpec.generateNarrative(config), '#'
+      );
       return `# Randomization Schema Generation in Python
 # Protocol: ${config.protocolId || 'Unknown'}
 # Study: ${config.studyName || 'Unknown'}
@@ -1073,6 +1095,7 @@ if (nrow(schema) > 0) {
 # Generated At: ${generatedAt}
 # PRNG Algorithm: PCG64
 ${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
+${methodologyBlock}
 
 import numpy as np
 import itertools
@@ -1229,6 +1252,11 @@ print(df['BlockSize'].value_counts())
       .map(line => line.replace(/^#\s?/, '/* ') + ' */')
       .join('\n');
 
+    // Build the methodology narrative block for SAS (/* */ style)
+    const sasMethodologyBlock = this.methodologySpec.formatAsSasComment(
+      this.methodologySpec.generateNarrative(config)
+    );
+
     // Phase 3 – Template compilation (localized catch)
     try {
       let code = `/* Randomization Schema Generation in SAS */
@@ -1238,6 +1266,7 @@ print(df['BlockSize'].value_counts())
 /* Generated At: ${generatedAt} */
 /* PRNG Algorithm: Mersenne Twister */
 ${sasCapStrategyComment}${sasBlockStrategyComment ? '\n' + sasBlockStrategyComment : ''}
+${sasMethodologyBlock}
 
 %let seed = ${this.hashCode(config.seed)};
 %let total_ratio = ${totalRatio};
