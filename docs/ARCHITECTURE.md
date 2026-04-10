@@ -1,4 +1,4 @@
-# Architecture Overview — Clinical Randomization Generator
+# Architecture Overview — Equipose
 
 > **Version:** v1.18.0  
 > **Stack:** Angular 21 · NgRx Signals · Web Workers · Vitest · Playwright · Tailwind CSS v4

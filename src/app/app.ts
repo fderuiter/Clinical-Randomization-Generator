@@ -7,14 +7,15 @@ import {ThemeService, ThemeMode} from './core/services/theme.service';
   selector: 'app-root',
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    <div class="min-h-screen bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-sans transition-colors duration-200">
+    <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-sans transition-colors duration-200">
       <header class="bg-indigo-700 dark:bg-slate-800 text-white shadow-md dark:shadow-slate-900/50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-200 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            <!-- Balance / equipoise scale icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-200 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M5 6l7-3 7 3M3 10l2 6a4 4 0 004 0l2-6M13 10l2 6a4 4 0 004 0l2-6" />
             </svg>
-            <a routerLink="/" class="text-2xl font-bold tracking-tight hover:text-indigo-100 transition-colors">Clinical Randomization Generator</a>
+            <a routerLink="/" class="text-2xl font-bold tracking-tight hover:text-indigo-100 transition-colors">Equipose</a>
           </div>
           <nav class="flex items-center gap-6 text-indigo-100 dark:text-slate-300 text-sm font-medium">
             <a routerLink="/" routerLinkActive="text-white dark:text-white" [routerLinkActiveOptions]="{exact: true}" class="hover:text-white transition-colors">Home</a>
@@ -82,9 +83,19 @@ import {ThemeService, ThemeMode} from './core/services/theme.service';
         </div>
       </header>
 
-      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <router-outlet></router-outlet>
       </main>
+
+      <footer class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500 dark:text-slate-400">
+          <p>© 2025 <a href="https://equipose.org" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Equipose</a> · equipose.org</p>
+          <nav class="flex items-center gap-5">
+            <a routerLink="/about" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">About</a>
+            <a href="https://github.com/fderuiter/Clinical-Randomization-Generator" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">GitHub</a>
+          </nav>
+        </div>
+      </footer>
     </div>
   `
 })
