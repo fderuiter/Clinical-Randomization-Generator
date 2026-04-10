@@ -6,6 +6,7 @@ import { RandomizationEngineFacade } from '../../randomization-engine/randomizat
 import { SchemaViewStateService } from '../services/schema-view-state.service';
 import { GeneratedSchema } from '../../core/models/randomization.model';
 import { ViewportService } from '../../../core/services/viewport.service';
+import { ToastService } from '../../../core/services/toast.service';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { APP_VERSION } from '../../../../environments/version';
@@ -60,6 +61,7 @@ export class ResultsGridComponent {
   public state = inject(RandomizationEngineFacade);
   public viewState = inject(SchemaViewStateService);
   public readonly viewport = inject(ViewportService);
+  private readonly toast = inject(ToastService);
 
   /**
    * Tracks the row whose kebab menu is currently open so the shared menu
@@ -377,8 +379,8 @@ export class ResultsGridComponent {
     if (!data) return;
 
     if (!this.isUnblinded()) {
-      window.alert(
-        'JSON export is only available in unblinded mode. Blinded exports redact treatment assignments and cannot be used for reproducibility verification. Please unblind the schema before exporting JSON.'
+      this.toast.showInfo(
+        'JSON export is only available in unblinded mode. Please unblind the schema before exporting JSON.'
       );
       return;
     }
@@ -396,8 +398,10 @@ export class ResultsGridComponent {
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url));
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
   }
 
   exportPdf() {

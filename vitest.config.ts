@@ -22,7 +22,10 @@ function angularTemplateInliner(): Plugin {
   return {
     name: 'angular-template-inliner',
     transform(code: string, id: string) {
-      if (!id.endsWith('.ts')) {
+      // Strip query strings (e.g. "?something") that Vite appends to module IDs
+      // before checking the extension or resolving relative paths.
+      const cleanId = id.split('?')[0];
+      if (!cleanId.endsWith('.ts')) {
         return null;
       }
 
@@ -30,7 +33,7 @@ function angularTemplateInliner(): Plugin {
       const result = code.replace(
         /templateUrl:\s*['"]([^'"]+)['"]/g,
         (fullMatch, relPath: string) => {
-          const htmlPath = resolve(dirname(id), relPath);
+          const htmlPath = resolve(dirname(cleanId), relPath);
           let htmlContent: string;
           try {
             htmlContent = readFileSync(htmlPath, 'utf-8');

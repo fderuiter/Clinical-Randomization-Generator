@@ -3,6 +3,7 @@ import { ResultsGridComponent, SortState } from './results-grid.component';
 import { RandomizationResult } from '../../core/models/randomization.model';
 import { By } from '@angular/platform-browser';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
+import { ToastService } from '../../../core/services/toast.service';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
 
@@ -22,6 +23,7 @@ describe('ResultsGridComponent (domain)', () => {
   let component: ResultsGridComponent;
   let fixture: ComponentFixture<ResultsGridComponent>;
   let mockFacade: any;
+  let mockToastService: { showInfo: ReturnType<typeof vi.fn>; showError: ReturnType<typeof vi.fn>; showSuccess: ReturnType<typeof vi.fn> };
 
   const generateMockData = (count: number): RandomizationResult => ({
     metadata: {
@@ -74,10 +76,17 @@ describe('ResultsGridComponent (domain)', () => {
       clearResults: vi.fn()
     };
 
+    mockToastService = {
+      showInfo: vi.fn(),
+      showError: vi.fn(),
+      showSuccess: vi.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [ResultsGridComponent],
       providers: [
-        { provide: RandomizationEngineFacade, useValue: mockFacade }
+        { provide: RandomizationEngineFacade, useValue: mockFacade },
+        { provide: ToastService, useValue: mockToastService }
       ]
     }).compileComponents();
 
@@ -345,16 +354,19 @@ describe('ResultsGridComponent (domain)', () => {
     it('should trigger exportJson when JSON button is clicked', () => {
       const mockResult = generateMockData(5);
       mockFacade.results.set(mockResult);
+      component.isUnblinded.set(true);
       fixture.detectChanges();
 
       const spy = vi.spyOn(component, 'exportJson').mockImplementation(() => {});
       const jsonButton = fixture.debugElement.query(By.css('[data-testid="export-json-btn"]'));
       expect(jsonButton).toBeTruthy();
+      expect(jsonButton.nativeElement.disabled).toBe(false);
       jsonButton?.triggerEventHandler('click', null);
       expect(spy).toHaveBeenCalled();
     });
 
     it('should download a valid RandomizationResult JSON when exportJson is called', () => {
+      vi.useFakeTimers();
       const mockResult = generateMockData(3);
       mockFacade.results.set(mockResult);
       fixture.detectChanges();
@@ -366,9 +378,8 @@ describe('ResultsGridComponent (domain)', () => {
 
       component.exportJson();
 
-      // A link element was appended and then removed
+      // A link element was appended immediately
       expect(appendSpy).toHaveBeenCalled();
-      expect(removeSpy).toHaveBeenCalled();
 
       // The link that was appended should have the correct download filename
       const anchor = appendSpy.mock.calls[0][0] as HTMLAnchorElement;
@@ -376,26 +387,30 @@ describe('ResultsGridComponent (domain)', () => {
         `randomization_${mockResult.metadata.protocolId}_${mockResult.metadata.seed}.json`
       );
 
+      // removeChild and revokeObjectURL are deferred by 100ms
+      expect(removeSpy).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(100);
+      expect(removeSpy).toHaveBeenCalled();
+
       appendSpy.mockRestore();
       removeSpy.mockRestore();
+      vi.useRealTimers();
     });
 
-    it('should show an alert and not download when exportJson is called while blinded', () => {
+    it('should show a toast and not download when exportJson is called while blinded', () => {
       const mockResult = generateMockData(3);
       mockFacade.results.set(mockResult);
       fixture.detectChanges();
 
       component.isUnblinded.set(false);
 
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       const appendSpy = vi.spyOn(document.body, 'appendChild');
 
       component.exportJson();
 
-      expect(alertSpy).toHaveBeenCalled();
+      expect(mockToastService.showInfo).toHaveBeenCalled();
       expect(appendSpy).not.toHaveBeenCalled();
 
-      alertSpy.mockRestore();
       appendSpy.mockRestore();
     });
 

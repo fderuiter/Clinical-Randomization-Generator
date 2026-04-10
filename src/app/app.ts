@@ -89,7 +89,7 @@ import {ThemeService, ThemeMode} from './core/services/theme.service';
 
       <footer class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500 dark:text-slate-400">
-          <p>© 2025 <a href="https://equipose.org" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Equipose</a> · equipose.org</p>
+          <p>© {{ currentYear }} <a href="https://equipose.org" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Equipose</a> · equipose.org</p>
           <nav class="flex items-center gap-5">
             <a routerLink="/about" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">About</a>
             <a href="https://github.com/fderuiter/Clinical-Randomization-Generator" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">GitHub</a>
@@ -101,6 +101,7 @@ import {ThemeService, ThemeMode} from './core/services/theme.service';
 })
 export class App {
   readonly theme = inject(ThemeService);
+  readonly currentYear = new Date().getFullYear();
   themeMenuOpen = false;
 
   setTheme(mode: ThemeMode): void {
