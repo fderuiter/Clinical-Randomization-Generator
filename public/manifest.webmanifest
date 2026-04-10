@@ -1,0 +1,28 @@
+{
+  "name": "Equipose — Clinical Trial Randomization Tool",
+  "short_name": "Equipose",
+  "description": "Free, browser-based stratified block randomization tool for clinical trials. Generate balanced treatment allocation schemas and export to R, Python, or SAS.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#4338ca",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["medical", "productivity", "utilities"]
+}

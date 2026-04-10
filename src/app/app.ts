@@ -1,13 +1,19 @@
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {RouterOutlet, RouterLink, RouterLinkActive} from '@angular/router';
 import {ThemeService, ThemeMode} from './core/services/theme.service';
+import {UpdateNotificationService} from './core/services/update-notification.service';
+import {UpdateBannerComponent} from './core/components/update-banner.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpdateBannerComponent],
   template: `
-    <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-sans transition-colors duration-200">
+    @if (updateService.updateAvailable()) {
+      <app-update-banner />
+    }
+    <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-sans transition-colors duration-200"
+         [class.pt-10]="updateService.updateAvailable()">
       <header class="bg-indigo-700 dark:bg-slate-800 text-white shadow-md dark:shadow-slate-900/50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -101,6 +107,7 @@ import {ThemeService, ThemeMode} from './core/services/theme.service';
 })
 export class App {
   readonly theme = inject(ThemeService);
+  readonly updateService = inject(UpdateNotificationService);
   readonly currentYear = new Date().getFullYear();
   themeMenuOpen = false;
 
