@@ -105,9 +105,12 @@ export function generateMinimization(
       const subjectProfile: Record<string, string> = {};
       const stratum: Record<string, string> = {};
       for (const factor of strata) {
-        const probs = factor.levelDetails?.map(d => d.expectedProbability ?? 0) ??
-          factor.levels.map(() => 0);
-        const level = sampleLevel(factor.levels, probs, rng);
+      // Collect expected probabilities for each level; fall back to uniform when
+      // levelDetails are absent or all probabilities are zero/undefined.
+      const rawProbs: (number | undefined)[] = factor.levelDetails
+        ? factor.levelDetails.map(d => d.expectedProbability)
+        : factor.levels.map(() => undefined);
+      const level = sampleLevel(factor.levels, rawProbs, rng);
         subjectProfile[factor.id] = level;
         stratum[factor.id] = level;
       }

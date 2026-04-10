@@ -10,7 +10,9 @@ import { TagInputComponent } from './tag-input.component';
 import { previewSubjectIdMask, validateSubjectIdMask } from '../../randomization-engine/core/subject-id-engine';
 import { BlockPreviewComponent, ArmInput } from './block-preview.component';
 import { computeProportionalCaps, validateProportionalPercentages } from '../../randomization-engine/core/cap-strategy';
-import { CapStrategy } from '../../core/models/randomization.model';@Component({
+import { CapStrategy } from '../../core/models/randomization.model';
+
+@Component({
   selector: 'app-config-form',
   standalone: true,
   imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, MatTooltipModule, BlockPreviewComponent],

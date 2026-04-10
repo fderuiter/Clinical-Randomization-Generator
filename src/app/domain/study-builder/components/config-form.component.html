@@ -188,7 +188,7 @@
               <!-- Covariate Distribution for Minimization -->
               @if (randomizationMethod === 'MINIMIZATION') {
                 <div class="pl-8 mt-2">
-                  <label class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Expected Arrival Probabilities</label>
+                  <label class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Expected Covariate Distribution</label>
                   <div class="space-y-1">
                     @for (level of getStrataLevels($index); track level) {
                       <div class="flex items-center gap-2">
