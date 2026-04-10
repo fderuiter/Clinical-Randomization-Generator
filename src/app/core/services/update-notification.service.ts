@@ -1,4 +1,5 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter } from 'rxjs/operators';
 
@@ -17,6 +18,7 @@ import { filter } from 'rxjs/operators';
 @Injectable({ providedIn: 'root' })
 export class UpdateNotificationService {
   private readonly swUpdate = inject(SwUpdate, { optional: true });
+  private readonly destroyRef = inject(DestroyRef);
 
   /** True when a new application version has been detected and is ready. */
   readonly updateAvailable = signal(false);
@@ -28,7 +30,10 @@ export class UpdateNotificationService {
 
     // Listen for the SW telling us a new version is ready to activate.
     this.swUpdate.versionUpdates
-      .pipe(filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'))
+      .pipe(
+        filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe(() => {
         this.updateAvailable.set(true);
       });
