@@ -58,7 +58,7 @@ test.describe('Application Navigation', () => {
     await page.goto('http://localhost:4200/about');
     // Use exact: true to avoid matching description paragraph text
     await expect(page.getByText('Custom Ratios', { exact: true })).toBeVisible();
-    await expect(page.getByText(/Stratified Block Randomization/i)).toBeVisible();
-    await expect(page.getByText(/Code Generation/i)).toBeVisible();
+    await expect(page.getByText('Stratified Block Randomization', { exact: true })).toBeVisible();
+    await expect(page.getByText('Code Generation', { exact: true })).toBeVisible();
   });
 });
