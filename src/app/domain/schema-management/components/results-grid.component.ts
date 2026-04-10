@@ -372,6 +372,22 @@ export class ResultsGridComponent {
     document.body.removeChild(link);
   }
 
+  exportJson() {
+    const data = this.state.results();
+    if (!data) return;
+
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `randomization_${data.metadata.protocolId}_${data.metadata.seed}.json`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   exportPdf() {
     const data = this.state.results();
     if (!data) return;

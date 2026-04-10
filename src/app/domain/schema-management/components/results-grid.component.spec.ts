@@ -340,6 +340,45 @@ describe('ResultsGridComponent (domain)', () => {
       pdfButton?.triggerEventHandler('click', null);
       expect(spy).toHaveBeenCalled();
     });
+
+    it('should trigger exportJson when JSON button is clicked', () => {
+      const mockResult = generateMockData(5);
+      mockFacade.results.set(mockResult);
+      fixture.detectChanges();
+
+      const spy = vi.spyOn(component, 'exportJson').mockImplementation(() => {});
+      const jsonButton = fixture.debugElement.query(By.css('[data-testid="export-json-btn"]'));
+      expect(jsonButton).toBeTruthy();
+      jsonButton?.triggerEventHandler('click', null);
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('should download a valid RandomizationResult JSON when exportJson is called', () => {
+      const mockResult = generateMockData(3);
+      mockFacade.results.set(mockResult);
+      fixture.detectChanges();
+
+      const appendSpy = vi.spyOn(document.body, 'appendChild');
+      const removeSpy = vi.spyOn(document.body, 'removeChild');
+
+      component.exportJson();
+
+      // A link element was appended and then removed
+      expect(appendSpy).toHaveBeenCalled();
+      expect(removeSpy).toHaveBeenCalled();
+
+      // The link that was appended should have the correct download filename
+      const anchor = appendSpy.mock.calls[0][0] as HTMLAnchorElement;
+      expect(anchor.getAttribute('download')).toBe(
+        `randomization_${mockResult.metadata.protocolId}_${mockResult.metadata.seed}.json`
+      );
+    });
+
+    it('should not throw when exportJson is called with no results', () => {
+      mockFacade.results.set(null);
+      fixture.detectChanges();
+      expect(() => component.exportJson()).not.toThrow();
+    });
   });
 
   // ── Group by Block view ───────────────────────────────────────────────────
