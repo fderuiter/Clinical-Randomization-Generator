@@ -1,3 +1,15 @@
+# [1.23.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.22.0...v1.23.0) (2026-04-10)
+
+
+### Bug Fixes
+
+* correct typo in buildStratificationNarrative method name ([6653de3](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/6653de3593076337b63c5fdb140001ba0c4cce3b))
+
+
+### Features
+
+* add MethodologySpecificationService and integrate into exports and code generators ([42a950c](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/42a950cc1b64c5e82545069f643c9a283f5b4681))
+
 # [1.22.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.21.0...v1.22.0) (2026-04-10)
 
 
