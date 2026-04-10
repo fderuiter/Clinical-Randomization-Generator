@@ -1,3 +1,23 @@
+# [1.21.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.20.0...v1.21.0) (2026-04-10)
+
+
+### Bug Fixes
+
+* add angularTemplateInliner Vite plugin to vitest.config.ts to resolve templateUrl at test time ([29fb093](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/29fb093c86ff4c88dd0b1ff587e337a15ddd085c))
+* add provideRouter([]) to schema-verification spec to fix ActivatedRoute DI error ([8c5a642](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/8c5a6424cf1ce916f01bf5a8d30a4a10e95741ab))
+* address code review feedback on exportJson - blinding, memory leak, filename sanitization, spy cleanup ([1ce28f7](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/1ce28f742d68b2a9a460a472b1bb4f0b6e93c336))
+* apply PR review feedback - toast alerts, blob cleanup, disabled JSON button, dynamic year, sitemap, vitest query string fix ([49174fb](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/49174fbf76dcb5149bcf8975abc50d79a604e943))
+* correct JSON export test expectation to use _blinded suffix for default state ([bae2507](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/bae25079ce953e27cc09b4046915b79d3220bdb7))
+* gate JSON export behind isUnblinded, update verification copy and tests ([7f6383a](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/7f6383a94481e0df8ae68a6d841516e02407094d))
+* use download icon for JSON export button ([24c7d27](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/24c7d27888d150fc5696462b15eedd53f109839d))
+* use exact text match in navigation e2e test to avoid strict mode multi-element failure ([c280b81](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/c280b814157efe58cb3512b6ac4481e17f697fb3))
+
+
+### Features
+
+* add JSON export for schema reproducibility verification ([3383740](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/3383740b4230a35c76caebb7f65e8807d69d604f))
+* rebrand to Equipose and add comprehensive SEO enhancements ([ccec012](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/ccec01286fd2dc3f3d785f55849234af309d406c))
+
 # [1.20.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.19.0...v1.20.0) (2026-04-10)
 
 
