@@ -1,6 +1,6 @@
 import { computed } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
-import { CapStrategy, RandomizationConfig } from '../../core/models/randomization.model';
+import { BlockRule, CapStrategy, RandomizationConfig } from '../../core/models/randomization.model';
 
 // ---------------------------------------------------------------------------
 // Types used internally by the store
@@ -39,6 +39,22 @@ export interface StudyBuilderFormValue {
   globalCap?: number;
   /** Per-factor per-level detail values (percentages / marginal caps). Key: factorId. */
   levelDetails?: Record<string, LevelDetailFormValue[]>;
+  /** Global block selection type (applies when no override matches). */
+  blockSelectionType?: 'RANDOM_POOL' | 'FIXED_SEQUENCE';
+  /**
+   * Block override rules defined by the user for specific sites or strata.
+   * Each entry has a target type ('site' | 'stratum'), a target ID, and a BlockRule.
+   */
+  blockOverrides?: BlockOverrideFormValue[];
+}
+
+export interface BlockOverrideFormValue {
+  targetType: 'site' | 'stratum';
+  targetId: string;
+  sizesStr: string;
+  selectionType: 'RANDOM_POOL' | 'FIXED_SEQUENCE';
+  /** Per-size usage limits. Key = block size as string, value = max uses. */
+  limits?: Record<string, number>;
 }
 
 interface StudyBuilderState {
@@ -181,6 +197,30 @@ export const StudyBuilderStore = signalStore(
      * `RandomizationConfig` suitable for passing to the randomization engine.
      */
     buildConfig(formValue: StudyBuilderFormValue): RandomizationConfig {
+      const parseSizes = (str: string): number[] =>
+        str.split(',').map((s: string) => parseInt(s.trim(), 10)).filter((n: number) => !isNaN(n));
+
+      const globalSizes = parseSizes(formValue.blockSizesStr);
+      const globalSelectionType = formValue.blockSelectionType ?? 'RANDOM_POOL';
+
+      // Build site and stratum override dictionaries from the override list.
+      const siteBlockOverrides: Record<string, BlockRule> = {};
+      const stratumBlockOverrides: Record<string, BlockRule> = {};
+      for (const ov of (formValue.blockOverrides ?? [])) {
+        const sizes = parseSizes(ov.sizesStr);
+        if (!sizes.length || !ov.targetId) continue;
+        const rule: BlockRule = {
+          selectionType: ov.selectionType,
+          sizes,
+          ...(ov.limits && Object.keys(ov.limits).length ? { limits: ov.limits } : {})
+        };
+        if (ov.targetType === 'site') {
+          siteBlockOverrides[ov.targetId] = rule;
+        } else {
+          stratumBlockOverrides[ov.targetId] = rule;
+        }
+      }
+
       return {
         protocolId: formValue.protocolId,
         studyName: formValue.studyName,
@@ -209,15 +249,15 @@ export const StudyBuilderStore = signalStore(
               : undefined
           };
         }),
-        blockSizes: formValue.blockSizesStr
-          .split(',')
-          .map((s: string) => parseInt(s.trim(), 10))
-          .filter((n: number) => !isNaN(n)),
+        blockSizes: globalSizes,
         stratumCaps: formValue.stratumCaps,
         seed: formValue.seed || '',
         subjectIdMask: formValue.subjectIdMask,
         capStrategy: formValue.capStrategy ?? 'MANUAL_MATRIX',
-        globalCap: formValue.globalCap ?? 100
+        globalCap: formValue.globalCap ?? 100,
+        globalBlockStrategy: { selectionType: globalSelectionType, sizes: globalSizes },
+        ...(Object.keys(siteBlockOverrides).length ? { siteBlockOverrides } : {}),
+        ...(Object.keys(stratumBlockOverrides).length ? { stratumBlockOverrides } : {})
       };
     }
   }))

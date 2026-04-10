@@ -11,7 +11,6 @@ import { previewSubjectIdMask, validateSubjectIdMask } from '../../randomization
 import { BlockPreviewComponent, ArmInput } from './block-preview.component';
 import { computeProportionalCaps, validateProportionalPercentages } from '../../randomization-engine/core/cap-strategy';
 import { CapStrategy } from '../../core/models/randomization.model';
-
 @Component({
   selector: 'app-config-form',
   standalone: true,
@@ -68,6 +67,8 @@ export class ConfigFormComponent implements OnInit {
       ]),
       sitesStr: ['101, 102, 103', Validators.required],
       blockSizesStr: ['4, 6', Validators.required],
+      blockSelectionType: ['RANDOM_POOL'],
+      blockOverrides: this.fb.array([]),
       stratumCaps: this.fb.array([]),
       seed: [''],
       subjectIdMask: ['{SITE}-{STRATUM}-{SEQ:3}', Validators.required],
@@ -172,7 +173,13 @@ export class ConfigFormComponent implements OnInit {
   get arms(): FormArray { return this.form.get('arms') as FormArray; }
   get strata(): FormArray { return this.form.get('strata') as FormArray; }
   get stratumCaps(): FormArray { return this.form.get('stratumCaps') as FormArray; }
+  get blockOverrides(): FormArray { return this.form.get('blockOverrides') as FormArray; }
   get totalRatio(): number { return this.arms.controls.reduce((s, c) => s + (c.get('ratio')?.value || 0), 0); }
+
+  /** Current block selection type for the global strategy. */
+  get blockSelectionType(): 'RANDOM_POOL' | 'FIXED_SEQUENCE' {
+    return (this.form.get('blockSelectionType')?.value as 'RANDOM_POOL' | 'FIXED_SEQUENCE') ?? 'RANDOM_POOL';
+  }
 
   /** Current cap strategy value. */
   get capStrategy(): CapStrategy { return (this.form.get('capStrategy')?.value as CapStrategy) ?? 'MANUAL_MATRIX'; }
@@ -393,6 +400,58 @@ export class ConfigFormComponent implements OnInit {
 
   removeStratum(index: number): void { this.strata.removeAt(index); }
 
+  /** Add a new block override card. */
+  addBlockOverride(): void {
+    this.blockOverrides.push(this.fb.group({
+      targetType: ['site'],
+      targetId: [''],
+      sizesStr: [this.form.get('blockSizesStr')?.value ?? '4, 6'],
+      selectionType: ['RANDOM_POOL']
+    }));
+  }
+
+  /** Remove a block override card by index. */
+  removeBlockOverride(index: number): void {
+    this.blockOverrides.removeAt(index);
+  }
+
+  /**
+   * Returns the dynamically-populated options for the Target ID dropdown
+   * of a block override card, based on the selected target type.
+   */
+  getBlockOverrideTargetOptions(index: number): string[] {
+    const targetType = this.blockOverrides.at(index)?.get('targetType')?.value as string;
+    if (targetType === 'site') {
+      return (this.form.get('sitesStr')?.value as string ?? '')
+        .split(',').map(s => s.trim()).filter(s => s);
+    }
+    // For stratum: return computed stratum codes
+    return this.computedStratumCodes();
+  }
+
+  /**
+   * Computes all stratum codes from the current strata configuration.
+   * These codes are used as keys in `stratumBlockOverrides`.
+   */
+  computedStratumCodes(): string[] {
+    const strataVals = this.strata.value as StratumFormValue[];
+    const validStrata = strataVals.filter(s => s.levelsStr?.trim());
+    if (validStrata.length === 0) return [];
+
+    const levelsList = validStrata.map(s =>
+      s.levelsStr.split(',').map(l => l.trim()).filter(l => l)
+    );
+
+    let combos: string[][] = [[]];
+    for (const levels of levelsList) {
+      combos = combos.flatMap(c => levels.map(l => [...c, l]));
+    }
+
+    return combos.map(combo =>
+      combo.map(l => l.substring(0, 3).toUpperCase()).join('-')
+    );
+  }
+
   onStrataDrop(event: CdkDragDrop<FormGroup[]>): void {
     if (event.previousIndex === event.currentIndex) return;
     const control = this.strata.at(event.previousIndex);
@@ -441,7 +500,16 @@ export class ConfigFormComponent implements OnInit {
         };
       });
     }
-    return { ...base, levelDetails };
+
+    // Build block overrides data from the blockOverrides form array.
+    const blockOverrides = (this.blockOverrides.value as {
+      targetType: 'site' | 'stratum';
+      targetId: string;
+      sizesStr: string;
+      selectionType: 'RANDOM_POOL' | 'FIXED_SEQUENCE';
+    }[]).filter(ov => ov.targetId?.trim());
+
+    return { ...base, levelDetails, blockOverrides };
   }
 
   private blockSizesValidator(group: FormGroup): { invalidBlockSize: true } | null {

@@ -202,4 +202,81 @@ describe('StudyBuilderStore', () => {
     });
     expect(config.sites).toEqual(['S1', 'S2']);
   });
+
+  // ── buildConfig – block strategy ─────────────────────────────────────────
+
+  it('buildConfig sets globalBlockStrategy from blockSizesStr and RANDOM_POOL default', () => {
+    const config = store.buildConfig({
+      protocolId: 'BS-001', studyName: 'BS', phase: 'I',
+      arms: [], strata: [], sitesStr: 'S1', blockSizesStr: '4, 6',
+      stratumCaps: [], seed: '', subjectIdMask: '[SiteID]-[001]',
+      capStrategy: 'MANUAL_MATRIX', globalCap: 100, levelDetails: {}
+    });
+    expect(config.globalBlockStrategy).toEqual({ selectionType: 'RANDOM_POOL', sizes: [4, 6] });
+  });
+
+  it('buildConfig sets globalBlockStrategy with FIXED_SEQUENCE when blockSelectionType is set', () => {
+    const config = store.buildConfig({
+      protocolId: 'BS-002', studyName: 'BS', phase: 'I',
+      arms: [], strata: [], sitesStr: 'S1', blockSizesStr: '4, 6',
+      stratumCaps: [], seed: '', subjectIdMask: '[SiteID]-[001]',
+      capStrategy: 'MANUAL_MATRIX', globalCap: 100, levelDetails: {},
+      blockSelectionType: 'FIXED_SEQUENCE'
+    });
+    expect(config.globalBlockStrategy?.selectionType).toBe('FIXED_SEQUENCE');
+    expect(config.globalBlockStrategy?.sizes).toEqual([4, 6]);
+  });
+
+  it('buildConfig maps site block overrides correctly', () => {
+    const config = store.buildConfig({
+      protocolId: 'BS-003', studyName: 'BS', phase: 'I',
+      arms: [], strata: [], sitesStr: 'S1, S2', blockSizesStr: '4',
+      stratumCaps: [], seed: '', subjectIdMask: '[SiteID]-[001]',
+      capStrategy: 'MANUAL_MATRIX', globalCap: 100, levelDetails: {},
+      blockOverrides: [
+        { targetType: 'site', targetId: 'S1', sizesStr: '2, 4', selectionType: 'RANDOM_POOL' }
+      ]
+    });
+    expect(config.siteBlockOverrides?.['S1']).toEqual({ selectionType: 'RANDOM_POOL', sizes: [2, 4] });
+    expect(config.stratumBlockOverrides).toBeUndefined();
+  });
+
+  it('buildConfig maps stratum block overrides correctly', () => {
+    const config = store.buildConfig({
+      protocolId: 'BS-004', studyName: 'BS', phase: 'I',
+      arms: [], strata: [], sitesStr: 'S1', blockSizesStr: '4',
+      stratumCaps: [], seed: '', subjectIdMask: '[SiteID]-[001]',
+      capStrategy: 'MANUAL_MATRIX', globalCap: 100, levelDetails: {},
+      blockOverrides: [
+        { targetType: 'stratum', targetId: '<65', sizesStr: '4, 6', selectionType: 'FIXED_SEQUENCE' }
+      ]
+    });
+    expect(config.stratumBlockOverrides?.['<65']).toEqual({ selectionType: 'FIXED_SEQUENCE', sizes: [4, 6] });
+  });
+
+  it('buildConfig ignores overrides with no targetId', () => {
+    const config = store.buildConfig({
+      protocolId: 'BS-005', studyName: 'BS', phase: 'I',
+      arms: [], strata: [], sitesStr: 'S1', blockSizesStr: '4',
+      stratumCaps: [], seed: '', subjectIdMask: '[SiteID]-[001]',
+      capStrategy: 'MANUAL_MATRIX', globalCap: 100, levelDetails: {},
+      blockOverrides: [
+        { targetType: 'site', targetId: '', sizesStr: '4', selectionType: 'RANDOM_POOL' }
+      ]
+    });
+    expect(config.siteBlockOverrides).toBeUndefined();
+  });
+
+  it('buildConfig ignores overrides with empty sizes', () => {
+    const config = store.buildConfig({
+      protocolId: 'BS-006', studyName: 'BS', phase: 'I',
+      arms: [], strata: [], sitesStr: 'S1', blockSizesStr: '4',
+      stratumCaps: [], seed: '', subjectIdMask: '[SiteID]-[001]',
+      capStrategy: 'MANUAL_MATRIX', globalCap: 100, levelDetails: {},
+      blockOverrides: [
+        { targetType: 'site', targetId: 'S1', sizesStr: '', selectionType: 'RANDOM_POOL' }
+      ]
+    });
+    expect(config.siteBlockOverrides).toBeUndefined();
+  });
 });
