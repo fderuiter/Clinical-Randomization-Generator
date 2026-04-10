@@ -1,6 +1,6 @@
 <div align="center">
-  <h1>Clinical Randomization Generator</h1>
-  <p>A study-agnostic, client-side randomization schema generator for clinical trials.</p>
+  <h1>Equipose</h1>
+  <p>Free, browser-based stratified block randomization tool for clinical trials — <a href="https://equipose.org">equipose.org</a></p>
 
   ![Angular](https://img.shields.io/badge/Angular-21-DD0031?logo=angular)
   ![NgRx Signals](https://img.shields.io/badge/NgRx_Signals-21-BA2BD2)
@@ -11,7 +11,7 @@
 
 ## Overview
 
-The Clinical Randomization Generator is an interactive web utility designed to help biostatisticians and clinical trial managers rapidly design, simulate, and export stratified block randomization schemas.
+Equipose is a free, open-source web utility designed to help biostatisticians and clinical trial managers rapidly design, simulate, and export stratified block randomization schemas for clinical trials.
 
 Built entirely as a client-side Angular application, it ensures that sensitive trial design parameters never leave the user's browser. It supports complex multi-strata designs, variable block sizes, and custom treatment ratios.
 
@@ -51,7 +51,7 @@ Built entirely as a client-side Angular application, it ensures that sensitive t
 | **E2E testing** | Playwright 1.58 (Chromium) |
 | **Linting** | ESLint 9 + `angular-eslint` + strict domain boundary rules |
 | **Versioning** | `semantic-release` (Conventional Commits → GitHub Releases) |
-| **Deployment** | GitHub Pages (static SPA) + optional SSR via `@angular/ssr` |
+| **Deployment** | GitHub Pages (static SPA) at [equipose.org](https://equipose.org) + optional SSR via `@angular/ssr` |
 
 ---
 
@@ -139,8 +139,8 @@ ng lint
 ### GitHub Pages (automatic)
 
 Pushes to `main` automatically trigger the `.github/workflows/deploy.yml` workflow,
-which builds the Angular app with the correct `--base-href` and deploys the contents
-of `dist/clinical-randomization-generator/browser/` to GitHub Pages.
+which builds the Angular app with the correct `--base-href` and deploys to GitHub Pages
+at [https://equipose.org](https://equipose.org).
 
 To enable this on a fork:
 1. Go to repository **Settings → Pages**.
@@ -152,7 +152,7 @@ The build also produces a Node.js SSR server:
 
 ```bash
 npm run build
-node dist/clinical-randomization-generator/server/server.mjs
+node dist/app/server/server.mjs
 ```
 
 ### Versioning

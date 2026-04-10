@@ -6,6 +6,7 @@ import { RandomizationEngineFacade } from '../../randomization-engine/randomizat
 import { SchemaViewStateService } from '../services/schema-view-state.service';
 import { GeneratedSchema } from '../../core/models/randomization.model';
 import { ViewportService } from '../../../core/services/viewport.service';
+import { ToastService } from '../../../core/services/toast.service';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { APP_VERSION } from '../../../../environments/version';
@@ -60,6 +61,7 @@ export class ResultsGridComponent {
   public state = inject(RandomizationEngineFacade);
   public viewState = inject(SchemaViewStateService);
   public readonly viewport = inject(ViewportService);
+  private readonly toast = inject(ToastService);
 
   /**
    * Tracks the row whose kebab menu is currently open so the shared menu
@@ -370,6 +372,36 @@ export class ResultsGridComponent {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  exportJson() {
+    const data = this.state.results();
+    if (!data) return;
+
+    if (!this.isUnblinded()) {
+      this.toast.showInfo(
+        'JSON export is only available in unblinded mode. Please unblind the schema before exporting JSON.'
+      );
+      return;
+    }
+
+    const sanitize = (s: string) => s.replace(/[^A-Za-z0-9._-]/g, '_').trim();
+    const safeProtocol = sanitize(data.metadata.protocolId);
+    const safeSeed = sanitize(data.metadata.seed);
+
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `randomization_${safeProtocol}_${safeSeed}.json`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
   }
 
   exportPdf() {

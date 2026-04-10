@@ -5,9 +5,9 @@ import { GeneratorComponent } from './domain/study-builder/components/generator.
 import { SchemaVerificationComponent } from './domain/schema-management/components/schema-verification.component';
 
 export const routes: Routes = [
-  { path: '', component: LandingComponent },
-  { path: 'about', component: AboutComponent },
-  { path: 'generator', component: GeneratorComponent },
-  { path: 'verify', component: SchemaVerificationComponent },
+  { path: '', component: LandingComponent, title: 'Equipose — Clinical Trial Randomization Tool' },
+  { path: 'about', component: AboutComponent, title: 'About | Equipose' },
+  { path: 'generator', component: GeneratorComponent, title: 'Randomization Generator | Equipose' },
+  { path: 'verify', component: SchemaVerificationComponent, title: 'Verify Schema | Equipose' },
   { path: '**', redirectTo: '' }
 ];

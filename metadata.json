@@ -1,5 +1,5 @@
 {
-  "name": "Clinical Randomization Generator",
-  "description": "Study-agnostic randomization schema generator for clinical trials with stratified block randomization.",
+  "name": "Equipose",
+  "description": "Free, browser-based stratified block randomization tool for clinical trials. Generate, simulate, and export balanced treatment allocation schemas to R, Python, or SAS.",
   "requestFramePermissions": []
 }

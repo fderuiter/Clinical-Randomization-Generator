@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { SchemaVerificationComponent, RowDiscrepancy } from './schema-verification.component';
 import { GeneratedSchema, RandomizationResult } from '../../core/models/randomization.model';
 import { generateRandomizationSchema } from '../../randomization-engine/core/randomization-algorithm';
@@ -64,6 +65,7 @@ describe('SchemaVerificationComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SchemaVerificationComponent],
+      providers: [provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SchemaVerificationComponent);

@@ -7,10 +7,14 @@ import {Component} from '@angular/core';
     <div class="bg-white dark:bg-slate-900 py-24 sm:py-32">
       <div class="mx-auto max-w-7xl px-6 lg:px-8">
         <div class="mx-auto max-w-2xl lg:mx-0">
-          <h2 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-100 sm:text-4xl">About the Generator</h2>
+          <h2 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-100 sm:text-4xl">About Equipose</h2>
           <p class="mt-6 text-lg leading-8 text-gray-600 dark:text-slate-400">
-            The Clinical Randomization Generator is a tool designed to help researchers and clinical trial managers create statistically sound, reproducible, and balanced treatment allocation schemas.
+            Equipose is a free, open-source tool designed to help biostatisticians, clinical trial managers, and contract
+            research organisations (CROs) rapidly design, simulate, and export stratified block randomization schemas for
+            clinical trials. It runs entirely in your browser — no server, no sign-up, no data ever transmitted externally.
           </p>
+
+          <!-- Compliance notice -->
           <div class="mt-8 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-500 p-4 rounded-r-md">
             <div class="flex">
               <div class="flex-shrink-0">
@@ -26,6 +30,8 @@ import {Component} from '@angular/core';
             </div>
           </div>
         </div>
+
+        <!-- Feature cards -->
         <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
           <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
             <div class="flex flex-col">
@@ -68,6 +74,45 @@ import {Component} from '@angular/core';
               </dd>
             </div>
           </dl>
+        </div>
+
+        <!-- What is stratified block randomization -->
+        <div class="mx-auto mt-20 max-w-2xl lg:mx-0">
+          <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-slate-100">What is Stratified Block Randomization?</h3>
+          <p class="mt-4 text-base leading-7 text-gray-600 dark:text-slate-400">
+            Stratified block randomization is a statistical method used in clinical trial design to ensure that treatment
+            groups are balanced across key prognostic factors — such as clinical site, age group, disease severity, or
+            region. By first stratifying subjects into homogeneous subgroups (strata) and then applying block randomization
+            within each stratum, the method guarantees that each treatment arm receives a proportional share of subjects
+            with similar baseline characteristics. This improves the statistical power of the trial and reduces the risk
+            of confounding.
+          </p>
+          <p class="mt-4 text-base leading-7 text-gray-600 dark:text-slate-400">
+            Variable block sizes are recommended to prevent investigators from predicting upcoming allocations, thereby
+            protecting allocation concealment and maintaining the integrity of the blind.
+          </p>
+        </div>
+
+        <!-- Who it is for -->
+        <div class="mx-auto mt-16 max-w-2xl lg:mx-0">
+          <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Who Is Equipose For?</h3>
+          <ul class="mt-4 space-y-3 text-base leading-7 text-gray-600 dark:text-slate-400 list-disc list-inside">
+            <li><strong class="text-gray-800 dark:text-slate-300">Biostatisticians</strong> designing randomization schemas and drafting Statistical Analysis Plans (SAPs).</li>
+            <li><strong class="text-gray-800 dark:text-slate-300">Clinical Trial Managers</strong> who need a quick, reproducible simulation of allocation sequences.</li>
+            <li><strong class="text-gray-800 dark:text-slate-300">Contract Research Organisations (CROs)</strong> validating randomization logic before implementation in IRT/IVRS systems.</li>
+            <li><strong class="text-gray-800 dark:text-slate-300">Academic researchers</strong> running investigator-initiated trials with limited budget for specialised software.</li>
+          </ul>
+        </div>
+
+        <!-- Zero trust privacy -->
+        <div class="mx-auto mt-16 max-w-2xl lg:mx-0">
+          <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Zero-Trust Privacy</h3>
+          <p class="mt-4 text-base leading-7 text-gray-600 dark:text-slate-400">
+            Equipose is built on a zero-trust architecture. Every computation — from randomization to code generation —
+            runs entirely inside your browser using WebAssembly-class JavaScript. No protocol identifiers, study names,
+            treatment arm labels, or randomization outputs are ever sent to any server. There are no cookies, no analytics
+            trackers, and no accounts. Your trial design data stays on your machine.
+          </p>
         </div>
       </div>
     </div>

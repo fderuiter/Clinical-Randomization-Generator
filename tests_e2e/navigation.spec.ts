@@ -7,7 +7,7 @@ test.describe('Application Navigation', () => {
 
   test('should display the landing page at the root URL', async ({ page }) => {
     await page.goto('http://localhost:4200');
-    await expect(page.getByRole('heading', { name: /Clinical Randomization Generator/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Equipose/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /Get started/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /Learn more/i })).toBeVisible();
   });
@@ -24,7 +24,7 @@ test.describe('Application Navigation', () => {
     // Use the nav in the header (not the footer or elsewhere)
     await page.locator('header').getByRole('link', { name: /About/i }).click();
     await expect(page).toHaveURL(/\/about/);
-    await expect(page.getByRole('heading', { name: /About the Generator/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /About Equipose/i })).toBeVisible();
   });
 
   test('should navigate to the Generator page via the header nav link', async ({ page }) => {
@@ -37,7 +37,7 @@ test.describe('Application Navigation', () => {
 
   test('should navigate back to the landing page via the logo link', async ({ page }) => {
     await page.goto('http://localhost:4200/generator');
-    await page.getByRole('link', { name: /Clinical Randomization Generator/ }).first().click();
+    await page.getByRole('link', { name: /Equipose/ }).first().click();
     await expect(page).toHaveURL('http://localhost:4200/');
     await expect(page.getByRole('link', { name: /Get started/i })).toBeVisible();
   });
@@ -58,7 +58,7 @@ test.describe('Application Navigation', () => {
     await page.goto('http://localhost:4200/about');
     // Use exact: true to avoid matching description paragraph text
     await expect(page.getByText('Custom Ratios', { exact: true })).toBeVisible();
-    await expect(page.getByText(/Stratified Block Randomization/i)).toBeVisible();
-    await expect(page.getByText(/Code Generation/i)).toBeVisible();
+    await expect(page.getByText('Stratified Block Randomization', { exact: true })).toBeVisible();
+    await expect(page.getByText('Code Generation', { exact: true })).toBeVisible();
   });
 });
