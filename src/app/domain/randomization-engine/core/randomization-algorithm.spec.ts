@@ -471,4 +471,179 @@ describe('generateRandomizationSchema – MARGINAL_ONLY strategy', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Hierarchical Block Strategy Engine
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('generateRandomizationSchema – hierarchical block strategy', () => {
+  const BASE_2_ARM: RandomizationConfig = {
+    protocolId: 'HBS-001',
+    studyName: 'Block Strategy Test',
+    phase: 'Phase II',
+    arms: [
+      { id: 'A', name: 'Active', ratio: 1 },
+      { id: 'B', name: 'Placebo', ratio: 1 }
+    ],
+    sites: ['Site1'],
+    strata: [],
+    blockSizes: [4],
+    stratumCaps: [{ levels: [], cap: 12 }],
+    seed: 'hbs_seed',
+    subjectIdMask: '[SiteID]-[001]'
+  };
+
+  describe('FIXED_SEQUENCE – global strategy', () => {
+    it('uses sizes in order and cycles when exhausted', () => {
+      const config: RandomizationConfig = {
+        ...BASE_2_ARM,
+        globalBlockStrategy: { selectionType: 'FIXED_SEQUENCE', sizes: [4, 6] }
+      };
+      const result = generateRandomizationSchema(config);
+      // 12-subject cap with [4, 6] sequence: block 1=4, block 2=6, block 3=4 (cycle) → 14 planned but capped at 12
+      // Verify block sizes follow the sequence pattern
+      const blockSizes = result.schema.reduce<Map<number, number>>((acc, row) => {
+        acc.set(row.blockNumber, row.blockSize);
+        return acc;
+      }, new Map());
+      const sizes = [...blockSizes.entries()].sort((a, b) => a[0] - b[0]).map(e => e[1]);
+      expect(sizes[0]).toBe(4);
+      expect(sizes[1]).toBe(6);
+      if (sizes.length > 2) {
+        expect(sizes[2]).toBe(4); // cycles back to start
+      }
+    });
+
+    it('is reproducible with the same seed', () => {
+      const config: RandomizationConfig = {
+        ...BASE_2_ARM,
+        globalBlockStrategy: { selectionType: 'FIXED_SEQUENCE', sizes: [4, 6] }
+      };
+      const r1 = generateRandomizationSchema(config);
+      const r2 = generateRandomizationSchema(config);
+      expect(r1.schema.map(r => r.treatmentArmId)).toEqual(r2.schema.map(r => r.treatmentArmId));
+    });
+  });
+
+  describe('RANDOM_POOL with limits – global strategy', () => {
+    it('respects per-size usage limits by excluding exhausted sizes', () => {
+      // Only allow size-4 blocks twice; size-6 is unlimited
+      const config: RandomizationConfig = {
+        ...BASE_2_ARM,
+        stratumCaps: [{ levels: [], cap: 16 }],
+        globalBlockStrategy: {
+          selectionType: 'RANDOM_POOL',
+          sizes: [4, 6],
+          limits: { '4': 2 }
+        }
+      };
+      const result = generateRandomizationSchema(config);
+      // Count how many blocks of size 4 were generated
+      const blockSizeMap = new Map<number, number>();
+      const seen = new Set<number>();
+      for (const row of result.schema) {
+        if (!seen.has(row.blockNumber)) {
+          seen.add(row.blockNumber);
+          blockSizeMap.set(row.blockSize, (blockSizeMap.get(row.blockSize) ?? 0) + 1);
+        }
+      }
+      expect(blockSizeMap.get(4) ?? 0).toBeLessThanOrEqual(2);
+    });
+
+    it('falls back to full pool when all sizes are exhausted by limits', () => {
+      // Limit size-4 to 0 – should fall back to the full pool
+      const config: RandomizationConfig = {
+        ...BASE_2_ARM,
+        globalBlockStrategy: {
+          selectionType: 'RANDOM_POOL',
+          sizes: [4, 6],
+          limits: { '4': 0, '6': 0 }
+        }
+      };
+      // Should not throw even when all limits are 0 (soft-cap fallback)
+      expect(() => generateRandomizationSchema(config)).not.toThrow();
+    });
+  });
+
+  describe('Site block override', () => {
+    it('uses the site-specific rule for the targeted site', () => {
+      const config: RandomizationConfig = {
+        ...BASE_2_ARM,
+        sites: ['Site1', 'Site2'],
+        stratumCaps: [{ levels: [], cap: 4 }],
+        globalBlockStrategy: { selectionType: 'RANDOM_POOL', sizes: [4] },
+        siteBlockOverrides: {
+          'Site2': { selectionType: 'FIXED_SEQUENCE', sizes: [6] }
+        }
+      };
+      const result = generateRandomizationSchema(config);
+      const site2Rows = result.schema.filter(r => r.site === 'Site2');
+      site2Rows.forEach(r => expect(r.blockSize).toBe(6));
+    });
+
+    it('falls back to global strategy when no site override matches', () => {
+      const config: RandomizationConfig = {
+        ...BASE_2_ARM,
+        globalBlockStrategy: { selectionType: 'FIXED_SEQUENCE', sizes: [4] },
+        siteBlockOverrides: {
+          'NonExistentSite': { selectionType: 'FIXED_SEQUENCE', sizes: [6] }
+        }
+      };
+      const result = generateRandomizationSchema(config);
+      result.schema.forEach(r => expect(r.blockSize).toBe(4));
+    });
+  });
+
+  describe('Stratum block override', () => {
+    it('uses the stratum-specific rule (higher priority than site override)', () => {
+      const config: RandomizationConfig = {
+        protocolId: 'HBS-002',
+        studyName: 'Stratum Override Test',
+        phase: 'Phase II',
+        arms: [
+          { id: 'A', name: 'Active', ratio: 1 },
+          { id: 'B', name: 'Placebo', ratio: 1 }
+        ],
+        sites: ['Site1'],
+        strata: [{ id: 'age', name: 'Age', levels: ['<65', '>=65'] }],
+        blockSizes: [4],
+        stratumCaps: [
+          { levels: ['<65'], cap: 8 },
+          { levels: ['>=65'], cap: 8 }
+        ],
+        seed: 'strat_override',
+        subjectIdMask: '[SiteID]-[001]',
+        stratumBlockOverrides: {
+          '<65': { selectionType: 'FIXED_SEQUENCE', sizes: [4] },
+          '>=6': { selectionType: 'FIXED_SEQUENCE', sizes: [4] }
+        },
+        siteBlockOverrides: {
+          'Site1': { selectionType: 'FIXED_SEQUENCE', sizes: [8] }  // should be overridden by stratum rule
+        }
+      };
+      const result = generateRandomizationSchema(config);
+      // All rows should use size 4 (stratum override beats site override)
+      result.schema.forEach(r => expect(r.blockSize).toBe(4));
+    });
+  });
+
+  describe('Validation', () => {
+    it('throws when globalBlockStrategy has a size not divisible by totalRatio', () => {
+      const config: RandomizationConfig = {
+        ...BASE_2_ARM,
+        globalBlockStrategy: { selectionType: 'RANDOM_POOL', sizes: [3] } // 3 not divisible by 2
+      };
+      expect(() => generateRandomizationSchema(config)).toThrow(/not a multiple/);
+    });
+
+    it('throws when siteBlockOverrides has an invalid size', () => {
+      const config: RandomizationConfig = {
+        ...BASE_2_ARM,
+        siteBlockOverrides: {
+          'Site1': { selectionType: 'RANDOM_POOL', sizes: [5] } // 5 not divisible by 2
+        }
+      };
+      expect(() => generateRandomizationSchema(config)).toThrow(/not a multiple/);
+    });
+  });
+});
 

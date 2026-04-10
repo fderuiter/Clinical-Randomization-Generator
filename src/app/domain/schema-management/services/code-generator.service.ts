@@ -39,9 +39,49 @@ export class CodeGeneratorService {
     if (!config.arms || config.arms.length === 0) {
       throw new ConfigurationValidationError('Arms array is empty. At least one treatment arm is required.', config);
     }
-    if (!config.blockSizes || config.blockSizes.length === 0) {
+    const effectiveSizes = config.globalBlockStrategy?.sizes ?? config.blockSizes;
+    if (!effectiveSizes || effectiveSizes.length === 0) {
       throw new ConfigurationValidationError('Block sizes array is empty. At least one block size is required.', config);
     }
+  }
+
+  /**
+   * Returns the effective block sizes for code generation.
+   * Uses `globalBlockStrategy.sizes` when the hierarchical strategy is present,
+   * otherwise falls back to the flat `blockSizes` array.
+   */
+  private effectiveBlockSizes(config: RandomizationConfig): number[] {
+    return config.globalBlockStrategy?.sizes ?? config.blockSizes ?? [];
+  }
+
+  /**
+   * Builds a comment block summarising the block strategy, using the given
+   * line-comment prefix (hash for R/Python; SAS callers wrap in slash-star).
+   */
+  private buildBlockStrategySection(prefix: string, config: RandomizationConfig): string {
+    const lines: string[] = [];
+    const strategy = config.globalBlockStrategy;
+    if (strategy) {
+      lines.push(`${prefix} Block Selection Mode: ${strategy.selectionType}`);
+      if (strategy.selectionType === 'FIXED_SEQUENCE') {
+        lines.push(`${prefix} Sizes are applied in order and cycle when exhausted.`);
+      }
+      if (strategy.limits && Object.keys(strategy.limits).length) {
+        const limitStr = Object.entries(strategy.limits).map(([k, v]) => `${k}→max ${v}`).join(', ');
+        lines.push(`${prefix} Usage limits: ${limitStr}`);
+      }
+    }
+    if (config.siteBlockOverrides && Object.keys(config.siteBlockOverrides).length) {
+      lines.push(`${prefix} Site-level block overrides defined for: ${Object.keys(config.siteBlockOverrides).join(', ')}`);
+      lines.push(`${prefix} NOTE: Site-specific overrides are not replicated in this generated code.`);
+      lines.push(`${prefix}       Apply the override logic manually for the affected sites.`);
+    }
+    if (config.stratumBlockOverrides && Object.keys(config.stratumBlockOverrides).length) {
+      lines.push(`${prefix} Stratum-level block overrides defined for: ${Object.keys(config.stratumBlockOverrides).join(', ')}`);
+      lines.push(`${prefix} NOTE: Stratum-specific overrides are not replicated in this generated code.`);
+      lines.push(`${prefix}       Apply the override logic manually for the affected strata.`);
+    }
+    return lines.length ? lines.join('\n') : '';
   }
 
   /**
@@ -164,7 +204,7 @@ export class CodeGeneratorService {
   private buildRMarginalOnly(config: RandomizationConfig): string {
     const generatedAt = new Date().toISOString();
     const sites = config.sites || [];
-    const blockSizes = config.blockSizes || [];
+    const blockSizes = this.effectiveBlockSizes(config);
     const arms = config.arms || [];
     const strata = config.strata || [];
 
@@ -188,6 +228,7 @@ export class CodeGeneratorService {
     }
 
     try {
+      const blockStrategySection = this.buildBlockStrategySection('#', config);
       return `# Randomization Schema Generation in R
 # Protocol: ${config.protocolId || 'Unknown'}
 # Study: ${config.studyName || 'Unknown'}
@@ -195,7 +236,7 @@ export class CodeGeneratorService {
 # App Version: ${APP_VERSION}
 # Generated At: ${generatedAt}
 # PRNG Algorithm: Mersenne-Twister
-${this.buildCapStrategySection('#', config)}
+${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
 # Subjects are allocated by randomly selecting valid stratum combinations
 # until no combination can accept additional subjects.
 
@@ -354,7 +395,7 @@ if (nrow(schema) > 0) {
   private buildPythonMarginalOnly(config: RandomizationConfig): string {
     const generatedAt = new Date().toISOString();
     const sites = config.sites || [];
-    const blockSizes = config.blockSizes || [];
+    const blockSizes = this.effectiveBlockSizes(config);
     const arms = config.arms || [];
     const strata = config.strata || [];
 
@@ -376,13 +417,14 @@ if (nrow(schema) > 0) {
     }
 
     try {
+      const blockStrategySection = this.buildBlockStrategySection('#', config);
       return `# Randomization Schema Generation in Python
 # Protocol: ${config.protocolId || 'Unknown'}
 # Study: ${config.studyName || 'Unknown'}
 # App Version: ${APP_VERSION}
 # Generated At: ${generatedAt}
 # PRNG Algorithm: PCG64
-${this.buildCapStrategySection('#', config)}
+${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
 # Subjects are allocated by randomly selecting valid stratum combinations
 # until no combination can accept additional subjects.
 
@@ -519,7 +561,7 @@ else:
   private buildSasMarginalOnly(config: RandomizationConfig): string {
     const generatedAt = new Date().toISOString();
     const sites = config.sites || [];
-    const blockSizes = config.blockSizes || [];
+    const blockSizes = this.effectiveBlockSizes(config);
     const arms = config.arms || [];
     const strata = config.strata || [];
     const totalRatio = arms.reduce((s, a) => s + a.ratio, 0);
@@ -620,6 +662,7 @@ else:
 /* Cap Strategy: MARGINAL_ONLY */
 /* Per-factor, per-level caps; no intersection caps needed. */
 /* Implementation: SAS DATA step with temporary arrays (base SAS 9.2+). */
+${this.buildBlockStrategySection('#', config).split('\n').map(l => l.replace(/^#/, '/*') + ' */').join('\n').replace(/\/\*  \*\//g, '')}
 ${capAnnotations}
 
 %let seed = ${this.hashCode(config.seed)};
@@ -813,7 +856,7 @@ title;
   generateR(config: RandomizationConfig): string {
     const generatedAt = new Date().toISOString();
     const sites = config.sites || [];
-    const blockSizes = config.blockSizes || [];
+    const blockSizes = this.effectiveBlockSizes(config);
     const arms = config.arms || [];
     const strata = config.strata || [];
     const caps = config.stratumCaps || [];
@@ -839,6 +882,7 @@ title;
 
     // Phase 3 – Template compilation (localized catch)
     try {
+      const blockStrategySection = this.buildBlockStrategySection('#', config);
       return `# Randomization Schema Generation in R
 # Protocol: ${config.protocolId || 'Unknown'}
 # Study: ${config.studyName || 'Unknown'}
@@ -846,7 +890,7 @@ title;
 # App Version: ${APP_VERSION}
 # Generated At: ${generatedAt}
 # PRNG Algorithm: Mersenne-Twister
-${this.buildCapStrategySection('#', config)}
+${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
 
 # Set seed for reproducibility
 # Note: R uses a different PRNG than the web tool, so the exact sequence will differ,
@@ -995,7 +1039,7 @@ if (nrow(schema) > 0) {
   generatePython(config: RandomizationConfig): string {
     const generatedAt = new Date().toISOString();
     const sites = config.sites || [];
-    const blockSizes = config.blockSizes || [];
+    const blockSizes = this.effectiveBlockSizes(config);
     const arms = config.arms || [];
     const strata = config.strata || [];
     const caps = config.stratumCaps || [];
@@ -1021,13 +1065,14 @@ if (nrow(schema) > 0) {
 
     // Phase 3 – Template compilation (localized catch)
     try {
+      const blockStrategySection = this.buildBlockStrategySection('#', config);
       return `# Randomization Schema Generation in Python
 # Protocol: ${config.protocolId || 'Unknown'}
 # Study: ${config.studyName || 'Unknown'}
 # App Version: ${APP_VERSION}
 # Generated At: ${generatedAt}
 # PRNG Algorithm: PCG64
-${this.buildCapStrategySection('#', config)}
+${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
 
 import numpy as np
 import itertools
@@ -1131,7 +1176,7 @@ print(df['BlockSize'].value_counts())
   generateSas(config: RandomizationConfig): string {
     const generatedAt = new Date().toISOString();
     const sites = config.sites || [];
-    const blockSizes = config.blockSizes || [];
+    const blockSizes = this.effectiveBlockSizes(config);
     const arms = config.arms || [];
     const strata = config.strata || [];
     const caps = config.stratumCaps || [];
@@ -1177,6 +1222,13 @@ print(df['BlockSize'].value_counts())
       .map(line => line.replace(/^\/\*\s?/, '/* ').replace(/$/, ' */'))
       .join('\n');
 
+    // Build the block strategy comment block for SAS (/* */ style)
+    const sasBlockStrategyComment = this.buildBlockStrategySection('#', config)
+      .split('\n')
+      .filter(l => l)
+      .map(line => line.replace(/^#\s?/, '/* ') + ' */')
+      .join('\n');
+
     // Phase 3 – Template compilation (localized catch)
     try {
       let code = `/* Randomization Schema Generation in SAS */
@@ -1185,7 +1237,7 @@ print(df['BlockSize'].value_counts())
 /* App Version: ${APP_VERSION} */
 /* Generated At: ${generatedAt} */
 /* PRNG Algorithm: Mersenne Twister */
-${sasCapStrategyComment}
+${sasCapStrategyComment}${sasBlockStrategyComment ? '\n' + sasBlockStrategyComment : ''}
 
 %let seed = ${this.hashCode(config.seed)};
 %let total_ratio = ${totalRatio};
