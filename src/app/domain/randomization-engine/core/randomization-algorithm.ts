@@ -364,7 +364,7 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
   // Calculate total ratio sum
   const totalRatio = resolvedConfig.arms.reduce((sum, arm) => sum + arm.ratio, 0);
 
-  // Validate block sizes from all rules (skip for minimization — block sizes don't apply).
+  // Validate block sizes from all rules (skip for minimization - block sizes don't apply).
   if (resolvedConfig.randomizationMethod !== 'MINIMIZATION') {
     for (const size of collectAllBlockSizes(resolvedConfig)) {
       if (size % totalRatio !== 0) {

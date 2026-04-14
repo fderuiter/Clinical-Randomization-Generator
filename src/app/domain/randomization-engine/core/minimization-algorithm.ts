@@ -66,7 +66,7 @@ function computeImbalanceScore(
  *
  * 1. Simulates N virtual subjects by sampling factor levels from user-defined distributions.
  * 2. For each subject, computes the imbalance score for each arm.
- * 3. The preferred arm(s) — those with the minimum imbalance score — are assigned with
+ * 3. The preferred arm(s) - those with the minimum imbalance score - are assigned with
  *    probability p; remaining probability (1-p) is shared equally among non-preferred arms.
  * 4. When multiple arms tie for minimum, one is chosen uniformly at random.
  */

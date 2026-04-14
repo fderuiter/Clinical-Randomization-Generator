@@ -201,7 +201,7 @@ describe('BalanceVerificationComponent', () => {
     const globalArms = component.globalRow().arms;
     // The test data creates balanced blocks so all variances should be 0
     for (const ab of globalArms) {
-      // Either perfect or within tolerance — key check is no critical errors
+      // Either perfect or within tolerance - key check is no critical errors
       expect(ab.status).not.toBe(2);
     }
   });

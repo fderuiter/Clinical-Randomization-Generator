@@ -150,7 +150,7 @@ export class ConfigFormComponent implements OnInit {
         }
       });
 
-    // When the global cap changes, the computed matrix is stale — reset it.
+    // When the global cap changes, the computed matrix is stale - reset it.
     this.form.get('globalCap')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.matrixComputed.set(false));

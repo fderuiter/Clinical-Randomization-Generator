@@ -207,7 +207,7 @@ export class CodeGeneratorService {
    * Validates that a MARGINAL_ONLY config can guarantee the active-pool loop terminates.
    * For termination to be guaranteed, every stratum combination must include at least one
    * capped level. A sufficient condition is that at least one stratification factor has a
-   * finite marginalCap on *every* one of its levels — any combo containing that factor will
+   * finite marginalCap on *every* one of its levels - any combo containing that factor will
    * eventually be pruned.
    * Throws {@link ConfigurationValidationError} when the guard is not met.
    */

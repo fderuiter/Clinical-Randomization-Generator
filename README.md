@@ -1,6 +1,6 @@
 <div align="center">
   <h1>Equipose</h1>
-  <p>Free, browser-based stratified block randomization tool for clinical trials — <a href="https://equipose.org">equipose.org</a></p>
+  <p>Free, browser-based stratified block randomization tool for clinical trials - <a href="https://equipose.org">equipose.org</a></p>
 
   ![Angular](https://img.shields.io/badge/Angular-21-DD0031?logo=angular)
   ![NgRx Signals](https://img.shields.io/badge/NgRx_Signals-21-BA2BD2)
@@ -59,9 +59,9 @@ Built entirely as a client-side Angular application, it ensures that sensitive t
 
 This project follows a **Domain-Driven Design** structure with three bounded contexts:
 
-1. **`randomization-engine`** — pure TypeScript algorithm, Web Worker, SSR-safe facade.
-2. **`study-builder`** — reactive form, NgRx SignalStore, preset definitions.
-3. **`schema-management`** — results grid, PDF/CSV export, code generation modal.
+1. **`randomization-engine`** - pure TypeScript algorithm, Web Worker, SSR-safe facade.
+2. **`study-builder`** - reactive form, NgRx SignalStore, preset definitions.
+3. **`schema-management`** - results grid, PDF/CSV export, code generation modal.
 
 ESLint `no-restricted-imports` rules enforce that the `study-builder` UI can only
 talk to the engine through the facade, never through internal service or worker files.
@@ -109,10 +109,10 @@ Runs all 216 unit tests across 11 spec files using Vitest in a jsdom environment
 ### End-to-end tests (Playwright)
 
 ```bash
-# Terminal 1 — start the dev server
+# Terminal 1 - start the dev server
 npm start
 
-# Terminal 2 — run all e2e specs
+# Terminal 2 - run all e2e specs
 npx playwright test
 ```
 
@@ -166,5 +166,5 @@ code script via `src/environments/version.ts`.
 
 ## License
 
-GNU Affero General Public License v3.0 — see [LICENSE](LICENSE) for details.
+GNU Affero General Public License v3.0 - see [LICENSE](LICENSE) for details.
 

@@ -206,7 +206,7 @@ describe('SchemaVerificationComponent', () => {
       expect(stratumDiscs).toHaveLength(1);
     });
 
-    it('should not short-circuit on first mismatch — collect all discrepancies', () => {
+    it('should not short-circuit on first mismatch - collect all discrepancies', () => {
       const baseline = buildSchema(4);
       const fresh = baseline.map(r => ({
         ...r,

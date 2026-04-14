@@ -38,7 +38,7 @@ function angularTemplateInliner(): Plugin {
           try {
             htmlContent = readFileSync(htmlPath, 'utf-8');
           } catch {
-            // HTML file not found — leave this occurrence unchanged.
+            // HTML file not found - leave this occurrence unchanged.
             return fullMatch;
           }
 

@@ -11,7 +11,7 @@ import {Component} from '@angular/core';
           <p class="mt-6 text-lg leading-8 text-gray-600 dark:text-slate-400">
             Equipose is a free, open-source tool designed to help biostatisticians, clinical trial managers, and contract
             research organisations (CROs) rapidly design, simulate, and export stratified block randomization schemas for
-            clinical trials. It runs entirely in your browser — no server, no sign-up, no data ever transmitted externally.
+            clinical trials. It runs entirely in your browser - no server, no sign-up, no data ever transmitted externally.
           </p>
 
           <!-- Compliance notice -->
@@ -81,7 +81,7 @@ import {Component} from '@angular/core';
           <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-slate-100">What is Stratified Block Randomization?</h3>
           <p class="mt-4 text-base leading-7 text-gray-600 dark:text-slate-400">
             Stratified block randomization is a statistical method used in clinical trial design to ensure that treatment
-            groups are balanced across key prognostic factors — such as clinical site, age group, disease severity, or
+            groups are balanced across key prognostic factors - such as clinical site, age group, disease severity, or
             region. By first stratifying subjects into homogeneous subgroups (strata) and then applying block randomization
             within each stratum, the method guarantees that each treatment arm receives a proportional share of subjects
             with similar baseline characteristics. This improves the statistical power of the trial and reduces the risk
@@ -108,7 +108,7 @@ import {Component} from '@angular/core';
         <div class="mx-auto mt-16 max-w-2xl lg:mx-0">
           <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Zero-Trust Privacy</h3>
           <p class="mt-4 text-base leading-7 text-gray-600 dark:text-slate-400">
-            Equipose is built on a zero-trust architecture. Every computation — from randomization to code generation —
+            Equipose is built on a zero-trust architecture. Every computation - from randomization to code generation -
             runs entirely inside your browser using WebAssembly-class JavaScript. No protocol identifiers, study names,
             treatment arm labels, or randomization outputs are ever sent to any server. There are no cookies, no analytics
             trackers, and no accounts. Your trial design data stays on your machine.

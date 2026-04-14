@@ -33,7 +33,7 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                 </div>
                 <div>
                   <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100" id="mc-modal-title">
-                    Statistical QA — Monte Carlo Validation
+                    Statistical QA - Monte Carlo Validation
                   </h3>
                   <p class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                     10,000 independent trial simulations using cryptographically random seeds
@@ -83,7 +83,7 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                   ></div>
                 </div>
                 <p class="text-xs text-gray-500 dark:text-slate-400 text-center">
-                  {{ progressIterations() | number }} / 10,000 iterations completed — running off the main UI thread via Web Worker
+                  {{ progressIterations() | number }} / 10,000 iterations completed - running off the main UI thread via Web Worker
                 </p>
               </div>
             }

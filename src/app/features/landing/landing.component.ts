@@ -15,10 +15,10 @@ import {RouterLink} from '@angular/router';
             <p class="mt-6 text-lg leading-8 text-gray-600 dark:text-slate-400">
               Design, simulate, and export statistically sound, reproducible treatment allocation schemas for your clinical trial.
               Equipose uses a seeded Fisher-Yates shuffle for stratified block randomization across multiple sites and
-              stratification factors — and exports the exact logic to validated <strong class="text-gray-700 dark:text-slate-300">R</strong>,
+              stratification factors - and exports the exact logic to validated <strong class="text-gray-700 dark:text-slate-300">R</strong>,
               <strong class="text-gray-700 dark:text-slate-300">Python</strong>, or
               <strong class="text-gray-700 dark:text-slate-300">SAS</strong> scripts for integration into your Statistical Analysis Plan.
-              100% client-side — no data ever leaves your browser.
+              100% client-side - no data ever leaves your browser.
             </p>
             <div class="mt-10 flex items-center justify-center gap-x-6">
               <a routerLink="/generator" class="rounded-lg bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors">Get started</a>

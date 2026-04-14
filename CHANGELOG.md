@@ -80,11 +80,11 @@
 * add missing capStrategy/globalCap/levelDetails to store spec, fix NG8107 optional chain in generator template ([6fee554](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/6fee554186b99db79f8cb0fa37d127c527a65212))
 * address code review - use .get() consistently in Python pruning, add null safety for empty levels in SAS ([846941a](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/846941afd620856807e0d060b4cb5e5ac332b950))
 * address code review - use Map for marginal caps (prevents prototype pollution), implement MANUAL_MATRIX switch on computed cap edit ([ac0f4c3](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/ac0f4c332b8f78f158d18da4516ba5f5ae3d9238))
-* apply all review feedback — canComputeMatrix guard, matrixComputed on globalCap, undefined marginalCap, blockNumber tracking, non-termination guards, test data fix, optional FormValue fields ([1012dab](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/1012dab3ea0db04ff50d8bc6e0596ebac85e1d0a))
-* apply second round of review feedback — stronger MARGINAL_ONLY guard, undefined marginalCap in form, min=0 for caps, BlockNumber in generated code ([4ebf58e](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/4ebf58eb5bd91309ea8d195eae89bceb3a15f815))
+* apply all review feedback - canComputeMatrix guard, matrixComputed on globalCap, undefined marginalCap, blockNumber tracking, non-termination guards, test data fix, optional FormValue fields ([1012dab](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/1012dab3ea0db04ff50d8bc6e0596ebac85e1d0a))
+* apply second round of review feedback - stronger MARGINAL_ONLY guard, undefined marginalCap in form, min=0 for caps, BlockNumber in generated code ([4ebf58e](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/4ebf58eb5bd91309ea8d195eae89bceb3a15f815))
 * clarify computeProportionalCaps JSDoc preconditions, fix Sites→Strata factors label, enforce integer>=0 in parseMarginalCapInput ([8d56fc8](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/8d56fc8366722d43ee5c0311ecbb6d7888d5bdfb))
 * preserve undefined marginalCaps in syncLevelDetails, use Number.isFinite in termination guard, align Validators.min(0) with HTML min="0" ([60647a6](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/60647a64f6685a54c40954bb436bd62bb77ad642))
-* review 4084891193 — ARIA radiogroup, label for/id, globalCap validators, validateMarginalOnly guard, NaN validation, name-based levelDetails lookup + ARCHITECTURE.md update ([ebcd4a4](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/ebcd4a4c99d57906ec2973aa3fcd463a34bddc93))
+* review 4084891193 - ARIA radiogroup, label for/id, globalCap validators, validateMarginalOnly guard, NaN validation, name-based levelDetails lookup + ARCHITECTURE.md update ([ebcd4a4](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/ebcd4a4c99d57906ec2973aa3fcd463a34bddc93))
 * use explicit SAS assignment for block_num increment; improve cap-strategy bounds comment ([2a6ae99](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/2a6ae99cc98c637a003de638340eb83e3993df82))
 * use Math.floor for integer seat distribution and add comment explaining matrixComputed guard ([6d58848](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/6d588484403b7a8dea897664a5c3850ab1e38ab4))
 
@@ -290,7 +290,7 @@
 ### Features
 
 * Architectural refactor - DDD structure, Facade, SignalStore, Web Worker, ESLint boundaries ([00387a0](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/00387a0edbc168f1817d84559d76adbde530dac7))
-* phases 5-7 — parity tests, legacy decommission, build verification ([7c76626](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/7c7662622754707206547af6b1fc5a478e202093)), closes [hi#volume](https://github.com/hi/issues/volume)
+* phases 5-7 - parity tests, legacy decommission, build verification ([7c76626](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/7c7662622754707206547af6b1fc5a478e202093)), closes [hi#volume](https://github.com/hi/issues/volume)
 
 # [1.1.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.0.0...v1.1.0) (2026-04-02)
 

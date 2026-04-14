@@ -11,9 +11,9 @@ export interface ActiveFilter {
  *
  * Centralized reactive state layer shared between the analytics dashboard and
  * the results grid.  It holds:
- *   - `isUnblinded`    — blinding toggle
- *   - `activeFilter`   — optional chart-driven cross-filter
- *   - `filteredSchema` — immutable projection of the raw schema through the
+ *   - `isUnblinded`    - blinding toggle
+ *   - `activeFilter`   - optional chart-driven cross-filter
+ *   - `filteredSchema` - immutable projection of the raw schema through the
  *                        active filter; the single source of truth for all UI.
  */
 @Injectable({ providedIn: 'root' })

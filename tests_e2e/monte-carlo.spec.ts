@@ -265,7 +265,7 @@ test.describe('Monte Carlo Statistical Validation', () => {
     await expect(confidenceStatement).toBeVisible({ timeout: 90000 });
     await expect(confidenceStatement).toContainText(/Algorithm mathematically verified/i);
 
-    // Complex preset has 3 arms — table should have 3 rows
+    // Complex preset has 3 arms - table should have 3 rows
     const tableRows = modal.locator('tbody tr');
     await expect(tableRows).toHaveCount(3, { timeout: 10000 });
 

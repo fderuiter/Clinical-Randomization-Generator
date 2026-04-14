@@ -187,7 +187,7 @@ export class MethodologySpecificationService {
         return parts.length ? `${s.name || s.id}: ${parts.join(', ')}` : null;
       }).filter(Boolean) as string[];
       const pctPart = pctLines.length
-        ? ` Target level proportions — ${pctLines.join('; ')}.`
+        ? ` Target level proportions - ${pctLines.join('; ')}.`
         : '';
       return (
         'Enrollment Cap Strategy: PROPORTIONAL. Per-stratum enrollment caps are ' +
@@ -209,7 +209,7 @@ export class MethodologySpecificationService {
         return parts.length ? `${s.name || s.id}: ${parts.join(', ')}` : null;
       }).filter(Boolean) as string[];
       const capPart = marginalLines.length
-        ? ` Per-level marginal caps — ${marginalLines.join('; ')}.`
+        ? ` Per-level marginal caps - ${marginalLines.join('; ')}.`
         : '';
       return (
         'Enrollment Cap Strategy: MARGINAL_ONLY. Enrollment is controlled using ' +

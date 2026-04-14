@@ -13,7 +13,7 @@
  * the same Fisher-Yates shuffle, so deterministic seeds must yield identical
  * sequences.  The only structural difference is that the legacy service mutated
  * the incoming config object when `seed` was empty, while the new function
- * creates a resolved copy — but all parity configs below supply an explicit
+ * creates a resolved copy - but all parity configs below supply an explicit
  * seed so this path is never exercised.
  */
 
@@ -219,7 +219,7 @@ const CONFIG_4: RandomizationConfig = {
   subjectIdMask: '[SiteID]-[0001]'
 };
 
-/** Config 5 – large cap, single block size, many subjects — regression guard */
+/** Config 5 – large cap, single block size, many subjects - regression guard */
 const CONFIG_5: RandomizationConfig = {
   protocolId: 'PARITY-005',
   studyName: 'High Volume Trial',

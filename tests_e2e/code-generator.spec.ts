@@ -13,12 +13,12 @@ test.describe('Code Generator Modal UI', () => {
     await page.getByLabel(/Study Name/i).fill('End-to-end Test Study');
     await page.locator('#phase').selectOption({ label: 'Phase II' });
 
-    // Arm Name inputs — use stable data-testid to avoid placeholder ambiguity (card-based UI)
+    // Arm Name inputs - use stable data-testid to avoid placeholder ambiguity (card-based UI)
     const armInputs = page.getByTestId('arm-name-input');
     await expect(armInputs.first()).toBeVisible({ timeout: 10000 });
     await armInputs.first().fill('Placebo');
 
-    // Ratio is now a stepper — verify it shows the default value of 1
+    // Ratio is now a stepper - verify it shows the default value of 1
     const ratioValue = page.locator('span.tabular-nums').first();
     await expect(ratioValue).toHaveText('1');
 

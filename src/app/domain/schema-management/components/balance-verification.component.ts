@@ -53,7 +53,7 @@ export interface MarginalBalanceRow {
           </span>
           <span class="inline-flex items-center gap-1.5">
             <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
-            Critical error — investigate
+            Critical error - investigate
           </span>
           <span class="ml-auto text-gray-400 dark:text-slate-500 italic">
             Cells show: Actual&nbsp;/&nbsp;Target
@@ -255,7 +255,7 @@ export class BalanceVerificationComponent {
     this.state.results()?.metadata.config?.randomizationMethod === 'MINIMIZATION'
   );
 
-  /** Maximum block size from the config — used to classify deviations.
+  /** Maximum block size from the config - used to classify deviations.
    * Returns Infinity for minimization so any non-zero variance is classified
    * as 'expected deviation' (status 1) rather than 'critical error' (status 2),
    * since minimization does not guarantee perfect block-level balance.

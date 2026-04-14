@@ -1,4 +1,4 @@
-# Architecture Overview — Equipose
+# Architecture Overview - Equipose
 
 > **Version:** v1.18.0  
 > **Stack:** Angular 21 · NgRx Signals · Web Workers · Vitest · Playwright · Tailwind CSS v4
@@ -21,7 +21,7 @@
 12. [Code Generation Service](#12-code-generation-service)
     - [12.1 Why code generation exists](#121-why-code-generation-exists)
     - [12.2 Cap strategy code generation paths](#122-cap-strategy-code-generation-paths)
-    - [12.3 Seed translation — hashCode](#123-seed-translation--hashcodeseed)
+    - [12.3 Seed translation - hashCode](#123-seed-translation--hashcodeseed)
     - [12.4 Overall pipeline](#124-overall-pipeline)
     - [12.5 Generated script structure](#125-generated-script-structure--section-by-section)
     - [12.6 R script](#126-r-script-generater)
@@ -51,7 +51,7 @@ sites, block sizes, subject-ID mask, enrollment cap strategy, optional seed) and
    sorting, and filtering controls.
 4. Exports the schema to **CSV** or **PDF**.
 5. Generates equivalent **R / SAS / Python** scripts that reproduce the same
-   statistical design — including cap strategy enforcement — so the trial statistician
+   statistical design - including cap strategy enforcement - so the trial statistician
    can run the official schema inside a validated, 21 CFR Part 11-capable system.
 6. Provides a **Monte Carlo simulation** mode to verify balance properties across
    thousands of hypothetical trials.
@@ -97,7 +97,7 @@ clinical-randomization-generator/
 │       │   └── about/
 │       │       └── about.component.ts     Feature overview + 21 CFR notice
 │       │
-│       └── domain/              All business logic — Domain-Driven Design
+│       └── domain/              All business logic - Domain-Driven Design
 │           │
 │           ├── core/
 │           │   └── models/
@@ -192,7 +192,7 @@ graph TD
         MODEL["domain/core/models\nrandomization.model.ts\n──────────────────────\nTreatmentArm\nStratificationFactor · StratificationLevel\nStratumCap · CapStrategy\nRandomizationConfig\nGeneratedSchema\nRandomizationResult"]
     end
 
-    subgraph "Bounded Context 1 — Randomization Engine"
+    subgraph "Bounded Context 1 - Randomization Engine"
         ALGO["core/\nrandomization-algorithm.ts\ncap-strategy.ts\nsubject-id-engine.ts\ncrypto-hash.ts\n(pure TS, zero Angular)"]
         WORKER["worker/\nrandomization-engine.worker.ts\nworker-protocol.ts"]
         SVC["randomization.service.ts\n(Observable wrapper / SSR)"]
@@ -203,13 +203,13 @@ graph TD
         SVC --> FACADE
     end
 
-    subgraph "Bounded Context 2 — Study Builder"
+    subgraph "Bounded Context 2 - Study Builder"
         STORE["store/\nstudy-builder.store.ts\n(NgRx SignalStore)"]
         FORM["components/\nconfig-form.component\ngenerator.component\nblock-preview.component\ntag-input.component\nskeleton-grid.component\nzero-state.component"]
         STORE --> FORM
     end
 
-    subgraph "Bounded Context 3 — Schema Management"
+    subgraph "Bounded Context 3 - Schema Management"
         ERRORS["errors/\ncode-generation-errors.ts\nCodeGenerationError hierarchy"]
         VSSTATE["services/\nschema-view-state.service.ts\n(filteredSchema · isUnblinded · activeFilter)"]
         CODEGEN["services/\ncode-generator.service.ts\n(3 cap strategies × 3 languages)"]
@@ -301,7 +301,7 @@ shared across components without manual provider registration.
 - `ConfigFormComponent` is a 5-step config wizard using a custom `WizardStepperComponent` that extends CDK Stepper.
 - `ResultsGridComponent` uses **CDK Virtual Scroll** (`ScrollingModule`) for the flat view (`itemSize=48`). `processedData()` is a computed signal: filteredSchema → column filterState → sortState.
 - The grouped view renders block headers + data rows + summary rows in a 600 px scrollable `div` using `@for`.
-- `SchemaViewStateService` (singleton) holds `isUnblinded`, `activeFilter`, and the `filteredSchema` computed signal — both `ResultsGridComponent` and `SchemaAnalyticsDashboardComponent` inject it.
+- `SchemaViewStateService` (singleton) holds `isUnblinded`, `activeFilter`, and the `filteredSchema` computed signal - both `ResultsGridComponent` and `SchemaAnalyticsDashboardComponent` inject it.
 - `ToastService` uses a CDK Overlay (single bottom-right overlay) attached to a `ToastComponent` that reads from `ToastService.toasts()`.
 - `ViewportService` exposes a `viewportSize()` signal (`'mobile' | 'tablet' | 'desktop'`) via CDK `BreakpointObserver`.
 
@@ -338,23 +338,23 @@ graph LR
 
 The single exported function `generateRandomizationSchema(config)`:
 
-1. **Resolves seed** — uses `config.seed` if provided, otherwise generates a random
+1. **Resolves seed** - uses `config.seed` if provided, otherwise generates a random
    string and attaches it to a copy of the config (non-mutating).
-2. **Cartesian product** — iterates `config.strata` to build every combination of
+2. **Cartesian product** - iterates `config.strata` to build every combination of
    stratum levels (e.g. `{sex: M, age: <65}`, `{sex: M, age: ≥65}`, …).
-3. **Validates block sizes** — throws if any block size is not an exact multiple of
+3. **Validates block sizes** - throws if any block size is not an exact multiple of
    the total arm ratio sum.
-4. **Dispatches by cap strategy** — `MARGINAL_ONLY` routes to `generateMarginalOnly()`;
+4. **Dispatches by cap strategy** - `MARGINAL_ONLY` routes to `generateMarginalOnly()`;
    both `MANUAL_MATRIX` (default) and `PROPORTIONAL` route to `generateStandard()`.
-5. **`generateStandard()`** — for each _(site × stratum combo)_ pair, while
+5. **`generateStandard()`** - for each _(site × stratum combo)_ pair, while
    `stratumSubjectCount < intersectionCap`, picks a random block size, fills the block
    with arms weighted by ratio, then applies a **Fisher-Yates shuffle** driven by the
    `seedrandom` PRNG.
-6. **`generateMarginalOnly()`** — maintains an *active pool* of all stratum combinations.
+6. **`generateMarginalOnly()`** - maintains an *active pool* of all stratum combinations.
    On each iteration, picks a random active combo, generates a block using Fisher-Yates,
    and increments per-level counts. Any combo whose level counts would breach a marginal
    cap is pruned from the active pool. Generation terminates when the pool is empty.
-7. **Formats subject IDs** — calls `generateSubjectId()` from `subject-id-engine.ts`
+7. **Formats subject IDs** - calls `generateSubjectId()` from `subject-id-engine.ts`
    to expand the mask tokens into the final subject ID string.
 8. Returns a `RandomizationResult` with `schema[]` rows and `metadata`.
 
@@ -426,7 +426,7 @@ Proportional strategy and shared validation utilities.
 | `PROPORTIONAL` | LRM computes intersection caps from a global cap + per-factor % weights | `generateStandard()` (LRM-computed caps) |
 | `MARGINAL_ONLY` | User sets per-level limits; no intersection caps needed | `generateMarginalOnly()` (active-pool algorithm) |
 
-### Largest Remainder Method — `computeProportionalCaps()`
+### Largest Remainder Method - `computeProportionalCaps()`
 
 Implements the **Hare–Niemeyer** algorithm:
 
@@ -452,7 +452,7 @@ computeProportionalCaps([gender, diabetes], 100, {
 // → [{ levels: ['Male','Diabetic'], cap: 18 }, …]  sum = 100 ✓
 ```
 
-### Percentage validation — `validateProportionalPercentages()`
+### Percentage validation - `validateProportionalPercentages()`
 
 Returns a `Record<factorId, true>` map of invalid factors. A factor is invalid if:
 - Its level percentages do not sum to 100 (within 0.001 tolerance), **or**
@@ -461,7 +461,7 @@ Returns a `Record<factorId, true>` map of invalid factors. A factor is invalid i
 NaN/Infinity inputs are detected with `Number.isFinite()` before they can propagate
 into the LRM calculation.
 
-### UI — `ConfigFormComponent`
+### UI - `ConfigFormComponent`
 
 Step 4 of the wizard presents a **segmented control** (`role="radiogroup"`) to switch
 between the three strategies. Strategy-specific sections are shown conditionally:
@@ -605,9 +605,9 @@ re-evaluates it automatically whenever the `strata` signal changes.
 `SchemaViewStateService` (singleton) holds three pieces of state shared between
 `ResultsGridComponent`, `SchemaAnalyticsDashboardComponent`, and `GeneratorComponent`:
 
-- `isUnblinded: WritableSignal<boolean>` — when true, treatment arms are shown in plain text.
-- `activeFilter: WritableSignal<ActiveFilter | null>` — chart-click cross-filter (`{ type: 'site' | 'treatment', value: string }`).
-- `filteredSchema: Signal<GeneratedSchema[]>` — computed projection of the master schema through `activeFilter`.
+- `isUnblinded: WritableSignal<boolean>` - when true, treatment arms are shown in plain text.
+- `activeFilter: WritableSignal<ActiveFilter | null>` - chart-click cross-filter (`{ type: 'site' | 'treatment', value: string }`).
+- `filteredSchema: Signal<GeneratedSchema[]>` - computed projection of the master schema through `activeFilter`.
 
 `syncResults(result)` sets the raw result and clears any active filter.
 
@@ -655,7 +655,7 @@ flowchart TD
 ## 11. Data Model
 
 All interfaces live in a single file: `domain/core/models/randomization.model.ts`.
-This is the **shared kernel** — every other module imports from here; nothing
+This is the **shared kernel** - every other module imports from here; nothing
 re-declares these types.
 
 ```mermaid
@@ -764,15 +764,15 @@ The web app's PRNG is `seedrandom` (the Alea algorithm). R, SAS, and Python each
 ship their own incompatible PRNGs (Mersenne-Twister, Mersenne-Twister, PCG64
 respectively). A byte-identical reproduction of the web UI schema inside a validated
 statistical environment is therefore impossible without shipping the Alea PRNG to
-every language — impractical and unsupported.
+every language - impractical and unsupported.
 
 Instead, the generated scripts embed **all study parameters as literals** and use the
 language-native PRNG. The resulting schema is statistically identical in distribution
 (same block sizes, same ratios, same caps, same balance properties) but the
 subject-by-subject sequence differs. This is the intended workflow:
 
-1. **Design phase** — use the web UI to quickly iterate and validate the study design.
-2. **Execution phase** — download and run the generated script inside your
+1. **Design phase** - use the web UI to quickly iterate and validate the study design.
+2. **Execution phase** - download and run the generated script inside your
    organisation's validated environment to produce the **official** schema.
 
 The exported script becomes the auditable source of truth for the trial.
@@ -792,7 +792,7 @@ a `ConfigurationValidationError` is thrown before any code is emitted.
 | `PROPORTIONAL` | Same intersection-cap loop. Enriched header shows global cap + per-factor target percentages (looked up by level name). |
 | `MARGINAL_ONLY` | Active-pool loop: `marginal_caps` declarations, per-subject level-count checks, pool pruning, `block_number` increment, QC output. |
 
-### 12.3 Seed translation — `hashCode(seed)`
+### 12.3 Seed translation - `hashCode(seed)`
 
 The web app stores seeds as arbitrary strings (e.g. `"abc123"` or a random
 alphanumeric). Statistical software requires a non-negative 32-bit integer for
@@ -810,7 +810,7 @@ return (hash >>> 0) % 2_147_483_647  // unsigned right-shift → mod into 31-bit
 
 The `>>> 0` unsigned right-shift avoids the `Math.abs(-2147483648) === 2147483648`
 edge case that would exceed the 31-bit limit. The result is always in
-`[0, 2_147_483_646]` — safe for all three language seed ranges.
+`[0, 2_147_483_646]` - safe for all three language seed ranges.
 
 ### 12.4 Overall pipeline
 
@@ -841,7 +841,7 @@ flowchart TD
     ERR --> CPE["copyErrorLog()\nclipboard ← { errorName, message, context }"]
 ```
 
-### 12.5 Generated script structure — section by section
+### 12.5 Generated script structure - section by section
 
 Every generated script follows the same logical sections regardless of language:
 
@@ -910,7 +910,7 @@ flowchart TD
 - Arms are emitted as a list of dicts: `[{"name": "Active", "ratio": 1}, ...]`. This
   keeps the data structured and avoids parallel-array synchronisation errors.
 - The stratum caps dict uses a **tuple** key `(level1, level2, ...)` matching the
-  `itertools.product` output exactly — no string join/split needed.
+  `itertools.product` output exactly - no string join/split needed.
 - `np.random.default_rng(N)` uses PCG64, NumPy's modern default generator, which is
   statistically superior to the legacy `np.random.seed()` / `np.random.shuffle()`
   interface.
@@ -1025,13 +1025,13 @@ When `CodeGeneratorService.generate()` throws, `CodeGeneratorModalComponent.refr
 
 - Error class name (e.g. `StrataParsingError`) and full message
 - Collapsible `<details>` block containing the stringified `RandomizationConfig`
-- **"Copy Error Log"** button — calls `copyErrorLog()` which writes
+- **"Copy Error Log"** button - calls `copyErrorLog()` which writes
   `{ errorName, message, context }` to the clipboard for one-click bug reports
 
 **Isolation zones inside each language method:**
 
 ```ts
-// Phase 2 — strata parsing (→ StrataParsingError)
+// Phase 2 - strata parsing (→ StrataParsingError)
 try {
   capsVector = config.stratumCaps.map(c => ...);
   strataLevels = config.strata.map(s => ...);
@@ -1039,7 +1039,7 @@ try {
   throw new StrataParsingError('R', e, config);
 }
 
-// Phase 3 — template compilation (→ TemplateCompilationError)
+// Phase 3 - template compilation (→ TemplateCompilationError)
 try {
   return `...template string...`;
 } catch (e) {
@@ -1098,8 +1098,8 @@ graph LR
 
 ```mermaid
 graph BT
-    E2E["E2E (Playwright)\ntests_e2e/ — 5 spec files\nChromium only\nRequires ng serve @ :4200"]
-    UNIT["Unit (Vitest + Angular TestBed)\nsrc/**/*.spec.ts — 24 spec files\n~523 tests\nDirect class/signal testing"]
+    E2E["E2E (Playwright)\ntests_e2e/ - 5 spec files\nChromium only\nRequires ng serve @ :4200"]
+    UNIT["Unit (Vitest + Angular TestBed)\nsrc/**/*.spec.ts - 24 spec files\n~523 tests\nDirect class/signal testing"]
     PARITY["Golden-Master Parity\nrandomization-algorithm-parity.spec.ts\n8 tests across 5 configs\nFixed seeds → deepEqual assertion"]
 
     PARITY --> UNIT
@@ -1177,7 +1177,7 @@ flowchart LR
 
 The Angular CLI uses **esbuild** (via `@angular/build`). The Web Worker is
 automatically split into its own chunk (`worker-*.js`) because it is referenced via
-`new URL('./worker/...', import.meta.url)` — the esbuild-specific dynamic import
+`new URL('./worker/...', import.meta.url)` - the esbuild-specific dynamic import
 form that Angular recognises as a Worker entry point.
 
 ### Vitest configuration
