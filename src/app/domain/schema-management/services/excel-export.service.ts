@@ -197,7 +197,7 @@ export class ExcelExportService {
     const watermarkCell = watermarkRow.getCell(1);
     watermarkCell.value =
       'DRAFT SCHEMA - DO NOT USE FOR ENROLLMENT. ' +
-      'Execute the generated R/SAS/Python script to generate the official trial schema.';
+      'Execute the generated R/SAS/Python/STATA script to generate the official trial schema.';
     watermarkCell.font = { bold: true, color: { argb: 'FF991B1B' } };
     watermarkCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF2F2' } };
     watermarkCell.alignment = { wrapText: true };
