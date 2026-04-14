@@ -37,7 +37,11 @@
                 "inlineCritical": true
               },
               "fonts": false
-            }
+            },
+            "allowedCommonJsDependencies": [
+              "exceljs",
+              "seedrandom"
+            ]
           },
           "configurations": {
             "production": {

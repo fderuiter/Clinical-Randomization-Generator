@@ -365,6 +365,24 @@ describe('ResultsGridComponent (domain)', () => {
       expect(spy).toHaveBeenCalled();
     });
 
+    it('should trigger exportXlsx when Excel button is clicked', () => {
+      const mockResult = generateMockData(5);
+      mockFacade.results.set(mockResult);
+      fixture.detectChanges();
+
+      const spy = vi.spyOn(component, 'exportXlsx').mockResolvedValue(undefined);
+      const xlsxButton = fixture.debugElement.query(By.css('[data-testid="export-xlsx-btn"]'));
+      expect(xlsxButton).toBeTruthy();
+      xlsxButton?.triggerEventHandler('click', null);
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('should not throw when exportXlsx is called with no results', async () => {
+      mockFacade.results.set(null);
+      fixture.detectChanges();
+      await expect(component.exportXlsx()).resolves.toBeUndefined();
+    });
+
     it('should download a valid RandomizationResult JSON when exportJson is called', () => {
       vi.useFakeTimers();
       const mockResult = generateMockData(3);
