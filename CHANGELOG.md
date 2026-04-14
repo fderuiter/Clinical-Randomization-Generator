@@ -1,3 +1,18 @@
+# [1.26.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.25.0...v1.26.0) (2026-04-14)
+
+
+### Bug Fixes
+
+* address second round of STATA review comments ([766b526](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/766b5262969135e3bbd406c7f7ba98b8a5578b51))
+* address STATA code generation review comments ([7c745f1](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/7c745f13e5490cfced9474852fd5dd13ca5dbc8b))
+* update E2E test filenames from randomization_code.* to randomization_schema.* ([68decc2](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/68decc22a6164cfd5c59e078882005a7296c6afe))
+* update excel export watermark to mention STATA as supported language ([c93e681](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/c93e681f38d635548978afd4768cc3d3335098d0))
+
+
+### Features
+
+* add STATA code generation support ([b61b05e](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/b61b05e0bd5c0d2cbc96ea2022a033ca9fde686e))
+
 # [1.25.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.24.0...v1.25.0) (2026-04-14)
 
 
