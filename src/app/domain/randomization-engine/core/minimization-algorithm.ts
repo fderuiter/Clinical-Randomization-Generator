@@ -117,8 +117,8 @@ export function generateMinimization(
         levelDetailsByName.get(levelName)
       );
       const level = sampleLevel(factor.levels, rawProbs, rng);
-        subjectProfile[factor.id] = level;
-        stratum[factor.id] = level;
+      subjectProfile[factor.id] = level;
+      stratum[factor.id] = level;
       }
 
       const scores = arms.map(arm => ({
