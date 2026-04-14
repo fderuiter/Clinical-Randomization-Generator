@@ -173,23 +173,36 @@ export class ConfigFormComponent implements OnInit {
       this.form.get('globalCap')?.disable();
     }
 
-    // Enable/disable minimization controls based on the randomization method.
+    // Enable/disable mode-specific controls based on the randomization method.
     this.form.get('randomizationMethod')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((method: string) => {
         const minimizationP = this.form.get('minimizationP');
         const totalSampleSize = this.form.get('totalSampleSize');
+        const blockSizesStr = this.form.get('blockSizesStr');
+        const blockSelectionType = this.form.get('blockSelectionType');
+        const blockOverrides = this.form.get('blockOverrides');
         if (method === 'MINIMIZATION') {
           minimizationP?.enable();
           totalSampleSize?.enable();
+          blockSizesStr?.disable();
+          blockSelectionType?.disable();
+          blockOverrides?.disable();
         } else {
           minimizationP?.disable();
           totalSampleSize?.disable();
+          blockSizesStr?.enable();
+          blockSelectionType?.enable();
+          blockOverrides?.enable();
         }
         this.form.updateValueAndValidity();
       });
-    // Initialise: disable minimization controls when starting in BLOCK mode.
-    if (this.randomizationMethod !== 'MINIMIZATION') {
+    // Initialise: disable controls that are irrelevant for the starting method.
+    if (this.randomizationMethod === 'MINIMIZATION') {
+      this.form.get('blockSizesStr')?.disable();
+      this.form.get('blockSelectionType')?.disable();
+      this.form.get('blockOverrides')?.disable();
+    } else {
       this.form.get('minimizationP')?.disable();
       this.form.get('totalSampleSize')?.disable();
     }
@@ -578,7 +591,8 @@ export class ConfigFormComponent implements OnInit {
 
   /**
    * Form-level validator that checks per-factor probability totals when
-   * Minimization is the active method. Each factor's levels must sum to 100%.
+   * Minimization is the active method. Each factor's levels must sum to 100%,
+   * and every individual probability must be finite and within [0, 100].
    */
   private minimizationProbabilitiesValidator(group: FormGroup): { minimizationProbabilitiesInvalid: true } | null {
     const method = group.get('randomizationMethod')?.value as string;
@@ -588,7 +602,12 @@ export class ConfigFormComponent implements OnInit {
     for (const s of strata) {
       const levels = s.levelsStr.split(',').map(l => l.trim()).filter(l => l);
       if (levels.length === 0) continue;
-      const total = levels.reduce((sum, l) => sum + (probs[s.id]?.[l] ?? 0), 0);
+      let total = 0;
+      for (const l of levels) {
+        const v = probs[s.id]?.[l] ?? 0;
+        if (!Number.isFinite(v) || v < 0 || v > 100) return { minimizationProbabilitiesInvalid: true };
+        total += v;
+      }
       if (Math.abs(total - 100) > 0.01) return { minimizationProbabilitiesInvalid: true };
     }
     return null;
@@ -622,9 +641,11 @@ export class ConfigFormComponent implements OnInit {
   }
 
   setMinimizationProbability(factorId: string, level: string, value: number): void {
+    // Clamp to [0, 100] and treat non-finite inputs as 0.
+    const sanitized = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
     this.minimizationProbabilities.update(prev => ({
       ...prev,
-      [factorId]: { ...(prev[factorId] ?? {}), [level]: value }
+      [factorId]: { ...(prev[factorId] ?? {}), [level]: sanitized }
     }));
     // Re-run form-level validator since probability data lives outside the FormGroup.
     this.form.updateValueAndValidity();

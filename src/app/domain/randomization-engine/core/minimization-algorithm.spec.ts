@@ -73,4 +73,20 @@ describe('generateMinimization', () => {
     expect(site1Count).toBe(50);
     expect(site2Count).toBe(50);
   });
+
+  it('throws when p is outside [0.5, 1.0]', () => {
+    const rng = seedrandom('test');
+    expect(() => generateMinimization({ ...baseConfig, minimizationConfig: { p: 0.3, totalSampleSize: 100 } }, rng))
+      .toThrow('Minimization probability p must be between 0.5 and 1.0');
+    expect(() => generateMinimization({ ...baseConfig, minimizationConfig: { p: 1.1, totalSampleSize: 100 } }, rng))
+      .toThrow('Minimization probability p must be between 0.5 and 1.0');
+  });
+
+  it('throws when totalSampleSize is not a positive integer', () => {
+    const rng = seedrandom('test');
+    expect(() => generateMinimization({ ...baseConfig, minimizationConfig: { p: 0.8, totalSampleSize: 0 } }, rng))
+      .toThrow('Total sample size must be a positive integer');
+    expect(() => generateMinimization({ ...baseConfig, minimizationConfig: { p: 0.8, totalSampleSize: -10 } }, rng))
+      .toThrow('Total sample size must be a positive integer');
+  });
 });

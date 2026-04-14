@@ -4,7 +4,9 @@ import { generateSubjectId } from './subject-id-engine';
 
 /**
  * Samples a level for one stratification factor based on expected probabilities.
- * Falls back to uniform sampling when probabilities are missing or don't sum to 1.
+ * Any positive weights are normalized to sum to 1 before sampling.
+ * Falls back to uniform sampling only when no positive weights are present
+ * (all values are undefined, zero, or negative).
  */
 function sampleLevel(
   levels: string[],
@@ -76,6 +78,13 @@ export function generateMinimization(
   const p = minimizationConfig?.p ?? 0.8;
   const totalSampleSize = minimizationConfig?.totalSampleSize ?? 100;
 
+  if (!Number.isFinite(p) || p < 0.5 || p > 1.0) {
+    throw new Error(`Minimization probability p must be between 0.5 and 1.0, got: ${p}`);
+  }
+  if (!Number.isFinite(totalSampleSize) || totalSampleSize <= 0 || !Number.isInteger(totalSampleSize)) {
+    throw new Error(`Total sample size must be a positive integer, got: ${totalSampleSize}`);
+  }
+
   if (arms.length === 0 || sites.length === 0) return [];
 
   const schema: GeneratedSchema[] = [];
@@ -83,6 +92,18 @@ export function generateMinimization(
 
   const basePerSite = Math.floor(totalSampleSize / sites.length);
   const remainder = totalSampleSize % sites.length;
+
+  // Precompute probability vectors per factor (once, outside the site/subject loops).
+  const factorProbVectors = new Map<string, (number | undefined)[]>();
+  for (const factor of strata) {
+    const levelDetailsByName = new Map(
+      (factor.levelDetails ?? []).map(d => [d.name, d.expectedProbability] as const)
+    );
+    factorProbVectors.set(
+      factor.id,
+      factor.levels.map(levelName => levelDetailsByName.get(levelName))
+    );
+  }
 
   for (let siteIdx = 0; siteIdx < sites.length; siteIdx++) {
     const site = sites[siteIdx];
@@ -108,17 +129,10 @@ export function generateMinimization(
       const subjectProfile: Record<string, string> = {};
       const stratum: Record<string, string> = {};
       for (const factor of strata) {
-      // Collect expected probabilities in the same order as factor.levels so
-      // sampleLevel() indexes a probability vector aligned to the levels array.
-      const levelDetailsByName = new Map(
-        (factor.levelDetails ?? []).map(d => [d.name, d.expectedProbability] as const)
-      );
-      const rawProbs: (number | undefined)[] = factor.levels.map(levelName =>
-        levelDetailsByName.get(levelName)
-      );
-      const level = sampleLevel(factor.levels, rawProbs, rng);
-      subjectProfile[factor.id] = level;
-      stratum[factor.id] = level;
+        const rawProbs = factorProbVectors.get(factor.id) ?? factor.levels.map(() => undefined);
+        const level = sampleLevel(factor.levels, rawProbs, rng);
+        subjectProfile[factor.id] = level;
+        stratum[factor.id] = level;
       }
 
       const scores = arms.map(arm => ({

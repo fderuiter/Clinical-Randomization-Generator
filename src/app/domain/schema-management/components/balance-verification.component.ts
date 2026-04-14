@@ -89,7 +89,7 @@ export interface MarginalBalanceRow {
                         [title]="tooltipText(ab)">
                       {{ ab.actual }}&nbsp;/&nbsp;{{ ab.target | number:'1.0-2' }}
                       @if (ab.status === 0) { <span class="ml-1">✓</span> }
-                      @if (ab.status === 1) { <span class="ml-1" title="Expected: incomplete block">⚠</span> }
+                      @if (ab.status === 1) { <span class="ml-1">⚠</span> }
                       @if (ab.status === 2) { <span class="ml-1" title="Critical error">✕</span> }
                     </td>
                   }
@@ -130,7 +130,7 @@ export interface MarginalBalanceRow {
                             [title]="tooltipText(ab)">
                           {{ ab.actual }}&nbsp;/&nbsp;{{ ab.target | number:'1.0-2' }}
                           @if (ab.status === 0) { <span class="ml-1">✓</span> }
-                          @if (ab.status === 1) { <span class="ml-1" title="Expected: incomplete block">⚠</span> }
+                          @if (ab.status === 1) { <span class="ml-1">⚠</span> }
                           @if (ab.status === 2) { <span class="ml-1" title="Critical error">✕</span> }
                         </td>
                       }
@@ -215,7 +215,7 @@ export interface MarginalBalanceRow {
                             [title]="tooltipText(ab)">
                           {{ ab.actual }}&nbsp;/&nbsp;{{ ab.target | number:'1.0-2' }}
                           @if (ab.status === 0) { <span class="ml-1">✓</span> }
-                          @if (ab.status === 1) { <span class="ml-1" title="Expected: incomplete block">⚠</span> }
+                          @if (ab.status === 1) { <span class="ml-1">⚠</span> }
                           @if (ab.status === 2) { <span class="ml-1" title="Critical error">✕</span> }
                         </td>
                       }
