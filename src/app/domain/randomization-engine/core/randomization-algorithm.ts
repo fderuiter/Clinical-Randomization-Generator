@@ -345,7 +345,7 @@ function generateMarginalOnly(
 export function generateRandomizationSchema(config: RandomizationConfig): RandomizationResult {
   const resolvedConfig = config.seed
     ? config
-    : { ...config, seed: Math.random().toString(36).substring(2, 15) };
+    : { ...config, seed: Array.from(crypto.getRandomValues(new Uint32Array(4))).map(n => n.toString(16).padStart(8, '0')).join('') };
 
   const rng = seedrandom(resolvedConfig.seed);
 

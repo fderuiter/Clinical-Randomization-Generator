@@ -134,7 +134,7 @@ export class RandomizationEngineFacade {
       return;
     }
 
-    const id = Math.random().toString(36).substring(2);
+    const id = crypto.randomUUID();
 
     this.pendingMonteCarloCallbacks.set(id, {
       onProgress: (p: MonteCarloProgressPayload) => {
@@ -224,7 +224,7 @@ export class RandomizationEngineFacade {
   }
 
   private dispatchToWorker(config: RandomizationConfig): void {
-    const id = Math.random().toString(36).substring(2);
+    const id = crypto.randomUUID();
 
     this.pendingCallbacks.set(id, {
       resolve: async result => {
