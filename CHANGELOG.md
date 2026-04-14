@@ -1,3 +1,18 @@
+# [1.24.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.23.0...v1.24.0) (2026-04-14)
+
+
+### Bug Fixes
+
+* address code review issues - newline, label rename, probability clarity ([8127bee](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/8127bee844fcff8eccea7bf605b5d7673f4addc5))
+* apply all PR review feedback for minimization algorithm ([80d61b9](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/80d61b9030d719790b247bd7ec63febf65ac6c93))
+* apply second round of PR review feedback for minimization ([1a82a9d](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/1a82a9d831f0c828d5626b4dd1515e5d85c48845))
+* correct indentation in minimization-algorithm.ts ([bbe83bf](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/bbe83bf92bae7aa1b91d6bc67b7f0a15d9fae5c4))
+
+
+### Features
+
+* implement Pocock-Simon minimization (covariate-adaptive randomization) ([6ff8ebf](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/6ff8ebfe75278bb275cb77ab1d3396baca823aab))
+
 # [1.23.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.22.0...v1.23.0) (2026-04-10)
 
 
