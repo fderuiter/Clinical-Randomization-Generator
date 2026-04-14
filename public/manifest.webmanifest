@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Equipose — Clinical Trial Randomization Tool",
   "short_name": "Equipose",
   "description": "Free, browser-based stratified block randomization tool for clinical trials. Generate balanced treatment allocation schemas and export to R, Python, or SAS.",
@@ -11,18 +12,61 @@
   "lang": "en",
   "icons": [
     {
+      "src": "icons/icon-48x48.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "social-preview.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "label": "Equipose — Clinical Trial Randomization Tool"
+    }
+  ],
   "categories": ["medical", "productivity", "utilities"]
 }
