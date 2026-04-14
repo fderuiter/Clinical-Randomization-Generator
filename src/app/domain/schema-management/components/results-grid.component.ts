@@ -11,6 +11,7 @@ import { MethodologySpecificationService } from '../services/methodology-specifi
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { APP_VERSION } from '../../../../environments/version';
+import { ExcelExportService } from '../services/excel-export.service';
 
 export type SortDirection = 'asc' | 'desc' | 'none';
 
@@ -64,6 +65,7 @@ export class ResultsGridComponent {
   public readonly viewport = inject(ViewportService);
   private readonly toast = inject(ToastService);
   private readonly methodologySpec = inject(MethodologySpecificationService);
+  private readonly excelExport = inject(ExcelExportService);
 
   /**
    * Tracks the row whose kebab menu is currently open so the shared menu
@@ -378,6 +380,16 @@ export class ResultsGridComponent {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  async exportXlsx(): Promise<void> {
+    const data = this.state.results();
+    if (!data) return;
+    try {
+      await this.excelExport.exportXlsx(data, this.isUnblinded());
+    } catch {
+      this.toast.showError('Failed to generate Excel file. Please try again.');
+    }
   }
 
   exportJson() {

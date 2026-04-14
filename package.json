@@ -29,6 +29,7 @@
     "@angular/ssr": "21.2.7",
     "@ngrx/signals": "^21.1.0",
     "echarts": "^6.0.0",
+    "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
