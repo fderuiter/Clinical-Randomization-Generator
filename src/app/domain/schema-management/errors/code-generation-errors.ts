@@ -40,7 +40,7 @@ export class StrataParsingError extends CodeGenerationError {
 /** Thrown when an unrecognised language value is passed into the generator. */
 export class UnsupportedLanguageError extends CodeGenerationError {
   constructor(language: string, context: Partial<RandomizationConfig> | null = null) {
-    super(`Unsupported output language: "${language}". Expected R, SAS, or Python.`, context);
+    super(`Unsupported output language: "${language}". Expected R, SAS, Python, or STATA.`, context);
     this.name = 'UnsupportedLanguageError';
     Object.setPrototypeOf(this, new.target.prototype);
   }

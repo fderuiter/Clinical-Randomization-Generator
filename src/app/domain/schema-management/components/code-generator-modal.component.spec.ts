@@ -142,7 +142,7 @@ describe('CodeGeneratorModalComponent (domain)', () => {
       vi.restoreAllMocks();
     });
 
-    const verifyDownloadFilename = (language: 'R' | 'SAS' | 'Python', expectedFilename: string) => {
+    const verifyDownloadFilename = (language: 'R' | 'SAS' | 'Python' | 'STATA', expectedFilename: string) => {
       const appendSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((n: any) => n);
       vi.spyOn(document.body, 'removeChild').mockImplementation((n: any) => n);
 
@@ -153,16 +153,20 @@ describe('CodeGeneratorModalComponent (domain)', () => {
       expect(anchorEl.getAttribute('download')).toBe(expectedFilename);
     };
 
-    it('should use randomization_code.R as the filename for R code', () => {
-      verifyDownloadFilename('R', 'randomization_code.R');
+    it('should use randomization_schema.R as the filename for R code', () => {
+      verifyDownloadFilename('R', 'randomization_schema.R');
     });
 
-    it('should use randomization_code.sas as the filename for SAS code', () => {
-      verifyDownloadFilename('SAS', 'randomization_code.sas');
+    it('should use randomization_schema.sas as the filename for SAS code', () => {
+      verifyDownloadFilename('SAS', 'randomization_schema.sas');
     });
 
-    it('should use randomization_code.py as the filename for Python code', () => {
-      verifyDownloadFilename('Python', 'randomization_code.py');
+    it('should use randomization_schema.py as the filename for Python code', () => {
+      verifyDownloadFilename('Python', 'randomization_schema.py');
+    });
+
+    it('should use randomization_schema.do as the filename for STATA code', () => {
+      verifyDownloadFilename('STATA', 'randomization_schema.do');
     });
 
     it('should call URL.createObjectURL with a Blob', () => {

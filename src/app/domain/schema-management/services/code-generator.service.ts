@@ -22,7 +22,7 @@ export class CodeGeneratorService {
    * Phase 0 – Language dispatch entry point.
    * Runs pre-flight config validation, then delegates to the appropriate generator.
    */
-  generate(language: 'R' | 'SAS' | 'Python', config: RandomizationConfig): string {
+  generate(language: 'R' | 'SAS' | 'Python' | 'STATA', config: RandomizationConfig): string {
     this.validateConfig(config);
     if (config.randomizationMethod === 'MINIMIZATION') {
       return this.generateMinimizationHeader(language, config);
@@ -31,6 +31,7 @@ export class CodeGeneratorService {
       case 'R':      return this.generateR(config);
       case 'SAS':    return this.generateSas(config);
       case 'Python': return this.generatePython(config);
+      case 'STATA':  return this.generateStata(config);
       default:       throw new UnsupportedLanguageError(language as string, config);
     }
   }
@@ -40,7 +41,7 @@ export class CodeGeneratorService {
    * configuration used to generate the schema. Full algorithmic implementation in statistical
    * software requires a custom sequential allocation loop; this export documents the parameters.
    */
-  private generateMinimizationHeader(language: 'R' | 'SAS' | 'Python', config: RandomizationConfig): string {
+  private generateMinimizationHeader(language: 'R' | 'SAS' | 'Python' | 'STATA', config: RandomizationConfig): string {
     const generatedAt = new Date().toISOString();
     const arms = config.arms || [];
     const strata = config.strata || [];
@@ -91,7 +92,7 @@ export class CodeGeneratorService {
     if (language === 'SAS') {
       return body.split('\n').map(l => `/* ${l} */`).join('\n');
     }
-    const prefix = language === 'R' ? '# ' : '# ';
+    const prefix = language === 'STATA' ? '* ' : '# ';
     return body.split('\n').map(l => `${prefix}${l}`).join('\n');
   }
 
@@ -1576,6 +1577,671 @@ title;
     } catch (e) {
       if (this.isKnownError(e)) throw e;
       throw new TemplateCompilationError('SAS', e, config);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // STATA – helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Sanitises a strata factor ID to a valid Stata variable name.
+   * Stata variable names: max 32 chars, must start with a letter or underscore,
+   * and contain only letters, digits, and underscores.
+   */
+  private sanitizeStataVarName(id: string): string {
+    const s = id.replace(/[^a-zA-Z0-9_]/g, '_');
+    const fixed = /^[^a-zA-Z_]/.test(s) ? `_${s}` : s;
+    return fixed.substring(0, 32);
+  }
+
+  // ---------------------------------------------------------------------------
+  // STATA – MARGINAL_ONLY template
+  // ---------------------------------------------------------------------------
+
+  private buildStataMarginalOnly(config: RandomizationConfig): string {
+    const generatedAt = new Date().toISOString();
+    const sites = config.sites || [];
+    const blockSizes = this.effectiveBlockSizes(config);
+    const arms = config.arms || [];
+    const strata = config.strata || [];
+    const totalRatio = arms.reduce((s, a) => s + a.ratio, 0);
+
+    const combos = this.computeCombinations(strata);
+    const nCombos = combos.length;
+    const nFactors = strata.length;
+
+    // Sanitised variable names for strata factors
+    const varNames = strata.map(s => this.sanitizeStataVarName(s.id));
+
+    // 1-based level indices: levelIdx.get(factorId).get(levelName) = 1-based integer
+    const levelIdx = new Map<string, Map<string, number>>();
+    for (const s of strata) {
+      const m = new Map<string, number>();
+      s.levels.forEach((lvl, i) => m.set(lvl, i + 1));
+      levelIdx.set(s.id, m);
+    }
+
+    // Build local macro declarations for marginal caps (uncapped → 2147483647)
+    const UNCAPPED = 2147483647;
+    const capMacroLines: string[] = [];
+    for (const s of strata) {
+      const m = levelIdx.get(s.id)!;
+      for (const lvl of s.levels) {
+        const idx = m.get(lvl)!;
+        const capEntry = (s.levelDetails ?? []).find(d => d.name === lvl);
+        const capVal = capEntry !== undefined && Number.isFinite(capEntry.marginalCap)
+          ? capEntry.marginalCap
+          : UNCAPPED;
+        const comment = capVal === UNCAPPED ? `* uncapped` : `* ${lvl} cap`;
+        const safeVarName = this.sanitizeStataVarName(s.id);
+        capMacroLines.push(`local cap_${safeVarName}_${idx} = ${capVal}  ${comment}`);
+      }
+    }
+
+    // Build count macro reset lines (per site)
+    const countResetLines: string[] = [];
+    for (const s of strata) {
+      const safeVarName = this.sanitizeStataVarName(s.id);
+      for (let i = 1; i <= s.levels.length; i++) {
+        countResetLines.push(`    local cnt_${safeVarName}_${i} = 0`);
+      }
+    }
+
+    // Cap annotations for header comment
+    const capAnnotations = strata.map(s => {
+      const entries = s.levels.map((lvl, i) => {
+        const d = (s.levelDetails ?? [])[i];
+        const capVal = d !== undefined && Number.isFinite(d.marginalCap) ? d.marginalCap : 'uncapped';
+        return `${lvl}=${capVal}`;
+      }).join(', ');
+      return `* ${s.name || s.id}: ${entries}`;
+    }).join('\n');
+
+    // Value label definitions
+    const labelDefs = strata.length > 0
+      ? strata.map((s, si) => {
+          const lvlDefs = s.levels.map((lvl, j) => `${j + 1} "${lvl.replace(/"/g, "'")}"`).join(' ');
+          return `label define lbl_${varNames[si]} ${lvlDefs}, replace`;
+        }).join('\n')
+      : '';
+
+    // postfile strata variable declarations
+    const postfileStrataDecl = varNames.length > 0
+      ? ' ' + varNames.map(v => `int ${v}`).join(' ')
+      : '';
+
+    // Post args for strata variables
+    const postStrataArgs = varNames.length > 0
+      ? ' ' + varNames.map((_, i) => `(chosen_${varNames[i]})`).join(' ')
+      : '';
+
+    // label values statements
+    const labelValues = varNames.length > 0
+      ? varNames.map(v => `label values ${v} lbl_${v}`).join('\n')
+      : '';
+
+    // Combo factor assignments for pool dataset (Cartesian product rows)
+    const comboFactorAssigns = strata.map((s, si) => {
+      const safeVarName = varNames[si];
+      // For combo i (1-based): value = the level index of this factor in that combo
+      const vals = combos.map(c => levelIdx.get(s.id)?.get(c[s.id] ?? '') ?? 1);
+      // Generate using mod-based formulas where possible, or explicit if-list
+      return `    * ${safeVarName}: ${s.levels.map((l, j) => `${j+1}=${l}`).join(', ')}\n` +
+             `    gen int ${safeVarName} = .`;
+    }).join('\n');
+
+    const comboFactorFill = strata.length > 0
+      ? combos.map((combo, ci) => {
+          const assigns = strata.map((s, si) => {
+            const val = levelIdx.get(s.id)?.get(combo[s.id] ?? '') ?? 1;
+            return `    quietly replace ${varNames[si]} = ${val} if combo_id == ${ci + 1}`;
+          }).join('\n');
+          return assigns;
+        }).join('\n')
+      : '';
+
+    // Per-subject cap check: only used in countUpdates / cap-check code sections below
+
+    // Count update macros after enrolling a subject
+    const countUpdates = strata.map((s, si) => {
+      const safeVarName = varNames[si];
+      return s.levels.map((_, j) => {
+        const idx = j + 1;
+        return `                if chosen_${safeVarName} == ${idx} local cnt_${safeVarName}_${idx} = \`cnt_${safeVarName}_${idx}' + 1`;
+      }).join('\n');
+    }).join('\n');
+
+    // Factor-value extraction from chosen combo row
+    const factorValueExtraction = varNames.map(v =>
+      `        local chosen_${v} = ${v}[_chosen_row]`
+    ).join('\n');
+
+    // Block size pick code
+    let blockSizePick: string;
+    if (blockSizes.length === 1) {
+      blockSizePick = `        local cur_bs = ${blockSizes[0]}`;
+    } else {
+      const parts = blockSizes.map((bs, i) => {
+        const threshold = ((i + 1) / blockSizes.length).toFixed(5);
+        if (i === 0) return `        if _rand_bs <= ${threshold} local cur_bs = ${bs}`;
+        if (i === blockSizes.length - 1) return `        else local cur_bs = ${bs}`;
+        return `        else if _rand_bs <= ${threshold} local cur_bs = ${bs}`;
+      });
+      blockSizePick = `        local _rand_bs = runiform()\n${parts.join('\n')}`;
+    }
+
+    const stataMethodologyBlock = this.methodologySpec.formatAsLineComments(
+      this.methodologySpec.generateNarrative(config), '*'
+    );
+    const stataBlockStrategyComment = this.buildBlockStrategySection('*', config);
+    const n_arms = arms.length;
+
+    try {
+      // Site macro declarations
+      const siteMacros = sites.map((s, i) =>
+        `local site_${i + 1} \`"${s}"'`
+      ).join('\n');
+
+      // Arm macro declarations
+      const armMacros = arms.map((a, i) =>
+        `local arm_name_${i + 1} \`"${a.name}"'\nlocal arm_ratio_${i + 1} = ${a.ratio}`
+      ).join('\n');
+
+      let code = `* Randomization Schema Generation in Stata
+* Protocol: ${config.protocolId || 'Unknown'}
+* Study: ${config.studyName || 'Unknown'}
+* App Version: ${APP_VERSION}
+* Generated At: ${generatedAt}
+* PRNG Algorithm: Mersenne Twister
+* Cap Strategy: MARGINAL_ONLY
+* Per-factor, per-level caps; no intersection caps needed.
+${stataBlockStrategyComment ? stataBlockStrategyComment + '\n' : ''}${capAnnotations ? capAnnotations + '\n' : ''}${stataMethodologyBlock}
+* Subjects are allocated by randomly selecting valid stratum combinations
+* until no combination can accept additional subjects.
+
+version 17
+set more off
+set seed ${this.hashCode(config.seed)}
+
+* ─── User-defined Parameters ────────────────────────────────────────────────
+local total_ratio = ${totalRatio}
+local block_sizes "${blockSizes.join(' ')}"
+local n_bs : word count \`block_sizes'
+local n_arms = ${n_arms}
+${armMacros}
+local n_sites = ${sites.length}
+${siteMacros}
+
+* Block Math Failsafe
+forvalues b = 1/\`n_bs' {
+    local bs : word \`b' of \`block_sizes'
+    if mod(\`bs', \`total_ratio') != 0 {
+        di as error "Block size \`bs' is not a multiple of total allocation ratio \`total_ratio'."
+        exit 198
+    }
+}
+`;
+
+      if (labelDefs) {
+        code += `
+* ─── Value Labels ──────────────────────────────────────────────────────────
+${labelDefs}
+`;
+      }
+
+      // Marginal cap macros
+      if (capMacroLines.length > 0) {
+        code += `
+* ─── Marginal Caps (${UNCAPPED} = uncapped) ─────────────────────────────────
+${capMacroLines.join('\n')}
+`;
+      }
+
+      code += `
+* ─── Active Pool Dataset (one row per strata combination) ──────────────────
+tempfile _pool_file
+quietly {
+    clear
+    set obs ${nCombos}
+    gen long combo_id = _n
+    gen byte active = 1
+`;
+
+      if (strata.length > 0) {
+        code += comboFactorAssigns + '\n' + comboFactorFill + '\n';
+      }
+
+      code += `    save \`_pool_file', replace
+}
+
+* ─── Schema Generation ──────────────────────────────────────────────────────
+tempfile _schema_data
+tempname _schema_fh
+postfile \`_schema_fh' str50 SubjectID str50 Site int BlockNumber int BlockSize ///
+    str50 Treatment${postfileStrataDecl} ///
+    using \`_schema_data', replace
+
+forvalues s = 1/\`n_sites' {
+    local site \`"\`site_\`s'"\''
+    local site_count = 0
+    local block_num = 0
+
+    * Reset active pool and marginal counts for this site
+    quietly use \`_pool_file', clear
+    quietly replace active = 1
+${countResetLines.join('\n')}
+
+    quietly count if active == 1
+    local n_active = r(N)
+    local total_rows = _N
+
+    while \`n_active' > 0 {
+        * Randomly select an active combination
+        local rand_pick = ceil(runiform() * \`n_active')
+        local seen = 0
+        local _chosen_row = 0
+        forvalues _i = 1/\`total_rows' {
+            if active[\`_i'] == 1 {
+                local seen = \`seen' + 1
+                if \`seen' == \`rand_pick' {
+                    local _chosen_row = \`_i'
+                    continue, break
+                }
+            }
+        }
+        if \`_chosen_row' == 0 continue, break
+`;
+
+      if (factorValueExtraction) {
+        code += factorValueExtraction + '\n';
+      }
+
+      code += `
+        * Pick random block size
+${blockSizePick}
+        local multiplier = \`cur_bs' / \`total_ratio'
+        local block_num = \`block_num' + 1
+
+        * Build treatment block using indexed local macros
+        local blk_idx = 0
+        forvalues a = 1/\`n_arms' {
+            local arm_name \`"\`arm_name_\`a'"\''
+            local arm_ratio = \`arm_ratio_\`a''
+            local arm_reps = round(\`arm_ratio' * \`multiplier')
+            forvalues r = 1/\`arm_reps' {
+                local blk_idx = \`blk_idx' + 1
+                local blk_\`blk_idx' \`"\`arm_name'"\''
+            }
+        }
+        local n_block = \`blk_idx'
+
+        * Fisher-Yates shuffle
+        forvalues _i = \`n_block'(-1)2 {
+            local _j = ceil(runiform() * \`_i')
+            local _tmp \`"\`blk_\`_i'"\''
+            local blk_\`_i' \`"\`blk_\`_j'"\''
+            local blk_\`_j' \`"\`_tmp'"\''
+        }
+
+        * Process each subject in the block (checking marginal caps)
+        forvalues t = 1/\`n_block' {
+            * Marginal cap check
+            local can_add = 1
+`;
+
+      if (strata.length > 0) {
+        // Build a simpler per-factor cap check using the chosen factor values
+        const capCheckLines = strata.map((s, si) => {
+          const safeVarName = varNames[si];
+          return s.levels.map((_, j) => {
+            const idx = j + 1;
+            return `            if chosen_${safeVarName} == ${idx} & \`cnt_${safeVarName}_${idx}' >= \`cap_${safeVarName}_${idx}' local can_add = 0`;
+          }).join('\n');
+        }).join('\n');
+        code += capCheckLines + '\n';
+      }
+
+      code += `            if \`can_add' == 0 continue, break
+
+            local site_count = \`site_count' + 1
+            local subj_id = "\`site'" + "-" + string(\`site_count', "%03.0f")
+            post \`_schema_fh' ("\`subj_id'") ("\`site'") (\`block_num') (\`cur_bs') ("\`blk_\`t''")${postStrataArgs}
+`;
+
+      if (countUpdates) {
+        code += countUpdates + '\n';
+      }
+
+      code += `        }
+
+        * Prune pool: deactivate combinations that breach any marginal cap
+        forvalues _i = 1/\`total_rows' {
+            if active[\`_i'] == 0 continue
+            local _exhausted = 0
+`;
+
+      if (strata.length > 0) {
+        const pruneLines = strata.map((s, si) => {
+          const safeVarName = varNames[si];
+          return s.levels.map((_, j) => {
+            const idx = j + 1;
+            return `            if ${safeVarName}[\`_i'] == ${idx} & \`cnt_${safeVarName}_${idx}' >= \`cap_${safeVarName}_${idx}' local _exhausted = 1`;
+          }).join('\n');
+        }).join('\n');
+        code += pruneLines + '\n';
+      }
+
+      code += `            if \`_exhausted' == 1 quietly replace active = 0 in \`_i'
+        }
+
+        quietly count if active == 1
+        local n_active = r(N)
+    }
+}
+
+postclose \`_schema_fh'
+use \`_schema_data', clear
+`;
+
+      if (labelValues) {
+        code += `
+* Apply value labels
+${labelValues}
+`;
+      }
+
+      code += `
+* ─── QC Checks ─────────────────────────────────────────────────────────────
+di _newline "--- QC Check: Overall Allocation ---"
+tabulate Treatment
+
+di _newline "--- QC Check: Site-Level Balance ---"
+tabulate Site Treatment, chi2
+
+di _newline "--- QC Check: Block Size Distribution ---"
+tabulate BlockSize
+
+list in 1/20, clean noobs
+
+* export delimited "randomization_schema.csv", replace
+`;
+      return code.trim() + '\n';
+    } catch (e) {
+      if (this.isKnownError(e)) throw e;
+      throw new TemplateCompilationError('STATA', e, config);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // STATA – MANUAL_MATRIX / PROPORTIONAL template
+  // ---------------------------------------------------------------------------
+
+  generateStata(config: RandomizationConfig): string {
+    const generatedAt = new Date().toISOString();
+    const sites = config.sites || [];
+    const blockSizes = this.effectiveBlockSizes(config);
+    const arms = config.arms || [];
+    const strata = config.strata || [];
+    const caps = config.stratumCaps || [];
+    const totalRatio = arms.reduce((sum, a) => sum + a.ratio, 0);
+    const capStrategy = config.capStrategy ?? 'MANUAL_MATRIX';
+
+    if (capStrategy === 'MARGINAL_ONLY') {
+      this.validateMarginalOnlyConfig(config);
+      return this.buildStataMarginalOnly(config);
+    }
+
+    // Phase 2 – Strata parsing (localized catch)
+    let varNames: string[];
+    let labelDefs: string;
+    let postfileStrataDecl: string;
+    let capConditions: string;
+    let forvaluesOpen: string;
+    let forvaluesClose: string;
+    let postStrataArgs: string;
+    let labelValues: string;
+    try {
+      varNames = strata.map(s => this.sanitizeStataVarName(s.id));
+
+      // Value label definitions (strata factors as 1-based integers)
+      labelDefs = strata.map((s, si) => {
+        const lvlDefs = s.levels.map((lvl, j) => `${j + 1} "${lvl.replace(/"/g, "'")}"`).join(' ');
+        return `label define lbl_${varNames[si]} ${lvlDefs}, replace`;
+      }).join('\n');
+
+      // Postfile strata variable declarations
+      postfileStrataDecl = varNames.length > 0
+        ? ' ' + varNames.map(v => `int ${v}`).join(' ')
+        : '';
+
+      // Cap conditions inside the strata loops (using _val suffix loop variables)
+      const capLines = caps.map(c => {
+        const conds = strata.map((s, si) => {
+          const idx = si < c.levels.length ? s.levels.indexOf(c.levels[si]) + 1 : -1;
+          return idx > 0 ? `\`${varNames[si]}_val' == ${idx}` : null;
+        }).filter(Boolean);
+        const cond = conds.join(' & ');
+        return cond
+          ? `            if ${cond} local cap = ${c.cap}`
+          : `            local cap = ${c.cap}`;
+      }).join('\n');
+
+      if (strata.length === 0) {
+        const singleCap = caps.length > 0 ? caps[0].cap : 0;
+        capConditions = `            local cap = ${singleCap}`;
+      } else {
+        capConditions = `            local cap = 0\n${capLines}`;
+      }
+
+      // Nested forvalues loops for strata
+      const IND = '    ';
+      if (strata.length > 0) {
+        forvaluesOpen = strata.map((s, i) => {
+          const varMacro = `${varNames[i]}_val`;
+          const ind = IND.repeat(i + 1);
+          const lvlAnnotation = s.levels.map((l, j) => `${j + 1}=${l}`).join(', ');
+          return `${ind}* ${s.name || s.id}: ${lvlAnnotation}\n` +
+                 `${ind}forvalues ${varMacro} = 1/${s.levels.length} {`;
+        }).join('\n');
+        forvaluesClose = strata.map((_, i) =>
+          IND.repeat(strata.length - i) + '}'
+        ).join('\n');
+      } else {
+        forvaluesOpen = '';
+        forvaluesClose = '';
+      }
+
+      // Post args for strata variables
+      postStrataArgs = varNames.length > 0
+        ? ' ' + varNames.map(v => `(\`${v}_val')`).join(' ')
+        : '';
+
+      // Label values
+      labelValues = varNames.map(v => `label values ${v} lbl_${v}`).join('\n');
+    } catch (e) {
+      throw new StrataParsingError('STATA', e, config);
+    }
+
+    // Phase 3 – Template compilation (localized catch)
+    const stataCapComment = this.buildCapStrategySection('*', config);
+    const stataBlockComment = this.buildBlockStrategySection('*', config);
+    const stataMethodology = this.methodologySpec.formatAsLineComments(
+      this.methodologySpec.generateNarrative(config), '*'
+    );
+
+    try {
+      // Site macro declarations (indexed, handles spaces in names)
+      const siteMacros = sites.map((s, i) =>
+        `local site_${i + 1} \`"${s}"'`
+      ).join('\n');
+
+      // Arm macro declarations (indexed)
+      const armMacros = arms.map((a, i) =>
+        `local arm_name_${i + 1} \`"${a.name}"'\nlocal arm_ratio_${i + 1} = ${a.ratio}`
+      ).join('\n');
+
+      // Block size pick code
+      let blockSizePick: string;
+      if (blockSizes.length === 1) {
+        blockSizePick = `                local cur_bs = ${blockSizes[0]}`;
+      } else {
+        const parts = blockSizes.map((bs, i) => {
+          const threshold = ((i + 1) / blockSizes.length).toFixed(5);
+          if (i === 0) return `                if _rand_bs <= ${threshold} local cur_bs = ${bs}`;
+          if (i === blockSizes.length - 1) return `                else local cur_bs = ${bs}`;
+          return `                else if _rand_bs <= ${threshold} local cur_bs = ${bs}`;
+        });
+        blockSizePick = `                local _rand_bs = runiform()\n${parts.join('\n')}`;
+      }
+
+      // Inner indentation: strata.length levels of nesting (+ 1 for site loop)
+      const innerInd = '    '.repeat(strata.length + 2);
+
+      // Cap annotation comments for header
+      const capAnnotations = strata.length > 0
+        ? caps.map(c => {
+            const lvlParts = strata.map((s, i) => `${varNames[i]}=${i < c.levels.length ? c.levels[i] : '?'}`).join(', ');
+            return `* (${lvlParts}) → ${c.cap} subjects`;
+          }).join('\n')
+        : '';
+
+      let code = `* Randomization Schema Generation in Stata
+* Protocol: ${config.protocolId || 'Unknown'}
+* Study: ${config.studyName || 'Unknown'}
+* App Version: ${APP_VERSION}
+* Generated At: ${generatedAt}
+* PRNG Algorithm: Mersenne Twister
+${stataCapComment}${stataBlockComment ? '\n' + stataBlockComment : ''}
+${stataMethodology}
+
+version 17
+set more off
+set seed ${this.hashCode(config.seed)}
+
+* ─── User-defined Parameters ────────────────────────────────────────────────
+local total_ratio = ${totalRatio}
+local block_sizes "${blockSizes.join(' ')}"
+local n_bs : word count \`block_sizes'
+local n_arms = ${arms.length}
+${armMacros}
+local n_sites = ${sites.length}
+${siteMacros}
+
+* Block Math Failsafe
+forvalues b = 1/\`n_bs' {
+    local bs : word \`b' of \`block_sizes'
+    if mod(\`bs', \`total_ratio') != 0 {
+        di as error "Block size \`bs' is not a multiple of total allocation ratio \`total_ratio'."
+        exit 198
+    }
+}
+`;
+
+      if (labelDefs) {
+        code += `
+* ─── Value Labels ──────────────────────────────────────────────────────────
+${labelDefs}
+`;
+      }
+
+      if (capAnnotations) {
+        code += `
+* ─── Stratum Caps ────────────────────────────────────────────────────────
+${capAnnotations}
+`;
+      }
+
+      code += `
+* ─── Schema Generation ──────────────────────────────────────────────────────
+tempfile _schema_data
+tempname _schema_fh
+
+* Strata factors are stored as integers; use 'label values' to display labels.
+postfile \`_schema_fh' str50 SubjectID str50 Site int BlockNumber int BlockSize ///
+    str50 Treatment${postfileStrataDecl} ///
+    using \`_schema_data', replace
+
+forvalues s = 1/\`n_sites' {
+    local site \`"\`site_\`s'"\''
+    local site_count = 0
+${forvaluesOpen ? '\n' + forvaluesOpen : ''}
+${capConditions}
+
+            local stratum_count = 0
+            local block_num = 1
+            while \`stratum_count' < \`cap' {
+                * Pick random block size
+${blockSizePick}
+                local multiplier = \`cur_bs' / \`total_ratio'
+
+                * Build treatment block using indexed local macros
+                local blk_idx = 0
+                forvalues a = 1/\`n_arms' {
+                    local arm_name \`"\`arm_name_\`a'"\''
+                    local arm_ratio = \`arm_ratio_\`a''
+                    local arm_reps = round(\`arm_ratio' * \`multiplier')
+                    forvalues r = 1/\`arm_reps' {
+                        local blk_idx = \`blk_idx' + 1
+                        local blk_\`blk_idx' \`"\`arm_name'"\''
+                    }
+                }
+                local n_block = \`blk_idx'
+
+                * Fisher-Yates shuffle (in-place via indexed local macros)
+                forvalues _i = \`n_block'(-1)2 {
+                    local _j = ceil(runiform() * \`_i')
+                    local _tmp \`"\`blk_\`_i'"\''
+                    local blk_\`_i' \`"\`blk_\`_j'"\''
+                    local blk_\`_j' \`"\`_tmp'"\''
+                }
+
+                * Output subjects (truncate to remaining cap)
+                local remaining = \`cap' - \`stratum_count'
+                local n_out = min(\`n_block', \`remaining')
+                forvalues t = 1/\`n_out' {
+                    local site_count = \`site_count' + 1
+                    local stratum_count = \`stratum_count' + 1
+                    local subj_id = "\`site'" + "-" + string(\`site_count', "%03.0f")
+                    post \`_schema_fh' ("\`subj_id'") ("\`site'") (\`block_num') ///
+                        (\`cur_bs') ("\`blk_\`t''")${postStrataArgs}
+                }
+                if \`stratum_count' >= \`cap' continue, break
+                local block_num = \`block_num' + 1
+            }
+${forvaluesClose ? '\n' + forvaluesClose : ''}
+}
+
+postclose \`_schema_fh'
+use \`_schema_data', clear
+`;
+
+      if (labelValues) {
+        code += `
+* Apply value labels to strata variables
+${labelValues}
+`;
+      }
+
+      code += `
+* ─── QC Checks ─────────────────────────────────────────────────────────────
+di _newline "--- QC Check: Overall Allocation ---"
+tabulate Treatment
+
+di _newline "--- QC Check: Site-Level Balance ---"
+tabulate Site Treatment, chi2
+
+di _newline "--- QC Check: Block Size Distribution ---"
+tabulate BlockSize
+
+list in 1/20, clean noobs
+
+* export delimited "randomization_schema.csv", replace
+`;
+      return code.trim() + '\n';
+    } catch (e) {
+      if (this.isKnownError(e)) throw e;
+      throw new TemplateCompilationError('STATA', e, config);
     }
   }
 }

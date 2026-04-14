@@ -145,8 +145,8 @@ describe('RandomizationEngineFacade – SSR (synchronous) path', () => {
     expect(facade.config()).toEqual(mockConfig);
   });
 
-  it('should open the code generator for all three supported languages', () => {
-    for (const lang of ['R', 'SAS', 'Python'] as const) {
+  it('should open the code generator for all four supported languages', () => {
+    for (const lang of ['R', 'SAS', 'Python', 'STATA'] as const) {
       facade.openCodeGenerator(mockConfig, lang);
       expect(facade.codeLanguage()).toBe(lang);
     }

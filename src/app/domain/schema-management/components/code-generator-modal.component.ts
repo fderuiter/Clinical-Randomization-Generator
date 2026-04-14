@@ -14,7 +14,7 @@ export class CodeGeneratorModalComponent implements OnInit {
   public state = inject(RandomizationEngineFacade);
   private codeGenService = inject(CodeGeneratorService);
 
-  activeTab = signal<'R' | 'SAS' | 'Python'>('R');
+  activeTab = signal<'R' | 'SAS' | 'Python' | 'STATA'>('R');
   copied = signal(false);
   errorState = signal<CodeGenerationError | null>(null);
   generatedCode = signal<string>('');
@@ -28,7 +28,7 @@ export class CodeGeneratorModalComponent implements OnInit {
     return this.generatedCode();
   }
 
-  setActiveTab(tab: 'R' | 'SAS' | 'Python') {
+  setActiveTab(tab: 'R' | 'SAS' | 'Python' | 'STATA') {
     this.activeTab.set(tab);
     this.refreshCode();
   }
@@ -81,12 +81,13 @@ export class CodeGeneratorModalComponent implements OnInit {
 
   downloadCode() {
     const code = this.currentCode;
-    const extension = this.activeTab() === 'R' ? 'R' : this.activeTab() === 'SAS' ? 'sas' : 'py';
+    const tab = this.activeTab();
+    const extension = tab === 'R' ? 'R' : tab === 'SAS' ? 'sas' : tab === 'STATA' ? 'do' : 'py';
     const blob = new Blob([code], { type: 'text/plain;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `randomization_code.${extension}`);
+    link.setAttribute('download', `randomization_schema.${extension}`);
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();

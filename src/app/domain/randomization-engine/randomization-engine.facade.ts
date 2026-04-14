@@ -58,7 +58,7 @@ export class RandomizationEngineFacade {
 
   // UI state
   readonly showCodeGenerator = signal(false);
-  readonly codeLanguage = signal<'R' | 'SAS' | 'Python'>('R');
+  readonly codeLanguage = signal<'R' | 'SAS' | 'Python' | 'STATA'>('R');
 
   // Monte Carlo state
   readonly isMonteCarloRunning = signal(false);
@@ -112,7 +112,7 @@ export class RandomizationEngineFacade {
     this.error.set(null);
   }
 
-  openCodeGenerator(config: RandomizationConfig, language: 'R' | 'SAS' | 'Python'): void {
+  openCodeGenerator(config: RandomizationConfig, language: 'R' | 'SAS' | 'Python' | 'STATA'): void {
     this.config.set(config);
     this.codeLanguage.set(language);
     this.showCodeGenerator.set(true);

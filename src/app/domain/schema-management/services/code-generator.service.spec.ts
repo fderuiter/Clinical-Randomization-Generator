@@ -750,19 +750,339 @@ describe('CodeGeneratorService', () => {
         expect(code).not.toContain('max_subjects_per_stratum');
       });
     });
+
+    // STATA tests
+    describe('STATA', () => {
+      it('should include MARGINAL_ONLY comment', () => {
+        const code = service.generateStata(marginalConfig);
+        expect(code).toContain('Cap Strategy: MARGINAL_ONLY');
+      });
+
+      it('should declare cap local macros per factor and level', () => {
+        const code = service.generateStata(marginalConfig);
+        expect(code).toContain('local cap_sex_1 = 30');
+        expect(code).toContain('local cap_sex_2 = 30');
+        expect(code).toContain('local cap_age_1 = 20');
+        expect(code).toContain('local cap_age_2 = 40');
+      });
+
+      it('should build an active pool dataset with combo_id and active columns', () => {
+        const code = service.generateStata(marginalConfig);
+        expect(code).toContain('gen long combo_id = _n');
+        expect(code).toContain('gen byte active = 1');
+      });
+
+      it('should use a while loop over n_active > 0', () => {
+        const code = service.generateStata(marginalConfig);
+        expect(code).toContain("while `n_active' > 0");
+      });
+
+      it('should include can_add cap check logic', () => {
+        const code = service.generateStata(marginalConfig);
+        expect(code).toContain('local can_add = 1');
+        expect(code).toContain('local can_add = 0');
+      });
+
+      it('should include pool pruning logic (_exhausted)', () => {
+        const code = service.generateStata(marginalConfig);
+        expect(code).toContain('local _exhausted = 0');
+        expect(code).toContain('local _exhausted = 1');
+      });
+
+      it('should embed the set seed command', () => {
+        const code = service.generateStata(marginalConfig);
+        expect(code).toMatch(/set seed \d+/);
+      });
+
+      it('should define value labels for strata factors', () => {
+        const code = service.generateStata(marginalConfig);
+        expect(code).toContain('label define lbl_sex 1 "Male" 2 "Female"');
+        expect(code).toContain('label define lbl_age 1 "Young" 2 "Old"');
+      });
+
+      it('should apply value labels after loading schema', () => {
+        const code = service.generateStata(marginalConfig);
+        expect(code).toContain('label values sex lbl_sex');
+        expect(code).toContain('label values age lbl_age');
+      });
+
+      it('should include QC tabulate steps', () => {
+        const code = service.generateStata(marginalConfig);
+        expect(code).toContain('tabulate Treatment');
+        expect(code).toContain('tabulate Site Treatment');
+      });
+
+      it('should include the block math failsafe', () => {
+        const code = service.generateStata(marginalConfig);
+        expect(code).toContain('mod(`bs\', `total_ratio\')');
+        expect(code).toContain('exit 198');
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // STATA code generation
+  // ---------------------------------------------------------------------------
+  describe('generateStata()', () => {
+    describe('header and parameters', () => {
+      it('should embed protocol, study, and version in the header', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('Protocol: FULL-456');
+        expect(code).toContain('Study: Full Study');
+        expect(code).toContain('App Version:');
+        expect(code).toContain('Generated At:');
+        expect(code).toContain('PRNG Algorithm: Mersenne Twister');
+      });
+
+      it('should fall back to "Unknown" when protocolId/studyName are blank', () => {
+        const code = service.generateStata({ ...minimalConfig, protocolId: '', studyName: '' });
+        expect(code).toContain('Protocol: Unknown');
+        expect(code).toContain('Study: Unknown');
+      });
+
+      it('should set version 17 and set more off', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('version 17');
+        expect(code).toContain('set more off');
+      });
+
+      it('should call set seed with a numeric argument', () => {
+        const code = service.generateStata(fullConfig);
+        const match = code.match(/set seed (\d+)/);
+        expect(match).not.toBeNull();
+        expect(Number(match![1])).toBeGreaterThanOrEqual(0);
+      });
+
+      it('should embed arm names as indexed local macros', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('local arm_name_1');
+        expect(code).toContain('Treatment');
+        expect(code).toContain('local arm_name_2');
+        expect(code).toContain('Placebo');
+      });
+
+      it('should embed arm ratios as indexed local macros', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('local arm_ratio_1 = 2');
+        expect(code).toContain('local arm_ratio_2 = 1');
+      });
+
+      it('should embed site names as indexed local macros', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('local site_1');
+        expect(code).toContain('SiteA');
+        expect(code).toContain('local site_2');
+        expect(code).toContain('SiteB');
+      });
+
+      it('should embed block sizes', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('local block_sizes "3 6"');
+      });
+    });
+
+    describe('strata and cap handling', () => {
+      it('should define value labels for each stratum factor', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('label define lbl_sex 1 "Male" 2 "Female"');
+        expect(code).toContain('label define lbl_age 1 "Young" 2 "Old"');
+      });
+
+      it('should apply value labels after loading schema', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('label values sex lbl_sex');
+        expect(code).toContain('label values age lbl_age');
+      });
+
+      it('should declare strata variables as int in postfile', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('int sex');
+        expect(code).toContain('int age');
+      });
+
+      it('should include forvalues loops for each strata factor', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('forvalues sex_val = 1/2');
+        expect(code).toContain('forvalues age_val = 1/2');
+      });
+
+      it('should include cap conditions for each stratum combination', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain("if `sex_val' == 1 & `age_val' == 1 local cap = 12");
+        expect(code).toContain("if `sex_val' == 1 & `age_val' == 2 local cap = 9");
+        expect(code).toContain("if `sex_val' == 2 & `age_val' == 1 local cap = 15");
+        expect(code).toContain("if `sex_val' == 2 & `age_val' == 2 local cap = 6");
+      });
+
+      it('should handle no strata (no forvalues strata loops)', () => {
+        const code = service.generateStata(minimalConfig);
+        expect(code).not.toContain('forvalues sex_val');
+        expect(code).not.toContain('label define');
+      });
+
+      it('should use cap = 0 for no-strata no-caps config', () => {
+        const code = service.generateStata(minimalConfig);
+        expect(code).toContain('local cap = 0');
+      });
+    });
+
+    describe('structural correctness', () => {
+      it('should include the block math failsafe', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain("mod(`bs', `total_ratio')");
+        expect(code).toContain('exit 198');
+      });
+
+      it('should use postfile/post/postclose pattern', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('postfile');
+        expect(code).toContain('post `_schema_fh\'');
+        expect(code).toContain('postclose `_schema_fh\'');
+      });
+
+      it('should include a while loop driven by stratum_count < cap', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain("while `stratum_count' < `cap'");
+      });
+
+      it('should include Fisher-Yates shuffle using indexed macros', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain("forvalues _i = `n_block'(-1)2");
+        expect(code).toContain('local _tmp');
+      });
+
+      it('should include QC tabulate steps', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('tabulate Treatment');
+        expect(code).toContain('tabulate Site Treatment');
+        expect(code).toContain('tabulate BlockSize');
+      });
+
+      it('should include a list preview', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('list in 1/20');
+      });
+    });
+
+    describe('variable name sanitisation', () => {
+      it('should replace spaces and special chars in strata IDs with underscores', () => {
+        const configWithSpecialChars: RandomizationConfig = {
+          ...minimalConfig,
+          strata: [
+            { id: 'age group', name: 'Age Group', levels: ['Young', 'Old'] }
+          ],
+          stratumCaps: [
+            { levels: ['Young'], cap: 10 },
+            { levels: ['Old'], cap: 10 }
+          ]
+        };
+        const code = service.generateStata(configWithSpecialChars);
+        expect(code).toContain('age_group');
+        expect(code).not.toContain('forvalues age group_val');
+      });
+
+      it('should prefix IDs that start with a digit', () => {
+        const configWithNumericId: RandomizationConfig = {
+          ...minimalConfig,
+          strata: [
+            { id: '2grp', name: 'Two Group', levels: ['A', 'B'] }
+          ],
+          stratumCaps: [
+            { levels: ['A'], cap: 10 },
+            { levels: ['B'], cap: 10 }
+          ]
+        };
+        const code = service.generateStata(configWithNumericId);
+        expect(code).toContain('_2grp');
+      });
+
+      it('should truncate variable names to 32 characters', () => {
+        const longId = 'a'.repeat(40);
+        const configWithLongId: RandomizationConfig = {
+          ...minimalConfig,
+          strata: [
+            { id: longId, name: 'Long ID Factor', levels: ['X', 'Y'] }
+          ],
+          stratumCaps: [
+            { levels: ['X'], cap: 10 },
+            { levels: ['Y'], cap: 10 }
+          ]
+        };
+        const code = service.generateStata(configWithLongId);
+        // Variable name should be truncated to max 32 chars
+        const varNameMatch = code.match(/label define lbl_([a-zA-Z_][a-zA-Z0-9_]*)/);
+        expect(varNameMatch).not.toBeNull();
+        expect(varNameMatch![1].length).toBeLessThanOrEqual(32);
+      });
+    });
+
+    describe('PROPORTIONAL cap strategy (STATA)', () => {
+      it('should embed PROPORTIONAL strategy comment', () => {
+        const proportionalConfig: RandomizationConfig = {
+          ...fullConfig,
+          capStrategy: 'PROPORTIONAL',
+          globalCap: 100,
+          stratumCaps: [
+            { levels: ['Male', 'Young'], cap: 36 },
+            { levels: ['Male', 'Old'], cap: 24 },
+            { levels: ['Female', 'Young'], cap: 24 },
+            { levels: ['Female', 'Old'], cap: 16 }
+          ]
+        };
+        const code = service.generateStata(proportionalConfig);
+        expect(code).toContain('Cap Strategy: PROPORTIONAL');
+      });
+
+      it('should still emit intersection cap conditions for PROPORTIONAL', () => {
+        const proportionalConfig: RandomizationConfig = {
+          ...fullConfig,
+          capStrategy: 'PROPORTIONAL',
+          globalCap: 100,
+          stratumCaps: [
+            { levels: ['Male', 'Young'], cap: 36 },
+            { levels: ['Male', 'Old'], cap: 24 },
+            { levels: ['Female', 'Young'], cap: 24 },
+            { levels: ['Female', 'Old'], cap: 16 }
+          ]
+        };
+        const code = service.generateStata(proportionalConfig);
+        expect(code).toContain('local cap = 36');
+      });
+    });
+
+    describe('edge cases', () => {
+      it('should handle empty sites array', () => {
+        const code = service.generateStata({ ...minimalConfig, sites: [] });
+        expect(code).toContain('local n_sites = 0');
+      });
+
+      it('should use a single fixed block size when only one is provided', () => {
+        const singleBlockConfig = { ...fullConfig, blockSizes: [6] };
+        const code = service.generateStata(singleBlockConfig);
+        expect(code).toContain('local block_sizes "6"');
+        expect(code).toContain('local cur_bs = 6');
+      });
+
+      it('should include probabilistic block size selection for multiple block sizes', () => {
+        const code = service.generateStata(fullConfig);
+        expect(code).toContain('runiform()');
+      });
+    });
   });
 
   // ---------------------------------------------------------------------------
   // Cross-language consistency
   // ---------------------------------------------------------------------------
   describe('cross-language consistency', () => {
-    it('should embed the same protocol ID in all three languages', () => {
+    it('should embed the same protocol ID in all four languages', () => {
       const r = service.generateR(fullConfig);
       const py = service.generatePython(fullConfig);
       const sas = service.generateSas(fullConfig);
+      const stata = service.generateStata(fullConfig);
       expect(r).toContain('FULL-456');
       expect(py).toContain('FULL-456');
       expect(sas).toContain('FULL-456');
+      expect(stata).toContain('FULL-456');
     });
 
     it('should derive a non-negative integer seed hash consistently', () => {
@@ -778,14 +1098,20 @@ describe('CodeGeneratorService', () => {
       const sas1 = service.generateSas(fullConfig).match(/%let seed = (\d+);/)![1];
       const sas2 = service.generateSas(fullConfig).match(/%let seed = (\d+);/)![1];
       expect(sas1).toBe(sas2);
+
+      const stata1 = service.generateStata(fullConfig).match(/set seed (\d+)/)![1];
+      const stata2 = service.generateStata(fullConfig).match(/set seed (\d+)/)![1];
+      expect(stata1).toBe(stata2);
     });
 
-    it('should embed the same seed hash value in R and Python for the same config', () => {
+    it('should embed the same seed hash value in all four languages for the same config', () => {
       const rSeed = service.generateR(fullConfig).match(/set\.seed\((\d+)\)/)![1];
       const pySeed = service.generatePython(fullConfig).match(/default_rng\((\d+)\)/)![1];
       const sasSeed = service.generateSas(fullConfig).match(/%let seed = (\d+);/)![1];
+      const stataSeed = service.generateStata(fullConfig).match(/set seed (\d+)/)![1];
       expect(rSeed).toBe(pySeed);
       expect(rSeed).toBe(sasSeed);
+      expect(rSeed).toBe(stataSeed);
     });
 
     it('should produce a different seed hash when the seed string changes', () => {
@@ -809,14 +1135,16 @@ describe('CodeGeneratorService', () => {
       }
     });
 
-    it('should include a Generated At timestamp in all three outputs', () => {
+    it('should include a Generated At timestamp in all four outputs', () => {
       const r = service.generateR(fullConfig);
       const py = service.generatePython(fullConfig);
       const sas = service.generateSas(fullConfig);
+      const stata = service.generateStata(fullConfig);
       // ISO 8601 date prefix
       expect(r).toMatch(/Generated At: \d{4}-\d{2}-\d{2}/);
       expect(py).toMatch(/Generated At: \d{4}-\d{2}-\d{2}/);
       expect(sas).toMatch(/Generated At: \d{4}-\d{2}-\d{2}/);
+      expect(stata).toMatch(/Generated At: \d{4}-\d{2}-\d{2}/);
     });
   });
 
@@ -837,6 +1165,12 @@ describe('CodeGeneratorService', () => {
     it('should delegate to generateSas for language "SAS"', () => {
       const code = service.generate('SAS', minimalConfig);
       expect(code).toContain('%let seed =');
+    });
+
+    it('should delegate to generateStata for language "STATA"', () => {
+      const code = service.generate('STATA', minimalConfig);
+      expect(code).toContain('set seed');
+      expect(code).toContain('version 17');
     });
   });
 
@@ -870,6 +1204,7 @@ describe('CodeGeneratorService', () => {
         expect(() => service.generate('R', baseMarginalConfig)).toThrow(ConfigurationValidationError);
         expect(() => service.generate('Python', baseMarginalConfig)).toThrow(ConfigurationValidationError);
         expect(() => service.generate('SAS', baseMarginalConfig)).toThrow(ConfigurationValidationError);
+        expect(() => service.generate('STATA', baseMarginalConfig)).toThrow(ConfigurationValidationError);
       });
 
       it('should throw when a factor has only some levels capped (partial caps)', () => {
@@ -903,6 +1238,7 @@ describe('CodeGeneratorService', () => {
         expect(() => service.generate('R', validConfig)).not.toThrow();
         expect(() => service.generate('Python', validConfig)).not.toThrow();
         expect(() => service.generate('SAS', validConfig)).not.toThrow();
+        expect(() => service.generate('STATA', validConfig)).not.toThrow();
       });
     });
   });

@@ -17,7 +17,7 @@ function buildMockFacade() {
     isGenerating: signal(false),
     error: signal<string | null>(null),
     showCodeGenerator: signal(false),
-    codeLanguage: signal<'R' | 'SAS' | 'Python'>('R'),
+    codeLanguage: signal<'R' | 'SAS' | 'Python' | 'STATA'>('R'),
     // Monte Carlo state
     showMonteCarloModal: signal(false),
     isMonteCarloRunning: signal(false),
