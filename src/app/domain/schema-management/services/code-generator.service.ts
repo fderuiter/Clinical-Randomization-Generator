@@ -1632,7 +1632,7 @@ title;
         const capVal = capEntry !== undefined && Number.isFinite(capEntry.marginalCap)
           ? capEntry.marginalCap
           : UNCAPPED;
-        const comment = capVal === UNCAPPED ? `* uncapped` : `* ${lvl} cap`;
+        const comment = capVal === UNCAPPED ? `// uncapped` : `// ${lvl} cap`;
         const safeVarName = this.sanitizeStataVarName(s.id);
         capMacroLines.push(`local cap_${safeVarName}_${idx} = ${capVal}  ${comment}`);
       }
@@ -1649,8 +1649,8 @@ title;
 
     // Cap annotations for header comment
     const capAnnotations = strata.map(s => {
-      const entries = s.levels.map((lvl, i) => {
-        const d = (s.levelDetails ?? [])[i];
+      const entries = s.levels.map(lvl => {
+        const d = (s.levelDetails ?? []).find(ld => ld.name === lvl);
         const capVal = d !== undefined && Number.isFinite(d.marginalCap) ? d.marginalCap : 'uncapped';
         return `${lvl}=${capVal}`;
       }).join(', ');
@@ -1818,6 +1818,7 @@ postfile \`_schema_fh' str50 SubjectID str50 Site int BlockNumber int BlockSize 
     str50 Treatment${postfileStrataDecl} ///
     using \`_schema_data', replace
 
+if \`n_sites' > 0 {
 forvalues s = 1/\`n_sites' {
     local site \`site_\`s''
     local site_count = 0
@@ -1935,6 +1936,7 @@ ${blockSizePick}
         local n_active = r(N)
     }
 }
+} // end if \`n_sites' > 0
 
 postclose \`_schema_fh'
 use \`_schema_data', clear
@@ -2155,6 +2157,7 @@ postfile \`_schema_fh' str50 SubjectID str50 Site int BlockNumber int BlockSize 
     str50 Treatment${postfileStrataDecl} ///
     using \`_schema_data', replace
 
+if \`n_sites' > 0 {
 forvalues s = 1/\`n_sites' {
     local site \`site_\`s''
     local site_count = 0
@@ -2204,6 +2207,7 @@ ${blockSizePick}
             }
 ${forvaluesClose ? '\n' + forvaluesClose : ''}
 }
+} // end if \`n_sites' > 0
 
 postclose \`_schema_fh'
 use \`_schema_data', clear
