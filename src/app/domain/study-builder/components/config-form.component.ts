@@ -7,15 +7,18 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
 import { TagInputComponent } from './tag-input.component';
+import { WizardStepperComponent } from './wizard-stepper.component';
+import { WizardNavigationComponent } from './wizard-navigation.component';
 import { previewSubjectIdMask, validateSubjectIdMask } from '../../randomization-engine/core/subject-id-engine';
 import { BlockPreviewComponent, ArmInput } from './block-preview.component';
 import { computeProportionalCaps, validateProportionalPercentages } from '../../randomization-engine/core/cap-strategy';
 import { CapStrategy } from '../../core/models/randomization.model';
+import { animateIfMotionOK } from '../../../core/utils/motion.utils';
 
 @Component({
   selector: 'app-config-form',
   standalone: true,
-  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, MatTooltipModule, BlockPreviewComponent],
+  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, MatTooltipModule, BlockPreviewComponent, WizardStepperComponent, WizardNavigationComponent],
   templateUrl: './config-form.component.html'
 })
 export class ConfigFormComponent implements OnInit {
@@ -24,6 +27,71 @@ export class ConfigFormComponent implements OnInit {
   readonly store = inject(StudyBuilderStore);
   private readonly destroyRef = inject(DestroyRef);
 
+  // ── Wizard state ─────────────────────────────────────────────────────────
+
+  /** Current wizard step (1–5). */
+  readonly currentStep = signal<number>(1);
+  readonly totalSteps = 5 as const;
+  readonly stepLabels: string[] = [
+    'Study Identity',
+    'Treatment Arms',
+    'Stratification',
+    'Algorithm & Enrollment',
+    'Advanced & Generate',
+  ];
+
+  /** Screen-reader live-region text that announces the current step. */
+  readonly stepAnnouncement = computed(
+    () => `Step ${this.currentStep()} of ${this.totalSteps}: ${this.stepLabels[this.currentStep() - 1]}`
+  );
+
+  /** Whether the user can advance from the current step. */
+  readonly canProceed = computed(() => {
+    const step = this.currentStep();
+    switch (step) {
+      case 1:
+        return (
+          (this.form.get('protocolId')?.valid ?? false) &&
+          (this.form.get('studyName')?.valid ?? false) &&
+          (this.form.get('phase')?.valid ?? false)
+        );
+      case 2:
+        return this.arms.valid;
+      case 3:
+        // Strata are optional; block if minimization probabilities are invalid.
+        return !this.form.errors?.['minimizationProbabilitiesInvalid'];
+      case 4: {
+        const method = this.randomizationMethod;
+        if (method === 'MINIMIZATION') {
+          return (
+            (this.form.get('sitesStr')?.valid ?? false) &&
+            (this.form.get('totalSampleSize')?.valid ?? false)
+          );
+        }
+        return (
+          (this.form.get('sitesStr')?.valid ?? false) &&
+          (this.form.get('blockSizesStr')?.valid ?? false) &&
+          !this.form.errors?.['invalidBlockSize']
+        );
+      }
+      default:
+        return this.form.valid;
+    }
+  });
+
+  /** Direction of the last wizard navigation action (used for enter animation). */
+  private stepDirection: 'forward' | 'backward' = 'forward';
+
+  /** Reference to the step content container for slide animations. */
+  @ViewChild('stepPanel') private readonly stepPanel!: ElementRef<HTMLDivElement>;
+
+  /** Reference to the arm cards grid for add/remove animations. */
+  @ViewChild('armsGrid') private readonly armsGrid!: ElementRef<HTMLDivElement>;
+
+  /** Reference to the strata list container for add/remove animations. */
+  @ViewChild('strataList') private readonly strataList!: ElementRef<HTMLDivElement>;
+
+  // ── Legacy dropdown (kept for backward-compat; navigation now in WizardNavigationComponent) ──
   dropdownOpen = false;
   /** Controls visibility of the Advanced Settings accordion section. */
   readonly showAdvanced = signal(false);
@@ -210,7 +278,7 @@ export class ConfigFormComponent implements OnInit {
 
   @HostListener('document:click', ['$event'])
   clickout(event: Event): void {
-    if (this.dropdownOpen && this.dropdownContainer && !this.dropdownContainer.nativeElement.contains(event.target))
+    if (this.dropdownOpen && this.dropdownContainer?.nativeElement && !this.dropdownContainer.nativeElement.contains(event.target))
       this.dropdownOpen = false;
   }
 
@@ -407,6 +475,85 @@ export class ConfigFormComponent implements OnInit {
 
   toggleAdvanced(): void { this.showAdvanced.update(v => !v); }
 
+  // ── Wizard navigation ─────────────────────────────────────────────────────
+
+  /** Advance to the next step after validating the current step's fields. */
+  goNext(): void {
+    if (!this.canProceed()) {
+      this.markCurrentStepTouched();
+      this.shakePanel();
+      return;
+    }
+    this.stepDirection = 'forward';
+    this.animateStepTransition(() => {
+      this.currentStep.update(s => Math.min(s + 1, this.totalSteps));
+    });
+  }
+
+  /** Return to the previous step without validation. */
+  goPrev(): void {
+    this.stepDirection = 'backward';
+    this.animateStepTransition(() => {
+      this.currentStep.update(s => Math.max(s - 1, 1));
+    });
+  }
+
+  /** Jump directly to a completed or current step (e.g. from the stepper). */
+  jumpToStep(step: number): void {
+    if (step === this.currentStep()) return;
+    this.stepDirection = step < this.currentStep() ? 'backward' : 'forward';
+    this.animateStepTransition(() => {
+      this.currentStep.set(step);
+    });
+  }
+
+  /**
+   * Animate the step panel out, run the step-change function, then animate the
+   * new content in.  Falls back to an instant switch when Motion is unavailable
+   * or the panel element is not yet in the DOM.
+   */
+  private animateStepTransition(changeFn: () => void): void {
+    const panel = this.stepPanel?.nativeElement;
+    if (!panel || typeof window === 'undefined') {
+      changeFn();
+      return;
+    }
+    const exitX = this.stepDirection === 'forward' ? -24 : 24;
+    const enterX = this.stepDirection === 'forward' ? 24 : -24;
+    animateIfMotionOK(panel, { opacity: [1, 0], x: [0, exitX] }, { duration: 0.15, easing: 'ease-in' }).then(() => {
+      changeFn();
+      // Give Angular one tick to render the new step content before animating in.
+      setTimeout(() => {
+        animateIfMotionOK(panel, { opacity: [0, 1], x: [enterX, 0] }, { duration: 0.25, easing: 'ease-out' });
+      }, 16);
+    });
+  }
+
+  /** Shake the step panel to signal that the user cannot proceed. */
+  private shakePanel(): void {
+    const panel = this.stepPanel?.nativeElement;
+    if (!panel || typeof window === 'undefined') return;
+    animateIfMotionOK(panel, { x: [0, -8, 8, -6, 6, 0] }, { duration: 0.35, easing: 'ease-out' });
+  }
+
+  /** Mark the controls of the current step as touched to surface inline errors. */
+  private markCurrentStepTouched(): void {
+    const step = this.currentStep();
+    const controlNames: Record<number, string[]> = {
+      1: ['protocolId', 'studyName', 'phase'],
+      2: [],
+      3: [],
+      4: ['sitesStr', 'blockSizesStr', 'totalSampleSize'],
+      5: [],
+    };
+    for (const name of controlNames[step] ?? []) {
+      this.form.get(name)?.markAsTouched();
+    }
+    if (step === 2) {
+      this.arms.controls.forEach(c => c.markAllAsTouched());
+    }
+  }
+
   loadPreset(type: 'simple' | 'standard' | 'complex'): void {
     const { protocolId, studyName, phase, sitesStr, blockSizesStr, subjectIdMask, arms, strata } =
       this.store.getPreset(type);
@@ -426,6 +573,19 @@ export class ConfigFormComponent implements OnInit {
     this.syncStratumCaps();
     this.syncLevelDetails(this.strata.value as StratumFormValue[]);
     this.matrixComputed.set(false);
+
+    // Return to step 1 so the user sees the updated study metadata.
+    this.currentStep.set(1);
+
+    // Brief indigo flash to confirm the preset was applied.
+    const panel = this.stepPanel?.nativeElement;
+    if (panel && typeof window !== 'undefined') {
+      animateIfMotionOK(
+        panel,
+        { backgroundColor: ['oklch(0.94 0.028 264 / 0.25)', 'transparent'] },
+        { duration: 0.6, easing: 'ease-out' }
+      );
+    }
   }
 
   parseCommaSeparated(value: string | null | undefined): string[] {
@@ -438,10 +598,31 @@ export class ConfigFormComponent implements OnInit {
       id: [String.fromCharCode(65 + this.arms.length)], name: [''], ratio: [1, [Validators.required, Validators.min(1)]]
     }));
     this.form.updateValueAndValidity();
+    // Animate the newly added card after Angular renders it
+    setTimeout(() => {
+      const grid = this.armsGrid?.nativeElement;
+      if (grid) {
+        const lastCard = grid.lastElementChild as HTMLElement | null;
+        if (lastCard) {
+          animateIfMotionOK(lastCard, { opacity: [0, 1], y: [16, 0], scale: [0.93, 1] }, { duration: 0.2, easing: 'ease-out' });
+        }
+      }
+    }, 16);
   }
 
   removeArm(index: number): void {
-    if (this.arms.length > 2) { this.arms.removeAt(index); this.form.updateValueAndValidity(); }
+    if (this.arms.length <= 2) return;
+    const grid = this.armsGrid?.nativeElement;
+    const card = grid?.children[index] as HTMLElement | undefined;
+    if (card && typeof window !== 'undefined') {
+      animateIfMotionOK(card, { opacity: [1, 0], scale: [1, 0.9] }, { duration: 0.15, easing: 'ease-in' }).then(() => {
+        this.arms.removeAt(index);
+        this.form.updateValueAndValidity();
+      });
+    } else {
+      this.arms.removeAt(index);
+      this.form.updateValueAndValidity();
+    }
   }
 
   incrementRatio(index: number): void {
@@ -458,9 +639,29 @@ export class ConfigFormComponent implements OnInit {
 
   addStratum(): void {
     this.strata.push(this.fb.group({ id: ['stratum_' + Date.now()], name: [''], levelsStr: ['', Validators.required] }));
+    // Animate the newly added stratum card
+    setTimeout(() => {
+      const list = this.strataList?.nativeElement;
+      if (list) {
+        const lastCard = list.lastElementChild as HTMLElement | null;
+        if (lastCard) {
+          animateIfMotionOK(lastCard, { opacity: [0, 1], y: [16, 0], scale: [0.93, 1] }, { duration: 0.2, easing: 'ease-out' });
+        }
+      }
+    }, 16);
   }
 
-  removeStratum(index: number): void { this.strata.removeAt(index); }
+  removeStratum(index: number): void {
+    const list = this.strataList?.nativeElement;
+    const card = list?.children[index] as HTMLElement | undefined;
+    if (card && typeof window !== 'undefined') {
+      animateIfMotionOK(card, { opacity: [1, 0], scale: [1, 0.9] }, { duration: 0.15, easing: 'ease-in' }).then(() => {
+        this.strata.removeAt(index);
+      });
+    } else {
+      this.strata.removeAt(index);
+    }
+  }
 
   /** Add a new block override card. */
   addBlockOverride(): void {
@@ -523,7 +724,7 @@ export class ConfigFormComponent implements OnInit {
     this.syncStratumCaps();
   }
 
-  onGenerateCode(language: 'R' | 'SAS' | 'Python'): void {
+  onGenerateCode(language: 'R' | 'SAS' | 'Python' | 'STATA'): void {
     if (this.form.valid) {
       try { this.facade.openCodeGenerator(this.store.buildConfig(this.buildFormValue()), language); this.dropdownOpen = false; }
       catch (e) { console.error('Error generating code config:', e); alert('Error generating code. Please check your configuration.'); }

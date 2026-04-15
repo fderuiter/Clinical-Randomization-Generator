@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { AbstractControl } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import { animateIfMotionOK } from '../../../core/utils/motion.utils';
 
 /**
  * TagInputComponent – an interactive chip/tag input that reads and writes
@@ -16,6 +17,7 @@ import { Subscription } from 'rxjs';
     <div
       class="flex flex-wrap gap-1.5 items-center min-h-[44px] border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 cursor-text transition-colors"
       (click)="tagInput.focus()"
+      #tagContainer
     >
       @for (tag of tags; track tag) {
         <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 select-none">
@@ -51,6 +53,7 @@ export class TagInputComponent implements OnInit, OnDestroy {
   @Input() placeholder = 'Type and press Enter…';
 
   @ViewChild('tagInput') tagInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('tagContainer') tagContainer!: ElementRef<HTMLElement>;
 
   tags: string[] = [];
   inputValue = '';
@@ -101,11 +104,40 @@ export class TagInputComponent implements OnInit, OnDestroy {
     if (val && !this.tags.includes(val)) {
       this.tags = [...this.tags, val];
       this.update();
+      // Animate the newly added tag chip after Angular renders it
+      setTimeout(() => {
+        const container = this.tagContainer?.nativeElement;
+        if (container) {
+          // The new tag is the last span before the input
+          const chips = container.querySelectorAll('span');
+          const newChip = chips[chips.length - 1] as HTMLElement | undefined;
+          if (newChip) {
+            animateIfMotionOK(newChip, { scale: [0.8, 1.05, 1], opacity: [0, 1] }, { duration: 0.2, easing: 'ease-out' });
+          }
+        }
+      }, 16);
     }
     this.inputValue = '';
   }
 
   removeTag(tag: string): void {
+    // Animate the chip out before removing it from the list
+    const container = this.tagContainer?.nativeElement;
+    if (container) {
+      const chips = Array.from(container.querySelectorAll('span'));
+      const idx = this.tags.indexOf(tag);
+      const chip = chips[idx] as HTMLElement | undefined;
+      if (chip) {
+        animateIfMotionOK(chip, { scale: [1, 0], opacity: [1, 0] }, { duration: 0.15, easing: 'ease-in' }).then(() => {
+          this.doRemoveTag(tag);
+        });
+        return;
+      }
+    }
+    this.doRemoveTag(tag);
+  }
+
+  private doRemoveTag(tag: string): void {
     this.tags = this.tags.filter(t => t !== tag);
     this.update();
   }

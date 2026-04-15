@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, effect, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, effect, signal, viewChild, ElementRef, ViewChild } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ConfigFormComponent } from './config-form.component';
@@ -12,6 +12,7 @@ import { BalanceVerificationComponent } from '../../schema-management/components
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { ViewportService } from '../../../core/services/viewport.service';
 import { SeoService } from '../../../core/services/seo.service';
+import { animateIfMotionOK } from '../../../core/utils/motion.utils';
 
 type ResultsTab = 'grid' | 'balance';
 
@@ -84,60 +85,67 @@ type ResultsTab = 'grid' | 'balance';
           <!-- ── Tab Navigation ──────────────────────────────────────── -->
           <div class="flex gap-1 border-b border-gray-200 dark:border-slate-700">
             <button
-              (click)="activeTab.set('grid')"
+              (click)="onTabClick('grid')"
               class="px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors"
               [class]="activeTab() === 'grid'
                 ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800'
                 : 'border-transparent text-gray-600 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-500'"
               aria-label="Schema Grid tab"
+              [attr.aria-selected]="activeTab() === 'grid'"
             >
               Schema Grid
             </button>
             <button
-              (click)="activeTab.set('balance')"
+              (click)="onTabClick('balance')"
               class="px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors"
               [class]="activeTab() === 'balance'
                 ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800'
                 : 'border-transparent text-gray-600 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-500'"
               aria-label="Balance Verification tab"
+              [attr.aria-selected]="activeTab() === 'balance'"
             >
               Balance Verification
             </button>
           </div>
 
-          <!-- ── Schema Grid tab ─────────────────────────────────────── -->
-          @if (activeTab() === 'grid') {
-            <div class="space-y-6">
-              <!-- Schema Analytics Dashboard (heavy ECharts):
-                   Fully unmounted on mobile to save CPU/memory.
-                   A lightweight text summary is rendered instead. -->
-              @if (!viewport.isMobile()) {
-                <app-schema-analytics-dashboard></app-schema-analytics-dashboard>
-              } @else {
-                <!-- Mobile: text-based analytics summary -->
-                @if (state.results(); as data) {
-                  <div data-testid="mobile-analytics-summary" class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-4 space-y-2">
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-slate-100">Schema Summary</h3>
-                    <ul class="text-sm text-gray-700 dark:text-slate-300 space-y-1">
-                      <li><span class="font-medium">Protocol:</span> {{data.metadata.protocolId}}</li>
-                      <li><span class="font-medium">Total subjects:</span> {{data.schema.length}}</li>
-                      <li><span class="font-medium">Strata factors:</span> {{data.metadata.strata.length ?? 0}}</li>
-                      <li><span class="font-medium">Seed:</span> <code class="font-mono text-xs bg-gray-100 dark:bg-slate-700 px-1 rounded">{{data.metadata.seed}}</code></li>
-                    </ul>
-                    <p class="text-xs text-gray-600 dark:text-slate-400">Switch to a larger screen to view interactive charts.</p>
-                  </div>
+          <!-- ── Tab content panel (animated) ───────────────────────── -->
+          <div #tabPanel>
+
+            <!-- ── Schema Grid tab ─────────────────────────────────────── -->
+            @if (activeTab() === 'grid') {
+              <div class="space-y-6">
+                <!-- Schema Analytics Dashboard (heavy ECharts):
+                     Fully unmounted on mobile to save CPU/memory.
+                     A lightweight text summary is rendered instead. -->
+                @if (!viewport.isMobile()) {
+                  <app-schema-analytics-dashboard></app-schema-analytics-dashboard>
+                } @else {
+                  <!-- Mobile: text-based analytics summary -->
+                  @if (state.results(); as data) {
+                    <div data-testid="mobile-analytics-summary" class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-4 space-y-2">
+                      <h3 class="text-sm font-semibold text-gray-900 dark:text-slate-100">Schema Summary</h3>
+                      <ul class="text-sm text-gray-700 dark:text-slate-300 space-y-1">
+                        <li><span class="font-medium">Protocol:</span> {{data.metadata.protocolId}}</li>
+                        <li><span class="font-medium">Total subjects:</span> {{data.schema.length}}</li>
+                        <li><span class="font-medium">Strata factors:</span> {{data.metadata.strata.length ?? 0}}</li>
+                        <li><span class="font-medium">Seed:</span> <code class="font-mono text-xs bg-gray-100 dark:bg-slate-700 px-1 rounded">{{data.metadata.seed}}</code></li>
+                      </ul>
+                      <p class="text-xs text-gray-600 dark:text-slate-400">Switch to a larger screen to view interactive charts.</p>
+                    </div>
+                  }
                 }
-              }
 
-              <!-- Results Grid -->
-              <app-results-grid></app-results-grid>
-            </div>
-          }
+                <!-- Results Grid -->
+                <app-results-grid></app-results-grid>
+              </div>
+            }
 
-          <!-- ── Balance Verification tab ────────────────────────────── -->
-          @if (activeTab() === 'balance') {
-            <app-balance-verification></app-balance-verification>
-          }
+            <!-- ── Balance Verification tab ────────────────────────────── -->
+            @if (activeTab() === 'balance') {
+              <app-balance-verification></app-balance-verification>
+            }
+
+          </div>
 
         </div>
 
@@ -173,6 +181,9 @@ export class GeneratorComponent {
   /** Reference to the embedded config form so we can drive preset loading. */
   private readonly configForm = viewChild<ConfigFormComponent>('configForm');
 
+  /** Reference to the tab content panel for fade-in animations. */
+  @ViewChild('tabPanel') private readonly tabPanel!: ElementRef<HTMLDivElement>;
+
   private static readonly SCROLL_DELAY_MS = 100;
 
   constructor() {
@@ -191,14 +202,33 @@ export class GeneratorComponent {
       }
     });
 
-    // Scroll to results once generation is complete.
+    // Scroll to results and animate their appearance once generation completes.
     effect(() => {
       if (this.state.results() && !this.state.isGenerating()) {
         setTimeout(() => {
-          this.document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
+          const resultsEl = this.document.getElementById('results-section');
+          if (resultsEl) {
+            animateIfMotionOK(resultsEl, { opacity: [0, 1], y: [16, 0], scale: [0.98, 1] }, { duration: 0.35, easing: 'ease-out' });
+          }
+          resultsEl?.scrollIntoView({ behavior: 'smooth' });
         }, GeneratorComponent.SCROLL_DELAY_MS);
       }
     });
+  }
+
+  /**
+   * Switches the active tab and animates the panel content in.
+   */
+  onTabClick(tab: ResultsTab): void {
+    if (tab === this.activeTab()) return;
+    this.activeTab.set(tab);
+    // Animate the new tab panel content after Angular renders it
+    setTimeout(() => {
+      const panel = this.tabPanel?.nativeElement;
+      if (panel) {
+        animateIfMotionOK(panel, { opacity: [0, 1], y: [8, 0] }, { duration: 0.2, easing: 'ease-out' });
+      }
+    }, 16);
   }
 
   /**

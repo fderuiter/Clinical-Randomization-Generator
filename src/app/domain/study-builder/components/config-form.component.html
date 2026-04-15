@@ -1,785 +1,494 @@
+<!-- ARIA live region – announces step changes to screen readers -->
+<div aria-live="polite" aria-atomic="true" class="sr-only">{{ stepAnnouncement() }}</div>
 
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-8 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
-      
-      <div class="mb-2 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 dark:border-blue-400 p-4 rounded-r-md">
-        <div class="flex flex-col sm:flex-row sm:items-start">
-          <div class="flex-shrink-0 mt-0.5">
-            <svg class="h-5 w-5 text-blue-400 dark:text-blue-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="ml-3 w-full">
-            <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">Study-Agnostic Randomization Presets</h3>
-            <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
-              <p>Start from scratch or quickly toggle between different strata and complexity options.</p>
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
+
+  <!-- Wizard Stepper -->
+  <app-wizard-stepper
+    [currentStep]="currentStep()"
+    [steps]="stepLabels"
+    (stepClick)="jumpToStep($event)"
+  />
+
+  <!-- Animated Progress Bar -->
+  <div class="h-1 bg-gray-200 dark:bg-slate-600 rounded-full overflow-hidden mt-4" aria-hidden="true">
+    <div
+      class="h-full bg-indigo-500 rounded-full transition-[width] duration-500 ease-out"
+      [style.width.%]="(currentStep() / totalSteps) * 100"
+    ></div>
+  </div>
+
+  <!-- Step content (animated slide on step change) -->
+  <div #stepPanel class="mt-6 min-h-[300px]">
+
+    <!-- STEP 1: Study Identity -->
+    @if (currentStep() === 1) {
+      <div class="space-y-6">
+
+        <!-- Preset Banner -->
+        <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 dark:border-blue-400 p-4 rounded-r-md">
+          <div class="flex flex-col sm:flex-row sm:items-start">
+            <div class="flex-shrink-0 mt-0.5">
+              <svg class="h-5 w-5 text-blue-400 dark:text-blue-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+              </svg>
             </div>
-            <!-- Preset Buttons -->
-            <div class="mt-3 flex flex-wrap items-center gap-3">
-              <span class="text-sm font-semibold text-blue-900 dark:text-blue-100">Load Preset:</span>
-              <button type="button" (click)="loadPreset('simple')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">
-                Simple (Unstratified)
-              </button>
-              <button type="button" (click)="loadPreset('standard')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">
-                Standard (1 Stratum)
-              </button>
-              <button type="button" (click)="loadPreset('complex')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">
-                Complex (Multi-strata)
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Study Metadata -->
-      <section>
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">Study Metadata</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label for="protocolId" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Protocol ID</label>
-            <input id="protocolId" type="text" formControlName="protocolId" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500">
-          </div>
-          <div>
-            <label for="studyName" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Study Name</label>
-            <input id="studyName" type="text" formControlName="studyName" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500">
-          </div>
-          <div>
-            <label for="phase" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Phase</label>
-            <select id="phase" formControlName="phase" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border">
-              <option value="I">Phase I</option>
-              <option value="II">Phase II</option>
-              <option value="III">Phase III</option>
-              <option value="IV">Phase IV</option>
-            </select>
-          </div>
-        </div>
-      </section>
-
-      <!-- Treatment Arms – Card layout with stepper ratio buttons -->
-      <section>
-        <div class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Treatment Arms</h2>
-          <button type="button" (click)="addArm()" class="text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium transition-colors">
-            + Add Arm
-          </button>
-        </div>
-        <div formArrayName="arms" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          @for (arm of arms.controls; track arm) {
-            <div [formGroupName]="$index" class="relative bg-white dark:bg-slate-700 rounded-xl shadow-md dark:shadow-slate-900/30 border border-gray-200 dark:border-slate-600 p-4 flex flex-col gap-3">
-              <!-- Remove button -->
-              <button
-                type="button"
-                (click)="removeArm($index)"
-                [disabled]="arms.length <= 2"
-                class="absolute top-3 right-3 text-gray-600 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                aria-label="Remove arm"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                </svg>
-              </button>
-
-              <!-- Arm Name -->
-              <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Arm Name</label>
-                <input
-                  type="text"
-                  formControlName="name"
-                  placeholder="e.g., Placebo"
-                  data-testid="arm-name-input"
-                  class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-3 py-2 border dark:placeholder-slate-400"
-                >
+            <div class="ml-3 w-full">
+              <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">Study-Agnostic Randomization Presets</h3>
+              <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                <p>Start from scratch or quickly toggle between different strata and complexity options.</p>
               </div>
-
-              <!-- Ratio Stepper -->
-              <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-2 uppercase tracking-wide">Allocation Ratio</label>
-                <div class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    (click)="decrementRatio($index)"
-                    [disabled]="arm.get('ratio')?.value <= 1"
-                    class="w-11 h-11 flex items-center justify-center rounded-full border-2 border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 disabled:opacity-30 disabled:cursor-not-allowed font-bold text-lg leading-none transition-colors"
-                    aria-label="Decrease ratio"
-                  >&#x2212;</button>
-                  <span class="w-8 text-center text-xl font-bold text-gray-800 dark:text-slate-100 tabular-nums">{{ arm.get('ratio')?.value }}</span>
-                  <button
-                    type="button"
-                    (click)="incrementRatio($index)"
-                    class="w-11 h-11 flex items-center justify-center rounded-full border-2 border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 font-bold text-lg leading-none transition-colors"
-                    aria-label="Increase ratio"
-                  >+</button>
-                  <span class="ml-2 text-xs text-gray-600 dark:text-slate-500">of {{ totalRatio }} total</span>
-                </div>
+              <div class="mt-3 flex flex-wrap items-center gap-3">
+                <span class="text-sm font-semibold text-blue-900 dark:text-blue-100">Load Preset:</span>
+                <button type="button" (click)="loadPreset('simple')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">Simple (Unstratified)</button>
+                <button type="button" (click)="loadPreset('standard')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">Standard (1 Stratum)</button>
+                <button type="button" (click)="loadPreset('complex')" class="inline-flex items-center px-3 py-1.5 border border-blue-300 dark:border-blue-600 text-xs font-medium rounded-lg text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-colors">Complex (Multi-strata)</button>
               </div>
             </div>
-          }
-        </div>
-      </section>
-
-      <!-- Stratification Factors – Drag-and-drop cards -->
-      <section>
-        <div class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">
-          <div>
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Stratification Factors</h2>
-            <p class="text-xs text-gray-600 dark:text-slate-400 mt-0.5">Drag cards to reorder - the Cartesian product depends on factor order.</p>
           </div>
-          <button type="button" (click)="addStratum()" class="text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium transition-colors">
-            + Add Factor
-          </button>
         </div>
-        <div
-          formArrayName="strata"
-          cdkDropList
-          (cdkDropListDropped)="onStrataDrop($event)"
-          class="space-y-4"
-        >
-          @if (strata.length === 0) {
-            <p class="text-sm text-gray-600 dark:text-slate-400 italic">No stratification factors defined. Randomization will be unstratified.</p>
-          }
-          @for (stratum of strata.controls; track stratum) {
-            <div
-              [formGroupName]="$index"
-              cdkDrag
-              class="bg-white dark:bg-slate-700 rounded-xl shadow-md dark:shadow-slate-900/30 border border-gray-200 dark:border-slate-600 p-4"
-            >
-              <!-- Drag handle + header row -->
-              <div class="flex items-start gap-3 mb-3">
-                <!-- Drag handle -->
-                <button
-                  type="button"
-                  cdkDragHandle
-                  class="mt-2 text-gray-500 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 cursor-grab active:cursor-grabbing flex-shrink-0 focus:outline-none"
-                  aria-label="Drag to reorder"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M7 4a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zM7 8a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zM7 12a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zM7 16a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2z"/>
-                  </svg>
-                </button>
 
-                <!-- Factor Name -->
-                <div class="flex-1">
-                  <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Factor Name</label>
-                  <input
-                    type="text"
-                    formControlName="name"
-                    placeholder="e.g., Age Group"
-                    class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-3 py-2 border dark:placeholder-slate-400"
-                  >
-                </div>
-
-                <!-- Remove button -->
-                <button type="button" (click)="removeStratum($index)" class="mt-6 text-gray-600 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 transition-colors flex-shrink-0" aria-label="Remove factor">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-
-              <!-- Levels Tag Input -->
-              <div class="pl-8">
-                <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Levels</label>
-                <app-tag-input
-                  data-testid="stratum-levels-input"
-                  [control]="stratum.get('levelsStr')!"
-                  placeholder="e.g., <65  then press Enter"
-                />
-              </div>
-
-              <!-- Covariate Distribution for Minimization -->
-              @if (randomizationMethod === 'MINIMIZATION') {
-                <div class="pl-8 mt-2">
-                  <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Expected Covariate Distribution</label>
-                  <div class="space-y-1">
-                    @for (level of getStrataLevels($index); track level) {
-                      <div class="flex items-center gap-2">
-                        <label class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
-                        <input
-                          type="number" inputmode="decimal" min="0" max="100"
-                          [value]="getMinimizationProbability(getStrataId($index), level)"
-                          (input)="setMinimizationProbability(getStrataId($index), level, +$any($event.target).value)"
-                          class="w-20 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums"
-                          placeholder="%">
-                        <span class="text-xs text-gray-600 dark:text-slate-400">%</span>
-                      </div>
-                    }
-                    <p class="text-xs mt-0.5"
-                       [class.text-red-600]="isMinimizationProbabilityInvalid(getStrataId($index))"
-                       [class.text-gray-600]="!isMinimizationProbabilityInvalid(getStrataId($index))">
-                      Total: {{ getMinimizationProbabilityTotal(getStrataId($index), getStrataLevels($index)) }}% (must sum to 100%)
-                    </p>
-                  </div>
-                </div>
+        <!-- Study Metadata -->
+        <section>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">Study Metadata</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label for="protocolId" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Protocol ID</label>
+              <input id="protocolId" type="text" formControlName="protocolId" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500">
+              @if (form.get('protocolId')?.invalid && form.get('protocolId')?.touched) {
+                <p class="text-xs text-red-600 dark:text-rose-400 mt-1">Protocol ID is required.</p>
               }
             </div>
-          }
-        </div>
-      </section>
-
-      <!-- Algorithm Selector -->
-      <section>
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">Randomization Algorithm</h2>
-        <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup" aria-label="Randomization algorithm">
-          <button type="button" (click)="form.get('randomizationMethod')?.setValue('BLOCK')"
-            role="radio" [attr.aria-checked]="randomizationMethod === 'BLOCK'"
-            [class.bg-indigo-600]="randomizationMethod === 'BLOCK'"
-            [class.text-white]="randomizationMethod === 'BLOCK'"
-            [class.bg-white]="randomizationMethod !== 'BLOCK'"
-            [class.dark:bg-slate-700]="randomizationMethod !== 'BLOCK'"
-            [class.text-gray-700]="randomizationMethod !== 'BLOCK'"
-            [class.dark:text-slate-300]="randomizationMethod !== 'BLOCK'"
-            class="flex-1 px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            Stratified Block (Permuted)
-          </button>
-          <button type="button" (click)="form.get('randomizationMethod')?.setValue('MINIMIZATION')"
-            role="radio" [attr.aria-checked]="randomizationMethod === 'MINIMIZATION'"
-            [class.bg-indigo-600]="randomizationMethod === 'MINIMIZATION'"
-            [class.text-white]="randomizationMethod === 'MINIMIZATION'"
-            [class.bg-white]="randomizationMethod !== 'MINIMIZATION'"
-            [class.dark:bg-slate-700]="randomizationMethod !== 'MINIMIZATION'"
-            [class.text-gray-700]="randomizationMethod !== 'MINIMIZATION'"
-            [class.dark:text-slate-300]="randomizationMethod !== 'MINIMIZATION'"
-            class="flex-1 px-3 py-2 text-sm font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            Minimization (Pocock-Simon)
-          </button>
-        </div>
-
-        <!-- Minimization parameters -->
-        @if (randomizationMethod === 'MINIMIZATION') {
-          <div class="mt-4 space-y-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-            <p class="text-xs text-purple-700 dark:text-purple-300">
-              Minimization dynamically assigns treatments by evaluating the current covariate imbalance across all factors (Pocock-Simon method). Assign expected population distributions to stratification factor levels below.
-            </p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Base Probability (p)</label>
-                <input type="number" inputmode="decimal" formControlName="minimizationP" min="0.5" max="1.0" step="0.05"
-                  class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border tabular-nums">
-                <p class="text-xs text-gray-600 dark:text-slate-400 mt-1">Probability the arm with lowest imbalance is selected (0.5–1.0).</p>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Total Sample Size (N)</label>
-                <input type="number" inputmode="numeric" formControlName="totalSampleSize" min="1"
-                  class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border tabular-nums">
-                <p class="text-xs text-gray-600 dark:text-slate-400 mt-1">Total number of subjects across all sites.</p>
-              </div>
+            <div>
+              <label for="studyName" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Study Name</label>
+              <input id="studyName" type="text" formControlName="studyName" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500">
+              @if (form.get('studyName')?.invalid && form.get('studyName')?.touched) {
+                <p class="text-xs text-red-600 dark:text-rose-400 mt-1">Study name is required.</p>
+              }
+            </div>
+            <div>
+              <label for="phase" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Phase</label>
+              <select id="phase" formControlName="phase" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border">
+                <option value="I">Phase I</option>
+                <option value="II">Phase II</option>
+                <option value="III">Phase III</option>
+                <option value="IV">Phase IV</option>
+              </select>
             </div>
           </div>
-        }
-        @if (form.errors?.['minimizationProbabilitiesInvalid']) {
-          <p class="text-xs text-red-600 dark:text-rose-400 mt-2">
-            Each stratification factor's level probabilities must sum to 100% before generating a minimization schema.
-          </p>
-        }
-      </section>
+        </section>
 
-      <!-- Sites & Blocks -->
-      <section>
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">Sites & Blocks</h2>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- Left column: Sites + Block Sizes inputs -->
-          <div class="space-y-6">
-            <!-- Sites Tag Input -->
+      </div>
+    }
+
+    <!-- STEP 2: Treatment Arms -->
+    @if (currentStep() === 2) {
+      <div class="space-y-6">
+        <section>
+          <div class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Treatment Arms</h2>
+            <button type="button" (click)="addArm()" class="text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium transition-colors">+ Add Arm</button>
+          </div>
+          <div formArrayName="arms" #armsGrid class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            @for (arm of arms.controls; track arm) {
+              <div [formGroupName]="$index" class="relative bg-white dark:bg-slate-700 rounded-xl shadow-md dark:shadow-slate-900/30 border border-gray-200 dark:border-slate-600 p-4 flex flex-col gap-3">
+                <button type="button" (click)="removeArm($index)" [disabled]="arms.length <= 2" class="absolute top-3 right-3 text-gray-600 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Remove arm">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                </button>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Arm Name</label>
+                  <input type="text" formControlName="name" placeholder="e.g., Placebo" data-testid="arm-name-input" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-3 py-2 border dark:placeholder-slate-400">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-2 uppercase tracking-wide">Allocation Ratio</label>
+                  <div class="flex items-center gap-2">
+                    <button type="button" (click)="decrementRatio($index)" [disabled]="arm.get('ratio')?.value <= 1" class="w-11 h-11 flex items-center justify-center rounded-full border-2 border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 disabled:opacity-30 disabled:cursor-not-allowed font-bold text-lg leading-none transition-colors" aria-label="Decrease ratio">&#x2212;</button>
+                    <span class="w-8 text-center text-xl font-bold text-gray-800 dark:text-slate-100 tabular-nums">{{ arm.get('ratio')?.value }}</span>
+                    <button type="button" (click)="incrementRatio($index)" class="w-11 h-11 flex items-center justify-center rounded-full border-2 border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 font-bold text-lg leading-none transition-colors" aria-label="Increase ratio">+</button>
+                    <span class="ml-2 text-xs text-gray-600 dark:text-slate-500">of {{ totalRatio }} total</span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+    }
+
+    <!-- STEP 3: Stratification Factors -->
+    @if (currentStep() === 3) {
+      <div class="space-y-6">
+        <section>
+          <div class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Sites</label>
-              <app-tag-input
-                [control]="form.get('sitesStr')!"
-                placeholder="Type a site ID and press Enter…"
-              />
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Stratification Factors</h2>
+              <p class="text-xs text-gray-600 dark:text-slate-400 mt-0.5">Drag cards to reorder. The Cartesian product depends on factor order.</p>
             </div>
+            <button type="button" (click)="addStratum()" class="text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium transition-colors">+ Add Factor</button>
+          </div>
+          <div formArrayName="strata" cdkDropList (cdkDropListDropped)="onStrataDrop($event)" #strataList class="space-y-4">
+            @if (strata.length === 0) {
+              <p class="text-sm text-gray-600 dark:text-slate-400 italic">No stratification factors defined. Randomization will be unstratified.</p>
+            }
+            @for (stratum of strata.controls; track stratum) {
+              <div [formGroupName]="$index" cdkDrag class="bg-white dark:bg-slate-700 rounded-xl shadow-md dark:shadow-slate-900/30 border border-gray-200 dark:border-slate-600 p-4">
+                <div class="flex items-start gap-3 mb-3">
+                  <button type="button" cdkDragHandle class="mt-2 text-gray-500 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 cursor-grab active:cursor-grabbing flex-shrink-0 focus:outline-none" aria-label="Drag to reorder">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zM7 8a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zM7 12a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zM7 16a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2z"/></svg>
+                  </button>
+                  <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Factor Name</label>
+                    <input type="text" formControlName="name" placeholder="e.g., Age Group" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-3 py-2 border dark:placeholder-slate-400">
+                  </div>
+                  <button type="button" (click)="removeStratum($index)" class="mt-6 text-gray-600 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 transition-colors flex-shrink-0" aria-label="Remove factor">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                  </button>
+                </div>
+                <div class="pl-8">
+                  <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Levels</label>
+                  <app-tag-input data-testid="stratum-levels-input" [control]="stratum.get('levelsStr')!" placeholder="e.g., &lt;65  then press Enter" />
+                </div>
+                @if (randomizationMethod === 'MINIMIZATION') {
+                  <div class="pl-8 mt-3">
+                    <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Expected Covariate Distribution</label>
+                    <div class="space-y-1">
+                      @for (level of getStrataLevels($index); track level) {
+                        <div class="flex items-center gap-2">
+                          <label class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
+                          <input type="number" inputmode="decimal" min="0" max="100" [value]="getMinimizationProbability(getStrataId($index), level)" (input)="setMinimizationProbability(getStrataId($index), level, +$any($event.target).value)" class="w-20 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums" placeholder="%">
+                          <span class="text-xs text-gray-600 dark:text-slate-400">%</span>
+                        </div>
+                      }
+                      <p class="text-xs mt-0.5" [class.text-red-600]="isMinimizationProbabilityInvalid(getStrataId($index))" [class.dark:text-rose-400]="isMinimizationProbabilityInvalid(getStrataId($index))" [class.text-gray-600]="!isMinimizationProbabilityInvalid(getStrataId($index))" [class.dark:text-slate-400]="!isMinimizationProbabilityInvalid(getStrataId($index))">
+                        Total: {{ getMinimizationProbabilityTotal(getStrataId($index), getStrataLevels($index)) }}% (must sum to 100%)
+                      </p>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </section>
+        @if (form.errors?.['minimizationProbabilitiesInvalid']) {
+          <p class="text-xs text-red-600 dark:text-rose-400">Each stratification factor's level probabilities must sum to 100% before generating a minimization schema.</p>
+        }
+      </div>
+    }
 
-            @if (randomizationMethod !== 'MINIMIZATION') {
-            <div class="space-y-4">
+    <!-- STEP 4: Algorithm & Enrollment -->
+    @if (currentStep() === 4) {
+      <div class="space-y-6">
+
+        <!-- Algorithm Selector -->
+        <section>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">Randomization Algorithm</h2>
+          <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup" aria-label="Randomization algorithm">
+            <button type="button" (click)="form.get('randomizationMethod')?.setValue('BLOCK')" role="radio" [attr.aria-checked]="randomizationMethod === 'BLOCK'" [class.bg-indigo-600]="randomizationMethod === 'BLOCK'" [class.text-white]="randomizationMethod === 'BLOCK'" [class.bg-white]="randomizationMethod !== 'BLOCK'" [class.dark:bg-slate-700]="randomizationMethod !== 'BLOCK'" [class.text-gray-700]="randomizationMethod !== 'BLOCK'" [class.dark:text-slate-300]="randomizationMethod !== 'BLOCK'" class="flex-1 px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">Stratified Block (Permuted)</button>
+            <button type="button" (click)="form.get('randomizationMethod')?.setValue('MINIMIZATION')" role="radio" [attr.aria-checked]="randomizationMethod === 'MINIMIZATION'" [class.bg-indigo-600]="randomizationMethod === 'MINIMIZATION'" [class.text-white]="randomizationMethod === 'MINIMIZATION'" [class.bg-white]="randomizationMethod !== 'MINIMIZATION'" [class.dark:bg-slate-700]="randomizationMethod !== 'MINIMIZATION'" [class.text-gray-700]="randomizationMethod !== 'MINIMIZATION'" [class.dark:text-slate-300]="randomizationMethod !== 'MINIMIZATION'" class="flex-1 px-3 py-2 text-sm font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">Minimization (Pocock-Simon)</button>
+          </div>
+          @if (randomizationMethod === 'MINIMIZATION') {
+            <div class="mt-4 space-y-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+              <p class="text-xs text-purple-700 dark:text-purple-300">Minimization dynamically assigns treatments by evaluating the current covariate imbalance across all factors (Pocock-Simon method). Assign expected population distributions to stratification factor levels in Step 3.</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Base Probability (p)</label>
+                  <input type="number" inputmode="decimal" formControlName="minimizationP" min="0.5" max="1.0" step="0.05" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border tabular-nums">
+                  <p class="text-xs text-gray-600 dark:text-slate-400 mt-1">Probability the arm with lowest imbalance is selected (0.5–1.0).</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Total Sample Size (N)</label>
+                  <input type="number" inputmode="numeric" formControlName="totalSampleSize" min="1" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border tabular-nums">
+                  <p class="text-xs text-gray-600 dark:text-slate-400 mt-1">Total number of subjects across all sites.</p>
+                </div>
+              </div>
+            </div>
+          }
+        </section>
+
+        <!-- Sites & Blocks -->
+        <section>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 border-b border-gray-200 dark:border-slate-700 pb-2">Sites &amp; Blocks</h2>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="space-y-6">
+
+              <!-- Sites -->
               <div>
-                <label for="blockSizesStr" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Block Sizes (comma-separated)</label>
-                <input id="blockSizesStr" type="text" inputmode="numeric" formControlName="blockSizesStr" placeholder="e.g., 4, 6" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500 tabular-nums">
-                <div class="mt-2 flex flex-wrap gap-2">
-                  @for (size of parseCommaSeparated(form.get('blockSizesStr')?.value); track size) {
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300">{{size}}</span>
+                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Sites</label>
+                <app-tag-input [control]="form.get('sitesStr')!" placeholder="Type a site ID and press Enter&#x2026;" />
+              </div>
+
+              @if (randomizationMethod !== 'MINIMIZATION') {
+              <div class="space-y-4">
+                <div>
+                  <label for="blockSizesStr" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Block Sizes (comma-separated)</label>
+                  <input id="blockSizesStr" type="text" inputmode="numeric" formControlName="blockSizesStr" placeholder="e.g., 4, 6" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500 tabular-nums">
+                  <div class="mt-2 flex flex-wrap gap-2">
+                    @for (size of parseCommaSeparated(form.get('blockSizesStr')?.value); track size) {
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300">{{size}}</span>
+                    }
+                  </div>
+                  @if (form.errors?.['invalidBlockSize']) {
+                    <p class="text-xs text-red-600 dark:text-rose-400 mt-1">Block sizes must be multiples of the total treatment ratio ({{totalRatio}}).</p>
                   }
                 </div>
-                @if (form.errors?.['invalidBlockSize']) {
-                  <p class="text-xs text-red-600 dark:text-rose-400 mt-1">Block sizes must be multiples of the total treatment ratio ({{totalRatio}}).</p>
-                }
-              </div>
 
-              <!-- Block Selection Mode -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Block Selection Mode</label>
-                <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup" aria-label="Block selection mode">
-                  <button
-                    type="button"
-                    (click)="form.get('blockSelectionType')?.setValue('RANDOM_POOL')"
-                    role="radio"
-                    [attr.aria-checked]="blockSelectionType === 'RANDOM_POOL'"
-                    [class.bg-indigo-600]="blockSelectionType === 'RANDOM_POOL'"
-                    [class.text-white]="blockSelectionType === 'RANDOM_POOL'"
-                    [class.bg-white]="blockSelectionType !== 'RANDOM_POOL'"
-                    [class.dark:bg-slate-700]="blockSelectionType !== 'RANDOM_POOL'"
-                    [class.text-gray-700]="blockSelectionType !== 'RANDOM_POOL'"
-                    [class.dark:text-slate-300]="blockSelectionType !== 'RANDOM_POOL'"
-                    class="flex-1 px-3 py-2 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    Random Selection
-                  </button>
-                  <button
-                    type="button"
-                    (click)="form.get('blockSelectionType')?.setValue('FIXED_SEQUENCE')"
-                    role="radio"
-                    [attr.aria-checked]="blockSelectionType === 'FIXED_SEQUENCE'"
-                    [class.bg-indigo-600]="blockSelectionType === 'FIXED_SEQUENCE'"
-                    [class.text-white]="blockSelectionType === 'FIXED_SEQUENCE'"
-                    [class.bg-white]="blockSelectionType !== 'FIXED_SEQUENCE'"
-                    [class.dark:bg-slate-700]="blockSelectionType !== 'FIXED_SEQUENCE'"
-                    [class.text-gray-700]="blockSelectionType !== 'FIXED_SEQUENCE'"
-                    [class.dark:text-slate-300]="blockSelectionType !== 'FIXED_SEQUENCE'"
-                    class="flex-1 px-3 py-2 text-xs font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    Fixed Sequence
-                  </button>
-                </div>
-                @if (blockSelectionType === 'FIXED_SEQUENCE') {
-                  <p class="mt-1.5 text-xs text-gray-600 dark:text-slate-400">Sizes are applied in order and cycle when exhausted. PRNG is bypassed for size selection.</p>
-                }
-              </div>
-
-              <!-- Block Override Manager -->
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <label class="block text-sm font-medium text-gray-700 dark:text-slate-300">Block Size Overrides</label>
-                  <button
-                    type="button"
-                    (click)="addBlockOverride()"
-                    class="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium transition-colors"
-                  >
-                    + Add Override
-                  </button>
+                <!-- Block Selection Mode -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Block Selection Mode</label>
+                  <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup" aria-label="Block selection mode">
+                    <button type="button" (click)="form.get('blockSelectionType')?.setValue('RANDOM_POOL')" role="radio" [attr.aria-checked]="blockSelectionType === 'RANDOM_POOL'" [class.bg-indigo-600]="blockSelectionType === 'RANDOM_POOL'" [class.text-white]="blockSelectionType === 'RANDOM_POOL'" [class.bg-white]="blockSelectionType !== 'RANDOM_POOL'" [class.dark:bg-slate-700]="blockSelectionType !== 'RANDOM_POOL'" [class.text-gray-700]="blockSelectionType !== 'RANDOM_POOL'" [class.dark:text-slate-300]="blockSelectionType !== 'RANDOM_POOL'" class="flex-1 px-3 py-2 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">Random Selection</button>
+                    <button type="button" (click)="form.get('blockSelectionType')?.setValue('FIXED_SEQUENCE')" role="radio" [attr.aria-checked]="blockSelectionType === 'FIXED_SEQUENCE'" [class.bg-indigo-600]="blockSelectionType === 'FIXED_SEQUENCE'" [class.text-white]="blockSelectionType === 'FIXED_SEQUENCE'" [class.bg-white]="blockSelectionType !== 'FIXED_SEQUENCE'" [class.dark:bg-slate-700]="blockSelectionType !== 'FIXED_SEQUENCE'" [class.text-gray-700]="blockSelectionType !== 'FIXED_SEQUENCE'" [class.dark:text-slate-300]="blockSelectionType !== 'FIXED_SEQUENCE'" class="flex-1 px-3 py-2 text-xs font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">Fixed Sequence</button>
+                  </div>
+                  @if (blockSelectionType === 'FIXED_SEQUENCE') {
+                    <p class="mt-1.5 text-xs text-gray-600 dark:text-slate-400">Sizes are applied in order and cycle when exhausted. PRNG is bypassed for size selection.</p>
+                  }
                 </div>
 
-                @if (blockOverrides.length === 0) {
-                  <p class="text-xs text-gray-600 dark:text-slate-500 italic">No overrides defined. All sites and strata use the global block sizes above.</p>
-                }
-
-                <div formArrayName="blockOverrides" class="space-y-3">
-                  @for (override of blockOverrides.controls; track override; let i = $index) {
-                    <div [formGroupName]="i" class="bg-gray-50 dark:bg-slate-700/60 border border-gray-200 dark:border-slate-600 rounded-lg p-4 space-y-3">
-                      <!-- Override header -->
-                      <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 uppercase tracking-wide">Override #{{i + 1}}</span>
-                        <button
-                          type="button"
-                          (click)="removeBlockOverride(i)"
-                          class="text-gray-600 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 transition-colors"
-                          aria-label="Remove override"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-
-                      <!-- Target Type + Target ID -->
-                      <div class="grid grid-cols-2 gap-3">
-                        <div>
-                          <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Target Type</label>
-                          <select
-                            formControlName="targetType"
-                            class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2 border"
-                          >
-                            <option value="site">Site</option>
-                            <option value="stratum">Stratum</option>
-                          </select>
+                <!-- Block Override Manager -->
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300">Block Size Overrides</label>
+                    <button type="button" (click)="addBlockOverride()" class="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium transition-colors">+ Add Override</button>
+                  </div>
+                  @if (blockOverrides.length === 0) {
+                    <p class="text-xs text-gray-600 dark:text-slate-500 italic">No overrides defined. All sites and strata use the global block sizes above.</p>
+                  }
+                  <div formArrayName="blockOverrides" class="space-y-3">
+                    @for (override of blockOverrides.controls; track override; let i = $index) {
+                      <div [formGroupName]="i" class="bg-gray-50 dark:bg-slate-700/60 border border-gray-200 dark:border-slate-600 rounded-lg p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                          <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 uppercase tracking-wide">Override #{{i + 1}}</span>
+                          <button type="button" (click)="removeBlockOverride(i)" class="text-gray-600 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 transition-colors" aria-label="Remove override">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                          </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                          <div>
+                            <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Target Type</label>
+                            <select formControlName="targetType" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2 border">
+                              <option value="site">Site</option>
+                              <option value="stratum">Stratum</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Target ID</label>
+                            <select formControlName="targetId" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2 border">
+                              <option value="">-- Select --</option>
+                              @for (opt of getBlockOverrideTargetOptions(i); track opt) {
+                                <option [value]="opt">{{opt}}</option>
+                              }
+                            </select>
+                          </div>
                         </div>
                         <div>
-                          <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Target ID</label>
-                          <select
-                            formControlName="targetId"
-                            class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2 border"
-                          >
-                            <option value="">-- Select --</option>
-                            @for (opt of getBlockOverrideTargetOptions(i); track opt) {
-                              <option [value]="opt">{{opt}}</option>
-                            }
-                          </select>
+                          <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Block Sizes (comma-separated)</label>
+                          <input type="text" inputmode="numeric" formControlName="sizesStr" placeholder="e.g., 2, 4" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2 border dark:placeholder-slate-400 tabular-nums">
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Selection Mode</label>
+                          <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup">
+                            <button type="button" (click)="override.get('selectionType')?.setValue('RANDOM_POOL')" [class.bg-indigo-600]="override.get('selectionType')?.value === 'RANDOM_POOL'" [class.text-white]="override.get('selectionType')?.value === 'RANDOM_POOL'" [class.bg-white]="override.get('selectionType')?.value !== 'RANDOM_POOL'" [class.dark:bg-slate-600]="override.get('selectionType')?.value !== 'RANDOM_POOL'" [class.text-gray-700]="override.get('selectionType')?.value !== 'RANDOM_POOL'" [class.dark:text-slate-300]="override.get('selectionType')?.value !== 'RANDOM_POOL'" class="flex-1 px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none">Random</button>
+                            <button type="button" (click)="override.get('selectionType')?.setValue('FIXED_SEQUENCE')" [class.bg-indigo-600]="override.get('selectionType')?.value === 'FIXED_SEQUENCE'" [class.text-white]="override.get('selectionType')?.value === 'FIXED_SEQUENCE'" [class.bg-white]="override.get('selectionType')?.value !== 'FIXED_SEQUENCE'" [class.dark:bg-slate-600]="override.get('selectionType')?.value !== 'FIXED_SEQUENCE'" [class.text-gray-700]="override.get('selectionType')?.value !== 'FIXED_SEQUENCE'" [class.dark:text-slate-300]="override.get('selectionType')?.value !== 'FIXED_SEQUENCE'" class="flex-1 px-3 py-1.5 text-xs font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none">Fixed Sequence</button>
+                          </div>
                         </div>
                       </div>
+                    }
+                  </div>
+                </div>
 
-                      <!-- Override Block Sizes + Selection Mode -->
-                      <div>
-                        <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Block Sizes (comma-separated)</label>
-                        <input
-                          type="text"
-                          inputmode="numeric"
-                          formControlName="sizesStr"
-                          placeholder="e.g., 2, 4"
-                          class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2 border dark:placeholder-slate-400 tabular-nums"
-                        >
-                      </div>
-                      <div>
-                        <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Selection Mode</label>
-                        <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup">
-                          <button
-                            type="button"
-                            (click)="override.get('selectionType')?.setValue('RANDOM_POOL')"
-                            [class.bg-indigo-600]="override.get('selectionType')?.value === 'RANDOM_POOL'"
-                            [class.text-white]="override.get('selectionType')?.value === 'RANDOM_POOL'"
-                            [class.bg-white]="override.get('selectionType')?.value !== 'RANDOM_POOL'"
-                            [class.dark:bg-slate-600]="override.get('selectionType')?.value !== 'RANDOM_POOL'"
-                            [class.text-gray-700]="override.get('selectionType')?.value !== 'RANDOM_POOL'"
-                            [class.dark:text-slate-300]="override.get('selectionType')?.value !== 'RANDOM_POOL'"
-                            class="flex-1 px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none"
-                          >Random</button>
-                          <button
-                            type="button"
-                            (click)="override.get('selectionType')?.setValue('FIXED_SEQUENCE')"
-                            [class.bg-indigo-600]="override.get('selectionType')?.value === 'FIXED_SEQUENCE'"
-                            [class.text-white]="override.get('selectionType')?.value === 'FIXED_SEQUENCE'"
-                            [class.bg-white]="override.get('selectionType')?.value !== 'FIXED_SEQUENCE'"
-                            [class.dark:bg-slate-600]="override.get('selectionType')?.value !== 'FIXED_SEQUENCE'"
-                            [class.text-gray-700]="override.get('selectionType')?.value !== 'FIXED_SEQUENCE'"
-                            [class.dark:text-slate-300]="override.get('selectionType')?.value !== 'FIXED_SEQUENCE'"
-                            class="flex-1 px-3 py-1.5 text-xs font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none"
-                          >Fixed Sequence</button>
-                        </div>
+                <!-- Cap Strategy -->
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Enrollment Cap Strategy</label>
+                    <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup" aria-label="Cap strategy">
+                      <button type="button" (click)="form.get('capStrategy')?.setValue('MANUAL_MATRIX')" role="radio" [attr.aria-checked]="capStrategy === 'MANUAL_MATRIX'" [class.bg-indigo-600]="capStrategy === 'MANUAL_MATRIX'" [class.text-white]="capStrategy === 'MANUAL_MATRIX'" [class.bg-white]="capStrategy !== 'MANUAL_MATRIX'" [class.dark:bg-slate-700]="capStrategy !== 'MANUAL_MATRIX'" [class.text-gray-700]="capStrategy !== 'MANUAL_MATRIX'" [class.dark:text-slate-300]="capStrategy !== 'MANUAL_MATRIX'" class="flex-1 px-3 py-2 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">Manual Matrix</button>
+                      <button type="button" (click)="form.get('capStrategy')?.setValue('PROPORTIONAL')" role="radio" [attr.aria-checked]="capStrategy === 'PROPORTIONAL'" [class.bg-indigo-600]="capStrategy === 'PROPORTIONAL'" [class.text-white]="capStrategy === 'PROPORTIONAL'" [class.bg-white]="capStrategy !== 'PROPORTIONAL'" [class.dark:bg-slate-700]="capStrategy !== 'PROPORTIONAL'" [class.text-gray-700]="capStrategy !== 'PROPORTIONAL'" [class.dark:text-slate-300]="capStrategy !== 'PROPORTIONAL'" class="flex-1 px-3 py-2 text-xs font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">Proportional</button>
+                      <button type="button" (click)="form.get('capStrategy')?.setValue('MARGINAL_ONLY')" role="radio" [attr.aria-checked]="capStrategy === 'MARGINAL_ONLY'" [class.bg-indigo-600]="capStrategy === 'MARGINAL_ONLY'" [class.text-white]="capStrategy === 'MARGINAL_ONLY'" [class.bg-white]="capStrategy !== 'MARGINAL_ONLY'" [class.dark:bg-slate-700]="capStrategy !== 'MARGINAL_ONLY'" [class.text-gray-700]="capStrategy !== 'MARGINAL_ONLY'" [class.dark:text-slate-300]="capStrategy !== 'MARGINAL_ONLY'" class="flex-1 px-3 py-2 text-xs font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">Marginal Only</button>
+                    </div>
+                  </div>
+
+                  @if (capStrategy === 'MANUAL_MATRIX') {
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Max Subjects per Stratum Intersection</label>
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" formArrayName="stratumCaps">
+                        @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
+                          <div [formGroupName]="i" class="flex flex-col p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
+                            <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1 truncate" [title]="capControl.get('levels')?.value.join(' | ')">{{ capControl.get('levels')?.value.join(' | ') || 'Overall / Default' }}</span>
+                            <input type="number" inputmode="numeric" formControlName="cap" min="0" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-1.5 border tabular-nums" placeholder="Max subjects">
+                          </div>
+                        }
                       </div>
                     </div>
                   }
-                </div>
-              </div>
 
-              <!-- Cap Strategy Section -->
-              <div class="space-y-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Enrollment Cap Strategy</label>
-                  <!-- Strategy Selector: Segmented Control -->
-                  <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup" aria-label="Cap strategy">
-                    <button
-                      type="button"
-                      (click)="form.get('capStrategy')?.setValue('MANUAL_MATRIX')"
-                      role="radio"
-                      [attr.aria-checked]="capStrategy === 'MANUAL_MATRIX'"
-                      [class.bg-indigo-600]="capStrategy === 'MANUAL_MATRIX'"
-                      [class.text-white]="capStrategy === 'MANUAL_MATRIX'"
-                      [class.bg-white]="capStrategy !== 'MANUAL_MATRIX'"
-                      [class.dark:bg-slate-700]="capStrategy !== 'MANUAL_MATRIX'"
-                      [class.text-gray-700]="capStrategy !== 'MANUAL_MATRIX'"
-                      [class.dark:text-slate-300]="capStrategy !== 'MANUAL_MATRIX'"
-                      class="flex-1 px-3 py-2 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      Manual Matrix
-                    </button>
-                    <button
-                      type="button"
-                      (click)="form.get('capStrategy')?.setValue('PROPORTIONAL')"
-                      role="radio"
-                      [attr.aria-checked]="capStrategy === 'PROPORTIONAL'"
-                      [class.bg-indigo-600]="capStrategy === 'PROPORTIONAL'"
-                      [class.text-white]="capStrategy === 'PROPORTIONAL'"
-                      [class.bg-white]="capStrategy !== 'PROPORTIONAL'"
-                      [class.dark:bg-slate-700]="capStrategy !== 'PROPORTIONAL'"
-                      [class.text-gray-700]="capStrategy !== 'PROPORTIONAL'"
-                      [class.dark:text-slate-300]="capStrategy !== 'PROPORTIONAL'"
-                      class="flex-1 px-3 py-2 text-xs font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      Proportional
-                    </button>
-                    <button
-                      type="button"
-                      (click)="form.get('capStrategy')?.setValue('MARGINAL_ONLY')"
-                      role="radio"
-                      [attr.aria-checked]="capStrategy === 'MARGINAL_ONLY'"
-                      [class.bg-indigo-600]="capStrategy === 'MARGINAL_ONLY'"
-                      [class.text-white]="capStrategy === 'MARGINAL_ONLY'"
-                      [class.bg-white]="capStrategy !== 'MARGINAL_ONLY'"
-                      [class.dark:bg-slate-700]="capStrategy !== 'MARGINAL_ONLY'"
-                      [class.text-gray-700]="capStrategy !== 'MARGINAL_ONLY'"
-                      [class.dark:text-slate-300]="capStrategy !== 'MARGINAL_ONLY'"
-                      class="flex-1 px-3 py-2 text-xs font-medium border-l border-gray-300 dark:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      Marginal Only
-                    </button>
-                  </div>
-                </div>
-
-                <!-- MANUAL_MATRIX: existing caps grid -->
-                @if (capStrategy === 'MANUAL_MATRIX') {
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Max Subjects per Stratum Intersection</label>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" formArrayName="stratumCaps">
-                      @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
-                        <div [formGroupName]="i" class="flex flex-col p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
-                          <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1 truncate" [title]="capControl.get('levels')?.value.join(' | ')">
-                            {{ capControl.get('levels')?.value.join(' | ') || 'Overall / Default' }}
-                          </span>
-                          <input type="number" inputmode="numeric" formControlName="cap" min="0" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-1.5 border dark:placeholder-slate-400 tabular-nums" placeholder="Max subjects">
+                  @if (capStrategy === 'PROPORTIONAL') {
+                    <div class="space-y-4">
+                      <div>
+                        <label for="globalCap" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Global Enrollment Cap (per site)</label>
+                        <input id="globalCap" type="number" inputmode="numeric" formControlName="globalCap" min="1" class="w-40 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-3 py-2 border tabular-nums" placeholder="e.g. 100">
+                      </div>
+                      @for (factor of strataWithLevels; track factor.id) {
+                        <div class="p-3 border rounded-lg" [class.border-red-400]="isFactorPercentageInvalid(factor.id)" [class.border-gray-200]="!isFactorPercentageInvalid(factor.id)" [class.dark:border-red-500]="isFactorPercentageInvalid(factor.id)" [class.dark:border-slate-600]="!isFactorPercentageInvalid(factor.id)" [class.bg-red-50]="isFactorPercentageInvalid(factor.id)" [class.bg-gray-50]="!isFactorPercentageInvalid(factor.id)" [class.dark:bg-red-900]="isFactorPercentageInvalid(factor.id)" [class.dark:bg-slate-700]="!isFactorPercentageInvalid(factor.id)">
+                          <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wide">{{ factor.name }}</span>
+                            <span class="text-xs font-mono tabular-nums" [class.text-red-600]="isFactorPercentageInvalid(factor.id)" [class.text-green-600]="!isFactorPercentageInvalid(factor.id)" [class.dark:text-red-400]="isFactorPercentageInvalid(factor.id)" [class.dark:text-green-400]="!isFactorPercentageInvalid(factor.id)">{{ getFactorPercentageTotal(factor.id, factor.levels) }}% / 100%</span>
+                          </div>
+                          @for (level of factor.levels; track level) {
+                            <div class="flex items-center gap-2 mb-1">
+                              <label [for]="factor.id + '-pct-' + level" class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
+                              <input [id]="factor.id + '-pct-' + level" type="number" inputmode="numeric" min="0" max="100" [value]="getPercentage(factor.id, level)" (input)="setPercentage(factor.id, level, +$any($event.target).value)" class="w-20 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums" placeholder="%">
+                              <span class="text-xs text-gray-600 dark:text-slate-400">%</span>
+                            </div>
+                          }
+                          @if (isFactorPercentageInvalid(factor.id)) {
+                            <p class="text-xs text-red-600 dark:text-rose-400 mt-1">Percentages must sum to exactly 100%.</p>
+                          }
+                        </div>
+                      }
+                      <button type="button" (click)="computeMatrix()" [disabled]="!canComputeMatrix" class="w-full py-2 px-4 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">Compute Matrix</button>
+                      @if (matrixComputed()) {
+                        <div>
+                          <div class="flex items-center gap-2 mb-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-slate-300">Computed Intersection Caps</label>
+                            <span class="text-xs text-indigo-600 dark:text-indigo-400">(editable – manual changes shift strategy to Manual Matrix)</span>
+                          </div>
+                          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" formArrayName="stratumCaps">
+                            @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
+                              <div [formGroupName]="i" class="flex flex-col p-3 border border-indigo-200 dark:border-indigo-700 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
+                                <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1 truncate" [title]="capControl.get('levels')?.value.join(' | ')">{{ capControl.get('levels')?.value.join(' | ') || 'Overall / Default' }}</span>
+                                <input type="number" inputmode="numeric" formControlName="cap" min="0" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-1.5 border tabular-nums" placeholder="Cap">
+                              </div>
+                            }
+                          </div>
                         </div>
                       }
                     </div>
-                  </div>
-                }
+                  }
 
-                <!-- PROPORTIONAL: global cap + per-factor percentage inputs -->
-                @if (capStrategy === 'PROPORTIONAL') {
-                  <div class="space-y-4">
-                    <!-- Global Cap input -->
-                    <div>
-                      <label for="globalCap" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Global Enrollment Cap (per site)</label>
-                      <input
-                        id="globalCap"
-                        type="number"
-                        inputmode="numeric"
-                        formControlName="globalCap"
-                        min="1"
-                        class="w-40 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-3 py-2 border tabular-nums"
-                        placeholder="e.g. 100"
-                      >
-                    </div>
-
-                    <!-- Per-factor level percentage inputs -->
-                    @for (factor of strataWithLevels; track factor.id) {
-                      <div class="p-3 border rounded-lg"
-                           [class.border-red-400]="isFactorPercentageInvalid(factor.id)"
-                           [class.border-gray-200]="!isFactorPercentageInvalid(factor.id)"
-                           [class.dark:border-red-500]="isFactorPercentageInvalid(factor.id)"
-                           [class.dark:border-slate-600]="!isFactorPercentageInvalid(factor.id)"
-                           [class.bg-red-50]="isFactorPercentageInvalid(factor.id)"
-                           [class.bg-gray-50]="!isFactorPercentageInvalid(factor.id)"
-                           [class.dark:bg-red-900]="isFactorPercentageInvalid(factor.id)"
-                           [class.dark:bg-slate-700]="!isFactorPercentageInvalid(factor.id)">
-                        <div class="flex justify-between items-center mb-2">
-                          <span class="text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wide">{{ factor.name }}</span>
-                          <span class="text-xs font-mono tabular-nums"
-                                [class.text-red-600]="isFactorPercentageInvalid(factor.id)"
-                                [class.text-green-600]="!isFactorPercentageInvalid(factor.id)"
-                                [class.dark:text-red-400]="isFactorPercentageInvalid(factor.id)"
-                                [class.dark:text-green-400]="!isFactorPercentageInvalid(factor.id)">
-                            {{ getFactorPercentageTotal(factor.id, factor.levels) }}% / 100%
-                          </span>
-                        </div>
-                        @for (level of factor.levels; track level) {
-                          <div class="flex items-center gap-2 mb-1">
-                            <label [for]="factor.id + '-pct-' + level" class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
-                            <input
-                              [id]="factor.id + '-pct-' + level"
-                              type="number"
-                              inputmode="numeric"
-                              min="0"
-                              max="100"
-                              [value]="getPercentage(factor.id, level)"
-                              (input)="setPercentage(factor.id, level, +$any($event.target).value)"
-                              class="w-20 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums"
-                              placeholder="%"
-                            >
-                            <span class="text-xs text-gray-600 dark:text-slate-400">%</span>
-                          </div>
-                        }
-                        @if (isFactorPercentageInvalid(factor.id)) {
-                          <p class="text-xs text-red-600 dark:text-rose-400 mt-1">Percentages must sum to exactly 100%.</p>
-                        }
-                      </div>
-                    }
-
-                    <!-- Compute Matrix button -->
-                    <button
-                      type="button"
-                      (click)="computeMatrix()"
-                      [disabled]="!canComputeMatrix"
-                      class="w-full py-2 px-4 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      Compute Matrix
-                    </button>
-
-                    <!-- Hybrid matrix: shown once computed, editable -->
-                    @if (matrixComputed()) {
-                      <div>
-                        <div class="flex items-center gap-2 mb-2">
-                          <label class="block text-sm font-medium text-gray-700 dark:text-slate-300">Computed Intersection Caps</label>
-                          <span class="text-xs text-indigo-600 dark:text-indigo-400">(editable - manual changes shift strategy to Manual Matrix)</span>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" formArrayName="stratumCaps">
-                          @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
-                            <div [formGroupName]="i" class="flex flex-col p-3 border border-indigo-200 dark:border-indigo-700 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
-                              <span class="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1 truncate" [title]="capControl.get('levels')?.value.join(' | ')">
-                                {{ capControl.get('levels')?.value.join(' | ') || 'Overall / Default' }}
-                              </span>
-                              <input
-                                type="number"
-                                inputmode="numeric"
-                                formControlName="cap"
-                                min="0"
-                                class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-1.5 border dark:placeholder-slate-400 tabular-nums"
-                                placeholder="Cap"
-                              >
+                  @if (capStrategy === 'MARGINAL_ONLY') {
+                    <div class="space-y-3">
+                      <p class="text-xs text-gray-600 dark:text-slate-400">Set hard limits per factor level. The engine randomly allocates subjects across intersections until each level's cap is reached.</p>
+                      @for (factor of strataWithLevels; track factor.id) {
+                        <div class="p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
+                          <span class="block text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wide mb-2">{{ factor.name }}</span>
+                          @for (level of factor.levels; track level) {
+                            <div class="flex items-center gap-2 mb-1">
+                              <label [for]="factor.id + '-margcap-' + level" class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
+                              <input [id]="factor.id + '-margcap-' + level" type="number" inputmode="numeric" min="0" [value]="getMarginalCap(factor.id, level) ?? ''" (input)="setMarginalCap(factor.id, level, parseMarginalCapInput($any($event.target).value))" class="w-24 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums" placeholder="Max">
+                              <span class="text-xs text-gray-600 dark:text-slate-400">subjects</span>
                             </div>
                           }
                         </div>
-                      </div>
-                    }
-                  </div>
-                }
-
-                <!-- MARGINAL_ONLY: per-factor per-level marginal cap inputs -->
-                @if (capStrategy === 'MARGINAL_ONLY') {
-                  <div class="space-y-3">
-                    <p class="text-xs text-gray-600 dark:text-slate-400">
-                      Set hard limits per factor level. The engine randomly allocates subjects across intersections until each level's cap is reached.
-                    </p>
-                    @for (factor of strataWithLevels; track factor.id) {
-                      <div class="p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
-                        <span class="block text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wide mb-2">{{ factor.name }}</span>
-                        @for (level of factor.levels; track level) {
-                          <div class="flex items-center gap-2 mb-1">
-                            <label [for]="factor.id + '-margcap-' + level" class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
-                            <input
-                              [id]="factor.id + '-margcap-' + level"
-                              type="number"
-                              inputmode="numeric"
-                              min="0"
-                              [value]="getMarginalCap(factor.id, level) ?? ''"
-                              (input)="setMarginalCap(factor.id, level, parseMarginalCapInput($any($event.target).value))"
-                              class="w-24 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums"
-                              placeholder="Max"
-                            >
-                            <span class="text-xs text-gray-600 dark:text-slate-400">subjects</span>
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                }
+                      }
+                    </div>
+                  }
+                </div>
               </div>
-            </div>
-            } <!-- end @if randomizationMethod !== 'MINIMIZATION' -->
-          </div>
-
-          <!-- Right column: Block Preview widget -->
-          @if (randomizationMethod !== 'MINIMIZATION') {
-          <div class="rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 p-4 shadow-sm">
-            <app-block-preview
-              [arms]="armsSignal()"
-              [blockSizes]="blockSizesSignal()"
-            />
-          </div>
-          }
-        </div>
-      </section>
-
-      <!-- Advanced Settings Accordion -->
-      <section>
-        <button
-          type="button"
-          (click)="toggleAdvanced()"
-          class="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-          [attr.aria-expanded]="showAdvanced()"
-          aria-controls="advanced-settings-panel"
-        >
-          <span class="text-sm font-medium">Advanced Settings</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5 transition-transform duration-200"
-            [class.rotate-180]="showAdvanced()"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        @if (showAdvanced()) {
-          <div id="advanced-settings-panel" class="advanced-settings-panel mt-4 space-y-6">
-
-            <!-- PRNG Seed -->
-            <div>
-              <div class="flex items-center gap-1.5 mb-1">
-                <label for="seed" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Random Seed (Optional)</label>
-                <button
-                  type="button"
-                  class="p-1.5 -m-1.5 rounded-full text-gray-600 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  aria-label="About the seed field"
-                  matTooltip="Sets the initial state of the random number generator. Save this string to guarantee you can exactly reproduce this specific schema in the future."
-                  matTooltipPosition="above"
-                  matTooltipClass="app-tooltip"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </button>
-              </div>
-              <input id="seed" type="text" formControlName="seed" placeholder="Auto-generated if empty" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500">
-            </div>
-
-            <!-- Subject ID Mask -->
-            <div>
-              <div class="flex items-center gap-1.5 mb-1">
-                <label for="subjectIdMask" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Subject ID Mask</label>
-                <button
-                  type="button"
-                  class="p-1.5 -m-1.5 rounded-full text-gray-600 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  aria-label="About the subject ID mask field"
-                  matTooltip="Defines the format for generated patient IDs. Use {SITE} for the site code and {SEQ:3} for a zero-padded sequential number."
-                  matTooltipPosition="above"
-                  matTooltipClass="app-tooltip"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </button>
-              </div>
-              <input id="subjectIdMask" type="text" formControlName="subjectIdMask" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border font-mono dark:placeholder-slate-500">
-              <p class="text-xs text-gray-600 dark:text-slate-400 mt-1">
-                Tokens: <code class="font-mono">&#123;SITE&#125;</code>, <code class="font-mono">&#123;STRATUM&#125;</code>, <code class="font-mono">&#123;SEQ:n&#125;</code> (padded sequence), <code class="font-mono">&#123;RND:n&#125;</code> (random hash), <code class="font-mono">&#123;CHECKSUM&#125;</code>. Legacy: <code class="font-mono">[SiteID]</code>, <code class="font-mono">[StratumCode]</code>, <code class="font-mono">[001]</code>.
-              </p>
-              <!-- Live Preview -->
-              @if (subjectIdMaskInvalid()) {
-                <p class="mt-1.5 text-xs font-medium text-red-600 dark:text-rose-400 flex items-center gap-1" data-testid="mask-preview-error">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                  </svg>
-                  {{ subjectIdPreview() }}
-                </p>
-              } @else {
-                <p class="mt-1.5 text-xs text-gray-600 dark:text-slate-400" data-testid="mask-preview">
-                  <span class="font-medium text-gray-600 dark:text-slate-300">Preview:</span>
-                  <code class="ml-1 font-mono">{{ subjectIdPreview() }}</code>
-                </p>
               }
+
             </div>
 
+            <!-- Right column: Block Preview -->
+            @if (randomizationMethod !== 'MINIMIZATION') {
+            <div class="rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 p-4 shadow-sm">
+              <app-block-preview [arms]="armsSignal()" [blockSizes]="blockSizesSignal()" />
+            </div>
+            }
           </div>
-        }
-      </section>
+        </section>
 
-      <div class="pt-4 border-t border-gray-200 dark:border-slate-700 flex flex-wrap justify-end gap-3">
-        <button type="button" (click)="onRunMonteCarlo()" [disabled]="!form.valid" class="min-h-[44px] bg-white dark:bg-slate-700 border border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-lg hover:bg-purple-50 dark:hover:bg-slate-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-2 text-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          Run Statistical QA (Monte Carlo)
-        </button>
-        <div class="relative inline-block text-left" #dropdownContainer>
-          <button type="button" (click)="dropdownOpen = !dropdownOpen" [disabled]="!form.valid" class="min-h-[44px] bg-white dark:bg-slate-700 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 px-6 py-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-slate-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-            </svg>
-            Generate Code
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      </div>
+    }
+
+    <!-- STEP 5: Advanced & Generate -->
+    @if (currentStep() === 5) {
+      <div class="space-y-6">
+
+        <!-- Advanced Settings Accordion -->
+        <section>
+          <button type="button" (click)="toggleAdvanced()" class="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors" [attr.aria-expanded]="showAdvanced()" aria-controls="advanced-settings-panel">
+            <span class="text-sm font-medium">Advanced Settings</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform duration-200" [class.rotate-180]="showAdvanced()" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
 
-          @if (dropdownOpen) {
-            <div class="origin-bottom-right absolute right-0 bottom-full mb-2 w-40 rounded-xl shadow-lg bg-white/90 dark:bg-slate-800/90 backdrop-blur-md ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-10 overflow-hidden">
-              <div class="py-1" role="menu" aria-orientation="vertical">
-                <button type="button" (click)="onGenerateCode('R')" class="text-gray-700 dark:text-slate-200 block w-full text-left px-4 py-3 min-h-[44px] text-sm hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-colors" role="menuitem">R Script</button>
-                <button type="button" (click)="onGenerateCode('SAS')" class="text-gray-700 dark:text-slate-200 block w-full text-left px-4 py-3 min-h-[44px] text-sm hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-colors" role="menuitem">SAS Script</button>
-                <button type="button" (click)="onGenerateCode('Python')" class="text-gray-700 dark:text-slate-200 block w-full text-left px-4 py-3 min-h-[44px] text-sm hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-colors" role="menuitem">Python Script</button>
+          @if (showAdvanced()) {
+            <div id="advanced-settings-panel" class="advanced-settings-panel mt-4 space-y-6">
+              <div>
+                <div class="flex items-center gap-1.5 mb-1">
+                  <label for="seed" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Random Seed (Optional)</label>
+                  <button type="button" class="p-1.5 -m-1.5 rounded-full text-gray-600 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400" aria-label="About the seed field" matTooltip="Sets the initial state of the random number generator. Save this string to guarantee you can exactly reproduce this specific schema in the future." matTooltipPosition="above" matTooltipClass="app-tooltip">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </button>
+                </div>
+                <input id="seed" type="text" formControlName="seed" placeholder="Auto-generated if empty" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border dark:placeholder-slate-500">
+              </div>
+
+              <div>
+                <div class="flex items-center gap-1.5 mb-1">
+                  <label for="subjectIdMask" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Subject ID Mask</label>
+                  <button type="button" class="p-1.5 -m-1.5 rounded-full text-gray-600 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400" aria-label="About the subject ID mask field" matTooltip="Defines the format for generated patient IDs. Use {SITE} for the site code and {SEQ:3} for a zero-padded sequential number." matTooltipPosition="above" matTooltipClass="app-tooltip">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </button>
+                </div>
+                <input id="subjectIdMask" type="text" formControlName="subjectIdMask" class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border font-mono dark:placeholder-slate-500">
+                <p class="text-xs text-gray-600 dark:text-slate-400 mt-1">Tokens: <code class="font-mono">&#123;SITE&#125;</code>, <code class="font-mono">&#123;STRATUM&#125;</code>, <code class="font-mono">&#123;SEQ:n&#125;</code> (padded sequence), <code class="font-mono">&#123;RND:n&#125;</code> (random hash), <code class="font-mono">&#123;CHECKSUM&#125;</code>. Legacy: <code class="font-mono">[SiteID]</code>, <code class="font-mono">[StratumCode]</code>, <code class="font-mono">[001]</code>.</p>
+                @if (subjectIdMaskInvalid()) {
+                  <p class="mt-1.5 text-xs font-medium text-red-600 dark:text-rose-400 flex items-center gap-1" data-testid="mask-preview-error">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                    {{ subjectIdPreview() }}
+                  </p>
+                } @else {
+                  <p class="mt-1.5 text-xs text-gray-600 dark:text-slate-400" data-testid="mask-preview">
+                    <span class="font-medium text-gray-600 dark:text-slate-300">Preview:</span>
+                    <code class="ml-1 font-mono">{{ subjectIdPreview() }}</code>
+                  </p>
+                }
               </div>
             </div>
           }
+        </section>
+
+        <!-- Configuration Summary -->
+        <div class="p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-lg space-y-2">
+          <h3 class="text-sm font-semibold text-gray-800 dark:text-slate-200">Configuration Summary</h3>
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700 dark:text-slate-300">
+            <dt class="font-medium">Protocol:</dt>
+            <dd class="font-mono">{{ form.get('protocolId')?.value }}</dd>
+            <dt class="font-medium">Study:</dt>
+            <dd>{{ form.get('studyName')?.value }}</dd>
+            <dt class="font-medium">Arms:</dt>
+            <dd>{{ arms.length }} arm(s)</dd>
+            <dt class="font-medium">Strata:</dt>
+            <dd>{{ strata.length === 0 ? 'Unstratified' : strata.length + ' factor(s)' }}</dd>
+            <dt class="font-medium">Algorithm:</dt>
+            <dd>{{ randomizationMethod === 'MINIMIZATION' ? 'Minimization (Pocock-Simon)' : 'Stratified Block' }}</dd>
+          </dl>
+          @if (!form.valid) {
+            <p class="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+              Some fields need attention. Use the Back button to review earlier steps.
+            </p>
+          }
         </div>
-        <button type="submit" [disabled]="!form.valid" class="min-h-[44px] bg-indigo-600 dark:bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
-          Generate Schema
-        </button>
+
       </div>
-    </form>
+    }
+
+  </div>
+
+  <!-- Wizard Navigation Bar -->
+  <app-wizard-navigation
+    [currentStep]="currentStep()"
+    [totalSteps]="totalSteps"
+    [canProceed]="canProceed()"
+    [formValid]="form.valid"
+    [isGenerating]="facade.isGenerating()"
+    (back)="goPrev()"
+    (next)="goNext()"
+    (generateCode)="onGenerateCode($event)"
+    (monteCarlo)="onRunMonteCarlo()"
+  />
+
+</form>
