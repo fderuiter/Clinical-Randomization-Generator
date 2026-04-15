@@ -278,7 +278,7 @@ export class ConfigFormComponent implements OnInit {
 
   @HostListener('document:click', ['$event'])
   clickout(event: Event): void {
-    if (this.dropdownOpen && this.dropdownContainer?.nativeElement && !this.dropdownContainer.nativeElement.contains(event.target))
+    if (this.dropdownOpen && !this.dropdownContainer?.nativeElement?.contains(event.target))
       this.dropdownOpen = false;
   }
 
@@ -522,10 +522,10 @@ export class ConfigFormComponent implements OnInit {
     const enterX = this.stepDirection === 'forward' ? 24 : -24;
     animateIfMotionOK(panel, { opacity: [1, 0], x: [0, exitX] }, { duration: 0.15, easing: 'ease-in' }).then(() => {
       changeFn();
-      // Give Angular one tick to render the new step content before animating in.
-      setTimeout(() => {
+      // Use requestAnimationFrame to wait for Angular's DOM update before animating in.
+      requestAnimationFrame(() => {
         animateIfMotionOK(panel, { opacity: [0, 1], x: [enterX, 0] }, { duration: 0.25, easing: 'ease-out' });
-      }, 16);
+      });
     });
   }
 
@@ -599,7 +599,7 @@ export class ConfigFormComponent implements OnInit {
     }));
     this.form.updateValueAndValidity();
     // Animate the newly added card after Angular renders it
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       const grid = this.armsGrid?.nativeElement;
       if (grid) {
         const lastCard = grid.lastElementChild as HTMLElement | null;
@@ -607,7 +607,7 @@ export class ConfigFormComponent implements OnInit {
           animateIfMotionOK(lastCard, { opacity: [0, 1], y: [16, 0], scale: [0.93, 1] }, { duration: 0.2, easing: 'ease-out' });
         }
       }
-    }, 16);
+    });
   }
 
   removeArm(index: number): void {
@@ -640,7 +640,7 @@ export class ConfigFormComponent implements OnInit {
   addStratum(): void {
     this.strata.push(this.fb.group({ id: ['stratum_' + Date.now()], name: [''], levelsStr: ['', Validators.required] }));
     // Animate the newly added stratum card
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       const list = this.strataList?.nativeElement;
       if (list) {
         const lastCard = list.lastElementChild as HTMLElement | null;
@@ -648,7 +648,7 @@ export class ConfigFormComponent implements OnInit {
           animateIfMotionOK(lastCard, { opacity: [0, 1], y: [16, 0], scale: [0.93, 1] }, { duration: 0.2, easing: 'ease-out' });
         }
       }
-    }, 16);
+    });
   }
 
   removeStratum(index: number): void {

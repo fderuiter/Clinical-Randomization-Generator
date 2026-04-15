@@ -223,12 +223,12 @@ export class GeneratorComponent {
     if (tab === this.activeTab()) return;
     this.activeTab.set(tab);
     // Animate the new tab panel content after Angular renders it
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       const panel = this.tabPanel?.nativeElement;
       if (panel) {
         animateIfMotionOK(panel, { opacity: [0, 1], y: [8, 0] }, { duration: 0.2, easing: 'ease-out' });
       }
-    }, 16);
+    });
   }
 
   /**

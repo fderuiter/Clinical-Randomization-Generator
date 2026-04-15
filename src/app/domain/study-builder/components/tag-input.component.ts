@@ -105,17 +105,17 @@ export class TagInputComponent implements OnInit, OnDestroy {
       this.tags = [...this.tags, val];
       this.update();
       // Animate the newly added tag chip after Angular renders it
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         const container = this.tagContainer?.nativeElement;
         if (container) {
-          // The new tag is the last span before the input
-          const chips = container.querySelectorAll('span');
-          const newChip = chips[chips.length - 1] as HTMLElement | undefined;
+          // The new tag is the last chip (span with rounded-full class) before the input
+          const chips = container.querySelectorAll<HTMLElement>('span.rounded-full');
+          const newChip = chips[chips.length - 1];
           if (newChip) {
             animateIfMotionOK(newChip, { scale: [0.8, 1.05, 1], opacity: [0, 1] }, { duration: 0.2, easing: 'ease-out' });
           }
         }
-      }, 16);
+      });
     }
     this.inputValue = '';
   }
