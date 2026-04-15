@@ -213,14 +213,14 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
               </div>
 
               <!-- High imbalance warning (shown only with attrition and significant deviation) -->
-              @if (results.attritionRate > 0 && maxRetainedDeviation() > 2) {
+              @if (results.attritionRate > 0 && maxRetainedDeviation() > ATTRITION_WARNING_THRESHOLD_PCT) {
                 <div class="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700/50 rounded-lg p-4 flex items-start gap-3" data-testid="mc-attrition-warning">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-rose-500 dark:text-rose-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <p class="text-sm text-rose-800 dark:text-rose-300 leading-relaxed" data-testid="mc-attrition-warning-text">
                     <strong>High post-attrition imbalance detected.</strong>
-                    Under a {{ results.attritionRate }}% dropout rate, the maximum retained-arm deviation exceeds 2% ({{ maxRetainedDeviation() | number:'1.4-4' }}%).
+                    Under a {{ results.attritionRate }}% dropout rate, the maximum retained-arm deviation exceeds {{ ATTRITION_WARNING_THRESHOLD_PCT }}% ({{ maxRetainedDeviation() | number:'1.4-4' }}%).
                     Consider utilizing smaller block sizes or minimization to counter chronological bias under high attrition.
                   </p>
                 </div>
@@ -264,6 +264,9 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
 })
 export class MonteCarloModalComponent {
   readonly facade = inject(RandomizationEngineFacade);
+
+  /** Threshold (in %) above which the post-attrition imbalance warning banner is shown. */
+  protected readonly ATTRITION_WARNING_THRESHOLD_PCT = 2;
 
   readonly progressIterations = computed(() =>
     Math.round((this.facade.monteCarloProgress() / 100) * 10_000)

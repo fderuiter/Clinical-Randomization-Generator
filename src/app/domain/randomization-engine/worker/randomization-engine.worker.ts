@@ -43,6 +43,8 @@ addEventListener('message', (event: MessageEvent<IncomingCommand>) => {
 function runMonteCarlo(id: string, { config, attritionRate }: MonteCarloPayload): void {
   const TOTAL_ITERATIONS = 10_000;
   const PROGRESS_INTERVAL = 500;
+  // Defensive clamp: even though the UI constrains input to [0, 50], the worker
+  // validates the value itself to prevent incorrect results if called directly.
   const dropoutProbability = Math.max(0, Math.min(50, attritionRate)) / 100;
 
   // Initialise per-arm accumulators (before and after attrition)
@@ -65,6 +67,8 @@ function runMonteCarlo(id: string, { config, attritionRate }: MonteCarloPayload)
 
       // Deterministic PRNG for attrition: seeded by the iteration index so that
       // results are perfectly reproducible for any given attrition rate value.
+      // The multiplier (1_000_003) and offset (7) are coprime primes chosen to spread
+      // seeds evenly across the 32-bit space and avoid low-entropy seed clustering.
       const rng = dropoutProbability > 0 ? mulberry32(i * 1_000_003 + 7) : null;
 
       for (const subject of result.schema) {
