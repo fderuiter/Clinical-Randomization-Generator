@@ -48,11 +48,9 @@ addEventListener('message', (event: MessageEvent<IncomingCommand>) => {
 function runMonteCarlo(id: string, { config, attritionRate }: MonteCarloPayload): void {
   const TOTAL_ITERATIONS = 10_000;
   const PROGRESS_INTERVAL = 500;
-  // Defensive clamp: even though the UI constrains input to [0, 50], the worker
-  // validates the value itself to prevent incorrect results if called directly.
-  // NaN is normalised to 0 so non-finite input never propagates to the simulation.
-  const safeRate = Number.isFinite(attritionRate) ? attritionRate : 0;
-  const clampedAttritionRate = Math.max(0, Math.min(50, safeRate));
+  // NaN guard: non-finite values (e.g. NaN from empty input) are normalised to 0.
+  const normalizedAttritionRate = Number.isFinite(attritionRate) ? attritionRate : 0;
+  const clampedAttritionRate = Math.max(0, Math.min(50, normalizedAttritionRate));
   const dropoutProbability = clampedAttritionRate / 100;
 
   // Initialise per-arm accumulators (before and after attrition)

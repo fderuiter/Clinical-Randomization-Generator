@@ -106,7 +106,7 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                     <p class="text-xs text-purple-600 dark:text-purple-400 mt-1">Retained Subjects ({{ results.attritionRate }}% dropout)</p>
                   </div>
                 }
-                <div class="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4 text-center">
+                <div [class]="deviationCardClass(results.attritionRate)">
                   <p class="text-2xl font-bold" [class]="maxDeviationClass()">{{ maxDeviation() | number:'1.4-4' }}%</p>
                   <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Max Arm Deviation</p>
                 </div>
@@ -278,6 +278,17 @@ export class MonteCarloModalComponent {
     return attritionRate > 0
       ? 'grid grid-cols-2 sm:grid-cols-4 gap-4'
       : 'grid grid-cols-2 sm:grid-cols-3 gap-4';
+  }
+
+  /**
+   * Returns the class string for the "Max Arm Deviation" summary card.
+   * When attrition = 0 there are only 3 cards in a 2-column mobile grid, so
+   * `col-span-2` ensures the card fills the full row on small screens.
+   * `sm:col-span-1` restores the natural single-column width at the sm breakpoint.
+   */
+  deviationCardClass(attritionRate: number): string {
+    const base = 'bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4 text-center';
+    return attritionRate === 0 ? `${base} col-span-2 sm:col-span-1` : base;
   }
 
   barWidth(count: number, total: number): number {
