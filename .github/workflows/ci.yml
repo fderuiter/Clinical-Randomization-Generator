@@ -106,16 +106,28 @@ jobs:
       run: npm ci
 
     - name: Download all blob reports
+      id: download_reports
       uses: actions/download-artifact@v4
       with:
         path: all-blob-reports
         pattern: blob-report-*
         merge-multiple: true
 
+    - name: Check if blob reports exist
+      id: has_reports
+      run: |
+        if [ -d all-blob-reports ] && [ -n "$(ls -A all-blob-reports 2>/dev/null)" ]; then
+          echo "found=true" >> $GITHUB_OUTPUT
+        else
+          echo "found=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Merge Playwright reports
+      if: steps.has_reports.outputs.found == 'true'
       run: npx playwright merge-reports --reporter html ./all-blob-reports
 
     - name: Upload merged HTML report
+      if: steps.has_reports.outputs.found == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: playwright-report
