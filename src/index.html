@@ -5,18 +5,26 @@
     <title>Equipose - Clinical Trial Randomization Tool</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="description" content="Equipose is a free, browser-based stratified block randomization tool for clinical trials. Generate, simulate, and export balanced treatment allocation schemas to R, Python, or SAS." />
     <meta name="keywords" content="clinical trial randomization, stratified block randomization, treatment allocation, randomization schema generator, R SAS Python randomization, biostatistics, clinical trial design" />
+    <meta name="author" content="Frederick de Ruiter" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://equipose.org/" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="theme-color" content="#4338ca" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Equipose" />
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
@@ -25,23 +33,54 @@
     <meta property="og:description" content="Free, browser-based stratified block randomization tool for clinical trials. Generate balanced treatment allocation schemas and export to R, Python, or SAS." />
     <meta property="og:url" content="https://equipose.org/" />
     <meta property="og:image" content="https://equipose.org/social-preview.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Equipose — Free Stratified Block Randomization for Clinical Trials" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Equipose - Clinical Trial Randomization Tool" />
+    <meta name="twitter:site" content="@equipose_org" />
+    <meta name="twitter:title" content="Equipose — Clinical Trial Randomization Tool" />
     <meta name="twitter:description" content="Free, browser-based stratified block randomization tool for clinical trials. Generate balanced treatment allocation schemas and export to R, Python, or SAS." />
     <meta name="twitter:image" content="https://equipose.org/social-preview.png" />
+    <meta name="twitter:image:alt" content="Equipose — Free Stratified Block Randomization for Clinical Trials" />
 
-    <!-- JSON-LD Structured Data -->
-    <script type="application/ld+json">
+    <!-- JSON-LD Structured Data (dynamically updated by App component) -->
+    <script id="app-jsonld" type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
+      "@type": ["SoftwareApplication", "WebApplication"],
       "name": "Equipose",
-      "description": "Free, browser-based stratified block randomization tool for clinical trials. Generate, simulate, and export balanced treatment allocation schemas to R, Python, or SAS.",
+      "description": "Free, browser-based stratified block randomization tool for clinical trials. Generate, simulate, and export balanced treatment allocation schemas to R, Python, SAS, or Stata.",
       "url": "https://equipose.org",
       "applicationCategory": "MedicalApplication",
       "operatingSystem": "Any",
+      "browserRequirements": "Requires a modern web browser with JavaScript enabled",
+      "screenshot": "https://equipose.org/social-preview.png",
+      "featureList": [
+        "Stratified block randomization across multiple clinical sites",
+        "Custom treatment arm ratios (e.g. 2:1, 3:1:1)",
+        "Variable and fixed block sizes",
+        "Monte Carlo simulation for balance verification",
+        "Export to R, Python, SAS, and Stata scripts",
+        "Excel and JSON schema export",
+        "Schema reproducibility verification",
+        "100% client-side — no data leaves the browser",
+        "Seeded Fisher-Yates shuffle for deterministic output",
+        "Pocock-Simon minimization algorithm"
+      ],
+      "author": {
+        "@type": "Person",
+        "name": "Frederick de Ruiter",
+        "url": "https://github.com/fderuiter"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Equipose",
+        "url": "https://equipose.org"
+      },
+      "license": "https://github.com/fderuiter/Clinical-Randomization-Generator/blob/main/LICENSE",
+      "codeRepository": "https://github.com/fderuiter/Clinical-Randomization-Generator",
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -50,10 +89,9 @@
     }
     </script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <!-- DNS prefetch for external resources -->
+    <link rel="dns-prefetch" href="https://github.com" />
+    <link rel="dns-prefetch" href="https://img.shields.io" />
   </head>
   <body>
     <app-root></app-root>
