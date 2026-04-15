@@ -1,3 +1,19 @@
+# [1.28.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.27.0...v1.28.0) (2026-04-15)
+
+
+### Bug Fixes
+
+* apply review feedback - deterministic a11y waits, curl server readiness, shared generateCryptoSeed ([19faffb](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/19faffbd8a0e09d5695208a74f3323ee076768f1))
+* correct dl/dt/dd structure on About page to resolve definition-list a11y violation ([f66dc26](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/f66dc26bf086efa6c23ab14e88ddf7cf42e9e24c))
+* remove codeql.yml to resolve conflict with repo's default CodeQL setup ([81ce2fc](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/81ce2fcc2ef49935dfeed2646d84c6d0120205c6))
+* upgrade emerald/amber text contrast and add aria-label to tag-input for WCAG AA ([cefe565](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/cefe565f337747399200d87dec1a5441138d0b43))
+* upgrade low-contrast text colors to meet WCAG AA color-contrast requirements ([3656acb](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/3656acba7d0c94345ba4f6c8ade70935353690af))
+
+
+### Features
+
+* CI/CD pipeline evolution - sharding, CodeQL, budgets, and a11y ([ce18ca0](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/ce18ca034143cbcc076c5aa67818f1fcf2a78d5f))
+
 # [1.27.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.26.0...v1.27.0) (2026-04-15)
 
 
