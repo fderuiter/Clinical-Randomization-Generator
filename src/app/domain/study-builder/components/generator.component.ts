@@ -12,7 +12,7 @@ import { BalanceVerificationComponent } from '../../schema-management/components
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { ViewportService } from '../../../core/services/viewport.service';
 import { SeoService } from '../../../core/services/seo.service';
-import { animateIfMotionOK } from '../../../core/utils/motion.utils';
+import { animateIfMotionOK, nextFrame } from '../../../core/utils/motion.utils';
 
 type ResultsTab = 'grid' | 'balance';
 
@@ -223,7 +223,7 @@ export class GeneratorComponent {
     if (tab === this.activeTab()) return;
     this.activeTab.set(tab);
     // Animate the new tab panel content after Angular renders it
-    requestAnimationFrame(() => {
+    nextFrame(() => {
       const panel = this.tabPanel?.nativeElement;
       if (panel) {
         animateIfMotionOK(panel, { opacity: [0, 1], y: [8, 0] }, { duration: 0.2, easing: 'ease-out' });

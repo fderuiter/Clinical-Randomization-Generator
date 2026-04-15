@@ -153,6 +153,12 @@ describe('ConfigFormComponent (domain)', () => {
       expect(lang).toBe('Python');
     });
 
+    it('should pass STATA as the language when requested', () => {
+      component.onGenerateCode('STATA');
+      const [, lang] = mockFacade.openCodeGenerator.mock.calls[0];
+      expect(lang).toBe('STATA');
+    });
+
     it('should NOT call facade.openCodeGenerator when the form is invalid', () => {
       component.form.get('protocolId')?.setValue('');
       component.onGenerateCode('Python');

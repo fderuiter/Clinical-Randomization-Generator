@@ -83,6 +83,8 @@ import {
               type="button"
               (click)="toggleDropdown()"
               [disabled]="!formValid"
+              [attr.aria-haspopup]="'menu'"
+              [attr.aria-expanded]="dropdownOpen"
               class="min-h-[44px] bg-white dark:bg-slate-700 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 px-6 py-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-slate-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center gap-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -139,7 +141,6 @@ export class WizardNavigationComponent {
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly generateCode = new EventEmitter<'R' | 'SAS' | 'Python' | 'STATA'>();
   @Output() readonly monteCarlo = new EventEmitter<void>();
-  @Output() readonly submit = new EventEmitter<void>();
 
   @ViewChild('dropdownContainer') dropdownContainer!: ElementRef;
 
@@ -152,6 +153,13 @@ export class WizardNavigationComponent {
   emitGenerateCode(lang: 'R' | 'SAS' | 'Python' | 'STATA'): void {
     this.generateCode.emit(lang);
     this.dropdownOpen = false;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.dropdownOpen) {
+      this.dropdownOpen = false;
+    }
   }
 
   @HostListener('document:click', ['$event'])

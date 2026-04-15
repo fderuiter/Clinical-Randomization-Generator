@@ -13,7 +13,7 @@ import { previewSubjectIdMask, validateSubjectIdMask } from '../../randomization
 import { BlockPreviewComponent, ArmInput } from './block-preview.component';
 import { computeProportionalCaps, validateProportionalPercentages } from '../../randomization-engine/core/cap-strategy';
 import { CapStrategy } from '../../core/models/randomization.model';
-import { animateIfMotionOK } from '../../../core/utils/motion.utils';
+import { animateIfMotionOK, nextFrame } from '../../../core/utils/motion.utils';
 
 @Component({
   selector: 'app-config-form',
@@ -522,8 +522,9 @@ export class ConfigFormComponent implements OnInit {
     const enterX = this.stepDirection === 'forward' ? 24 : -24;
     animateIfMotionOK(panel, { opacity: [1, 0], x: [0, exitX] }, { duration: 0.15, easing: 'ease-in' }).then(() => {
       changeFn();
-      // Use requestAnimationFrame to wait for Angular's DOM update before animating in.
-      requestAnimationFrame(() => {
+      // Use nextFrame() to wait for Angular's DOM update before animating in.
+      // Falls back to setTimeout(0) in non-visual environments (vitest/jsdom).
+      nextFrame(() => {
         animateIfMotionOK(panel, { opacity: [0, 1], x: [enterX, 0] }, { duration: 0.25, easing: 'ease-out' });
       });
     });
@@ -599,7 +600,7 @@ export class ConfigFormComponent implements OnInit {
     }));
     this.form.updateValueAndValidity();
     // Animate the newly added card after Angular renders it
-    requestAnimationFrame(() => {
+    nextFrame(() => {
       const grid = this.armsGrid?.nativeElement;
       if (grid) {
         const lastCard = grid.lastElementChild as HTMLElement | null;
@@ -616,8 +617,11 @@ export class ConfigFormComponent implements OnInit {
     const card = grid?.children[index] as HTMLElement | undefined;
     if (card && typeof window !== 'undefined') {
       animateIfMotionOK(card, { opacity: [1, 0], scale: [1, 0.9] }, { duration: 0.15, easing: 'ease-in' }).then(() => {
-        this.arms.removeAt(index);
-        this.form.updateValueAndValidity();
+        // Re-check the minimum-arm constraint in case multiple removals were scheduled.
+        if (this.arms.length > 2) {
+          this.arms.removeAt(index);
+          this.form.updateValueAndValidity();
+        }
       });
     } else {
       this.arms.removeAt(index);
@@ -640,7 +644,7 @@ export class ConfigFormComponent implements OnInit {
   addStratum(): void {
     this.strata.push(this.fb.group({ id: ['stratum_' + Date.now()], name: [''], levelsStr: ['', Validators.required] }));
     // Animate the newly added stratum card
-    requestAnimationFrame(() => {
+    nextFrame(() => {
       const list = this.strataList?.nativeElement;
       if (list) {
         const lastCard = list.lastElementChild as HTMLElement | null;

@@ -24,3 +24,16 @@ export function animateIfMotionOK(element: Element, keyframes: any, options?: an
     return Promise.resolve();
   }
 }
+
+/**
+ * Schedule a callback on the next paint frame.
+ * Falls back to `setTimeout(fn, 0)` in environments where
+ * `requestAnimationFrame` is not available (e.g. vitest/jsdom).
+ */
+export function nextFrame(fn: FrameRequestCallback): void {
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(fn);
+  } else {
+    setTimeout(fn, 0);
+  }
+}

@@ -1,7 +1,7 @@
 import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { AbstractControl } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { animateIfMotionOK } from '../../../core/utils/motion.utils';
+import { animateIfMotionOK, nextFrame } from '../../../core/utils/motion.utils';
 
 /**
  * TagInputComponent – an interactive chip/tag input that reads and writes
@@ -105,7 +105,7 @@ export class TagInputComponent implements OnInit, OnDestroy {
       this.tags = [...this.tags, val];
       this.update();
       // Animate the newly added tag chip after Angular renders it
-      requestAnimationFrame(() => {
+      nextFrame(() => {
         const container = this.tagContainer?.nativeElement;
         if (container) {
           // The new tag is the last chip (span with rounded-full class) before the input
