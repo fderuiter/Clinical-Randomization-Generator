@@ -60,6 +60,9 @@ export class ConfigFormComponent implements OnInit {
   /** Whether the computed proportional matrix has been generated and is ready to display. */
   readonly matrixComputed = signal(false);
 
+  /** Expected attrition/dropout rate for the Monte Carlo simulation (0–50 %). */
+  readonly attritionRate = signal(0);
+
   form: FormGroup = this.fb.group(
     {
       protocolId: ['PRT-001', Validators.required],
@@ -532,9 +535,13 @@ export class ConfigFormComponent implements OnInit {
 
   onRunMonteCarlo(): void {
     if (this.form.valid) {
-      try { this.facade.runMonteCarlo(this.store.buildConfig(this.buildFormValue())); }
+      try { this.facade.runMonteCarlo(this.store.buildConfig(this.buildFormValue()), this.attritionRate()); }
       catch (e) { console.error('Error starting Monte Carlo simulation:', e); alert('Error starting simulation. Please check your configuration.'); }
     }
+  }
+
+  clampAttritionRate(value: number): number {
+    return Math.min(50, Math.max(0, value));
   }
 
   onSubmit(): void {

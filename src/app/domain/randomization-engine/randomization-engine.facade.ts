@@ -122,7 +122,7 @@ export class RandomizationEngineFacade {
     this.showCodeGenerator.set(false);
   }
 
-  runMonteCarlo(config: RandomizationConfig): void {
+  runMonteCarlo(config: RandomizationConfig, attritionRate = 0): void {
     this.isMonteCarloRunning.set(true);
     this.monteCarloProgress.set(0);
     this.monteCarloResults.set(null);
@@ -153,7 +153,7 @@ export class RandomizationEngineFacade {
       }
     });
 
-    const command: MonteCarloCommand = { id, command: 'START_MONTE_CARLO', payload: config };
+    const command: MonteCarloCommand = { id, command: 'START_MONTE_CARLO', payload: { config, attritionRate } };
     this.worker.postMessage(command);
   }
 

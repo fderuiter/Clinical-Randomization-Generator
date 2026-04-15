@@ -91,7 +91,7 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
             <!-- Results state -->
             @if (facade.monteCarloResults(); as results) {
               <!-- Summary stats -->
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div class="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4 text-center">
                   <p class="text-2xl font-bold text-gray-900 dark:text-slate-100" data-testid="simulations-run-value">{{ results.totalIterations | number }}</p>
                   <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Simulations Run</p>
@@ -100,7 +100,13 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                   <p class="text-2xl font-bold text-gray-900 dark:text-slate-100">{{ results.totalSubjectsSimulated | number }}</p>
                   <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Total Subjects Simulated</p>
                 </div>
-                <div class="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4 text-center col-span-2 sm:col-span-1">
+                @if (results.attritionRate > 0) {
+                  <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center border border-purple-100 dark:border-purple-800/40">
+                    <p class="text-2xl font-bold text-purple-700 dark:text-purple-300" data-testid="retained-subjects-value">{{ results.totalRetainedSubjects | number }}</p>
+                    <p class="text-xs text-purple-600 dark:text-purple-400 mt-1">Retained Subjects ({{ results.attritionRate }}% dropout)</p>
+                  </div>
+                }
+                <div class="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4 text-center" [class.col-span-2]="results.attritionRate === 0" [class.sm:col-span-1]="results.attritionRate === 0">
                   <p class="text-2xl font-bold" [class]="maxDeviationClass()">{{ maxDeviation() | number:'1.4-4' }}%</p>
                   <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Max Arm Deviation</p>
                 </div>
@@ -122,7 +128,7 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                         <div class="flex-1 bg-gray-100 dark:bg-slate-700 rounded-full h-4 overflow-hidden">
                           <div
                             class="bg-indigo-300 dark:bg-indigo-600/60 h-4 rounded-full transition-all duration-500"
-                            [style.width.%]="barWidth(arm.expectedCount, results.totalSubjectsSimulated)"
+                            [style.width.%]="barWidth(arm.expectedCount, baseTotal(results))"
                           ></div>
                         </div>
                         <span class="text-xs w-20 text-gray-500 dark:text-slate-400 tabular-nums">{{ arm.expectedCount | number }}</span>
@@ -138,11 +144,25 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                         </div>
                         <span class="text-xs w-20 text-gray-500 dark:text-slate-400 tabular-nums">{{ arm.actualCount | number }}</span>
                       </div>
+                      <!-- Post-attrition bar (only when attrition > 0) -->
+                      @if (results.attritionRate > 0) {
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs w-20 text-right text-purple-500 dark:text-purple-400">Retained</span>
+                          <div class="flex-1 bg-gray-100 dark:bg-slate-700 rounded-full h-4 overflow-hidden">
+                            <div
+                              class="bg-purple-500 dark:bg-purple-400 h-4 rounded-full transition-all duration-500"
+                              [style.width.%]="barWidth(arm.retainedCount, results.totalRetainedSubjects)"
+                              data-testid="mc-retained-bar"
+                            ></div>
+                          </div>
+                          <span class="text-xs w-20 text-purple-600 dark:text-purple-300 tabular-nums">{{ arm.retainedCount | number }}</span>
+                        </div>
+                      }
                     </div>
                   }
                 </div>
                 <!-- Legend -->
-                <div class="flex gap-4 mt-3">
+                <div class="flex flex-wrap gap-4 mt-3">
                   <div class="flex items-center gap-1.5">
                     <div class="w-3 h-3 rounded-full bg-indigo-300 dark:bg-indigo-600/60"></div>
                     <span class="text-xs text-gray-500 dark:text-slate-400">Target (Expected)</span>
@@ -151,6 +171,12 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                     <div class="w-3 h-3 rounded-full bg-indigo-600 dark:bg-indigo-400"></div>
                     <span class="text-xs text-gray-500 dark:text-slate-400">Actual (Simulated)</span>
                   </div>
+                  @if (results.attritionRate > 0) {
+                    <div class="flex items-center gap-1.5">
+                      <div class="w-3 h-3 rounded-full bg-purple-500 dark:bg-purple-400"></div>
+                      <span class="text-xs text-purple-600 dark:text-purple-400">Post-Attrition (Retained)</span>
+                    </div>
+                  }
                 </div>
               </div>
 
@@ -163,6 +189,9 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                       <th class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Ratio</th>
                       <th class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Expected</th>
                       <th class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Actual</th>
+                      @if (results.attritionRate > 0) {
+                        <th class="px-4 py-2 text-right font-semibold text-purple-600 dark:text-purple-400">Retained</th>
+                      }
                       <th class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Deviation</th>
                     </tr>
                   </thead>
@@ -173,12 +202,29 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                         <td class="px-4 py-2 text-right text-gray-600 dark:text-slate-300">{{ arm.ratio }}</td>
                         <td class="px-4 py-2 text-right tabular-nums text-gray-600 dark:text-slate-300">{{ arm.expectedCount | number }}</td>
                         <td class="px-4 py-2 text-right tabular-nums text-gray-600 dark:text-slate-300">{{ arm.actualCount | number }}</td>
+                        @if (results.attritionRate > 0) {
+                          <td class="px-4 py-2 text-right tabular-nums text-purple-600 dark:text-purple-300">{{ arm.retainedCount | number }}</td>
+                        }
                         <td class="px-4 py-2 text-right tabular-nums font-semibold" [class]="deviationClass(arm)">{{ deviation(arm) | number:'1.4-4' }}%</td>
                       </tr>
                     }
                   </tbody>
                 </table>
               </div>
+
+              <!-- High imbalance warning (shown only with attrition and significant deviation) -->
+              @if (results.attritionRate > 0 && maxRetainedDeviation() > 2) {
+                <div class="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700/50 rounded-lg p-4 flex items-start gap-3" data-testid="mc-attrition-warning">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-rose-500 dark:text-rose-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <p class="text-sm text-rose-800 dark:text-rose-300 leading-relaxed" data-testid="mc-attrition-warning-text">
+                    <strong>High post-attrition imbalance detected.</strong>
+                    Under a {{ results.attritionRate }}% dropout rate, the maximum retained-arm deviation exceeds 2% ({{ maxRetainedDeviation() | number:'1.4-4' }}%).
+                    Consider utilizing smaller block sizes or minimization to counter chronological bias under high attrition.
+                  </p>
+                </div>
+              }
 
               <!-- Clinical confidence banner -->
               <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/50 rounded-lg p-4 flex items-start gap-3">
@@ -188,6 +234,9 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                 <p class="text-sm text-emerald-800 dark:text-emerald-300 leading-relaxed" data-testid="mc-confidence-statement">
                   <strong>Algorithm mathematically verified.</strong>
                   After {{ results.totalIterations | number }} independent trial simulations, actual treatment assignment deviates from target theoretical ratios by less than <strong>{{ maxDeviation() | number:'1.4-4' }}%</strong>, confirming true uniform distribution and absence of block bias.
+                  @if (results.attritionRate > 0) {
+                    Post-attrition balance ({{ results.attritionRate }}% dropout) shows a maximum retained-arm deviation of <strong>{{ maxRetainedDeviation() | number:'1.4-4' }}%</strong>.
+                  }
                 </p>
               </div>
             }
@@ -225,9 +274,20 @@ export class MonteCarloModalComponent {
     return (count / total) * 100;
   }
 
+  /** Returns the base total (retained subjects if attrition > 0, else all simulated). */
+  baseTotal(results: { attritionRate: number; totalRetainedSubjects: number; totalSubjectsSimulated: number }): number {
+    return results.attritionRate > 0 ? results.totalRetainedSubjects : results.totalSubjectsSimulated;
+  }
+
   deviation(arm: MonteCarloArmResult): number {
     if (arm.expectedCount === 0) return 0;
     return Math.abs((arm.actualCount - arm.expectedCount) / arm.expectedCount) * 100;
+  }
+
+  /** Deviation of retained subjects vs expected count (used when attrition > 0). */
+  retainedDeviation(arm: MonteCarloArmResult): number {
+    if (arm.expectedCount === 0) return 0;
+    return Math.abs((arm.retainedCount - arm.expectedCount) / arm.expectedCount) * 100;
   }
 
   deviationClass(arm: MonteCarloArmResult): string {
@@ -241,6 +301,12 @@ export class MonteCarloModalComponent {
     const results = this.facade.monteCarloResults();
     if (!results) return 0;
     return results.arms.reduce((max, arm) => Math.max(max, this.deviation(arm)), 0);
+  }
+
+  maxRetainedDeviation(): number {
+    const results = this.facade.monteCarloResults();
+    if (!results) return 0;
+    return results.arms.reduce((max, arm) => Math.max(max, this.retainedDeviation(arm)), 0);
   }
 
   maxDeviationClass(): string {

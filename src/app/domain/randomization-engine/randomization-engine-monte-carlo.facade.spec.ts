@@ -32,9 +32,22 @@ const mockConfig: RandomizationConfig = {
 const mockMonteCarloSuccess: MonteCarloSuccessPayload = {
   totalIterations: 10_000,
   totalSubjectsSimulated: 100_000,
+  totalRetainedSubjects: 100_000,
+  attritionRate: 0,
   arms: [
-    { armId: 'A', armName: 'Active', ratio: 1, expectedCount: 50_000, actualCount: 50_012 },
-    { armId: 'B', armName: 'Placebo', ratio: 1, expectedCount: 50_000, actualCount: 49_988 }
+    { armId: 'A', armName: 'Active', ratio: 1, expectedCount: 50_000, actualCount: 50_012, retainedCount: 50_012 },
+    { armId: 'B', armName: 'Placebo', ratio: 1, expectedCount: 50_000, actualCount: 49_988, retainedCount: 49_988 }
+  ]
+};
+
+const mockMonteCarloSuccessWithAttrition: MonteCarloSuccessPayload = {
+  totalIterations: 10_000,
+  totalSubjectsSimulated: 100_000,
+  totalRetainedSubjects: 80_000,
+  attritionRate: 20,
+  arms: [
+    { armId: 'A', armName: 'Active', ratio: 1, expectedCount: 40_000, actualCount: 50_012, retainedCount: 40_015 },
+    { armId: 'B', armName: 'Placebo', ratio: 1, expectedCount: 40_000, actualCount: 49_988, retainedCount: 39_985 }
   ]
 };
 
@@ -97,12 +110,19 @@ describe('RandomizationEngineFacade – Monte Carlo', () => {
     expect(facade.monteCarloProgress()).toBe(0);
   });
 
-  it('should postMessage with START_MONTE_CARLO command', () => {
+  it('should postMessage with START_MONTE_CARLO command including config and attritionRate=0 by default', () => {
     facade.runMonteCarlo(mockConfig);
     expect(fakeWorker.postMessage).toHaveBeenCalledTimes(1);
     const msg = fakeWorker.postMessage.mock.calls[0][0];
     expect(msg.command).toBe('START_MONTE_CARLO');
-    expect(msg.payload).toEqual(mockConfig);
+    expect(msg.payload).toEqual({ config: mockConfig, attritionRate: 0 });
+  });
+
+  it('should postMessage with the specified attritionRate when provided', () => {
+    facade.runMonteCarlo(mockConfig, 20);
+    const msg = fakeWorker.postMessage.mock.calls[0][0];
+    expect(msg.command).toBe('START_MONTE_CARLO');
+    expect(msg.payload).toEqual({ config: mockConfig, attritionRate: 20 });
   });
 
   it('should update progress on MONTE_CARLO_PROGRESS messages', () => {
@@ -130,6 +150,19 @@ describe('RandomizationEngineFacade – Monte Carlo', () => {
     expect(facade.isMonteCarloRunning()).toBe(false);
     expect(facade.monteCarloProgress()).toBe(100);
     expect(facade.showMonteCarloModal()).toBe(true); // modal stays open to show results
+  });
+
+  it('should set attrition results including retainedCount when attrition > 0', () => {
+    facade.runMonteCarlo(mockConfig, 20);
+    const { id } = fakeWorker.postMessage.mock.calls[0][0] as { id: string };
+
+    fakeWorker.simulateMessage({ id, type: 'MONTE_CARLO_SUCCESS', payload: mockMonteCarloSuccessWithAttrition });
+
+    const results = facade.monteCarloResults();
+    expect(results).not.toBeNull();
+    expect(results!.attritionRate).toBe(20);
+    expect(results!.totalRetainedSubjects).toBe(80_000);
+    expect(results!.arms[0].retainedCount).toBe(40_015);
   });
 
   it('should close the modal and reset state when closeMonteCarloModal is called', () => {
