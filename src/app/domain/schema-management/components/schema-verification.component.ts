@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { GeneratedSchema, RandomizationResult } from '../../core/models/randomization.model';
 import { generateRandomizationSchema } from '../../randomization-engine/core/randomization-algorithm';
+import { SeoService } from '../../../core/services/seo.service';
 
 // ---------------------------------------------------------------------------
 // Data model for the diff engine
@@ -199,6 +200,14 @@ export class SchemaVerificationComponent {
   readonly errorMessage = signal<string | null>(null);
   readonly discrepancies = signal<RowDiscrepancy[]>([]);
   readonly uploadedSchema = signal<GeneratedSchema[]>([]);
+
+  constructor() {
+    inject(SeoService).setPage({
+      title: 'Verify Schema Reproducibility | Equipose',
+      description: 'Upload a previously exported Equipose JSON schema to verify its reproducibility. The tool re-runs the algorithm and performs a strict row-by-row comparison.',
+      canonicalPath: '/verify',
+    });
+  }
 
   // ── Drag-and-drop handlers ───────────────────────────────────────────────
 

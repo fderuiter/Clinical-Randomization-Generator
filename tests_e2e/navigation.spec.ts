@@ -16,7 +16,7 @@ test.describe('Application Navigation', () => {
     await page.goto('http://localhost:4200');
     await page.getByRole('link', { name: /Get started/i }).click();
     await expect(page).toHaveURL(/\/generator/);
-    await expect(page.getByRole('heading', { name: 'Study-Agnostic Randomization', exact: true })).toBeVisible();
+    await expect(page.getByTestId('generator-page')).toBeVisible();
   });
 
   test('should navigate to the About page via the header nav link', async ({ page }) => {
@@ -32,7 +32,7 @@ test.describe('Application Navigation', () => {
     // Use exact: true to avoid matching the logo link "Clinical Randomization Generator"
     await page.locator('header').getByRole('link', { name: 'Generator', exact: true }).click();
     await expect(page).toHaveURL(/\/generator/);
-    await expect(page.getByRole('heading', { name: 'Study-Agnostic Randomization', exact: true })).toBeVisible();
+    await expect(page.getByTestId('generator-page')).toBeVisible();
   });
 
   test('should navigate back to the landing page via the logo link', async ({ page }) => {
@@ -56,9 +56,8 @@ test.describe('Application Navigation', () => {
 
   test('About page should show the three feature sections', async ({ page }) => {
     await page.goto('http://localhost:4200/about');
-    // Use exact: true to avoid matching description paragraph text
-    await expect(page.getByText('Custom Ratios', { exact: true })).toBeVisible();
-    await expect(page.getByText('Stratified Block Randomization', { exact: true })).toBeVisible();
-    await expect(page.getByText('Code Generation', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('feature-custom-ratios')).toBeVisible();
+    await expect(page.getByTestId('feature-stratified-block')).toBeVisible();
+    await expect(page.getByTestId('feature-code-generation')).toBeVisible();
   });
 });

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #312e81; }
+      .icon { stroke: #c7d2fe; }
+    }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #4338ca; }
+      .icon { stroke: #e0e7ff; }
+    }
+  </style>
+  <rect class="bg" width="24" height="24" rx="5" fill="#4338ca"/>
+  <path class="icon" stroke="#e0e7ff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+        d="M12 3v18M5 6l7-3 7 3M3 10l2 6a4 4 0 004 0l2-6M13 10l2 6a4 4 0 004 0l2-6"/>
+</svg>
