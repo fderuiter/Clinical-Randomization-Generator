@@ -1,3 +1,16 @@
+# [1.27.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.26.0...v1.27.0) (2026-04-15)
+
+
+### Bug Fixes
+
+* address code review — dynamic JSON-LD version, bibtex uses citationYear ([1c7480e](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/1c7480e275ac19a83d39d3de7f41309885e5e300))
+* update E2E navigation tests — replace brittle text assertions with data-testid selectors ([9d582ee](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/9d582ee1344ab74ed30f023693f7100d8ee200d6))
+
+
+### Features
+
+* comprehensive website enhancement — SEO, favicons, mobile nav, landing, about, footer, a11y ([3b37718](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/3b3771823eff4645fc2b858b88fff6e2838e6fd8))
+
 # [1.26.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.25.0...v1.26.0) (2026-04-14)
 
 

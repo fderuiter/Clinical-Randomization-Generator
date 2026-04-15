@@ -1,6 +1,6 @@
 {
   "name": "equipose",
-  "version": "1.26.0",
+  "version": "1.27.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -27,6 +27,7 @@
     "@angular/router": "21.2.7",
     "@angular/service-worker": "21.2.7",
     "@angular/ssr": "21.2.7",
+    "@fontsource-variable/inter": "^5.2.8",
     "@ngrx/signals": "^21.1.0",
     "echarts": "^6.0.0",
     "exceljs": "^4.4.0",

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, effect, signal, viewChild } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { ConfigFormComponent } from './config-form.component';
 import { ZeroStateComponent } from './zero-state.component';
 import { SkeletonGridComponent } from './skeleton-grid.component';
@@ -10,6 +11,7 @@ import { SchemaAnalyticsDashboardComponent } from '../../schema-management/compo
 import { BalanceVerificationComponent } from '../../schema-management/components/balance-verification.component';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { ViewportService } from '../../../core/services/viewport.service';
+import { SeoService } from '../../../core/services/seo.service';
 
 type ResultsTab = 'grid' | 'balance';
 
@@ -17,6 +19,7 @@ type ResultsTab = 'grid' | 'balance';
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-generator',
   imports: [
+    RouterLink,
     ConfigFormComponent,
     ZeroStateComponent,
     SkeletonGridComponent,
@@ -27,16 +30,32 @@ type ResultsTab = 'grid' | 'balance';
     BalanceVerificationComponent,
   ],
   template: `
-    <div class="space-y-8">
+    <div class="space-y-8" data-testid="generator-page">
       <!-- Intro -->
       <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Study-Agnostic Randomization</h2>
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100" data-testid="generator-heading">Build Your Randomization Schema</h2>
+          <a routerLink="/about"
+             class="shrink-0 text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+             aria-label="Learn more about Equipose">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            How does this work?
+          </a>
         </div>
         <p class="text-gray-600 dark:text-slate-400 text-sm leading-relaxed">
-          Configure your clinical trial parameters below to generate a statistically sound, reproducible, and balanced treatment allocation schema. 
-          The system uses a seeded Fisher-Yates shuffle for stratified block randomization.
+          Configure your clinical trial parameters below to produce a statistically sound, reproducible, and balanced treatment allocation schema.
+          Each schema is uniquely seeded, deterministic, and can be exported to R, Python, SAS, or Stata for inclusion in your Statistical Analysis Plan.
         </p>
+        <!-- Property badges -->
+        <div class="mt-4 flex flex-wrap gap-2" aria-label="Schema properties">
+          @for (badge of introBadges; track badge) {
+            <span class="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-700">
+              {{ badge }}
+            </span>
+          }
+        </div>
       </div>
 
       <!-- Configuration Form -->
@@ -146,6 +165,8 @@ export class GeneratorComponent {
   public readonly viewport = inject(ViewportService);
   private readonly document = inject(DOCUMENT);
 
+  readonly introBadges = ['Stratified', 'Reproducible', 'Seeded', 'Deterministic', 'Multi-site'];
+
   /** Active results tab – 'grid' (default) or 'balance'. */
   readonly activeTab = signal<ResultsTab>('grid');
 
@@ -155,6 +176,11 @@ export class GeneratorComponent {
   private static readonly SCROLL_DELAY_MS = 100;
 
   constructor() {
+    inject(SeoService).setPage({
+      title: 'Randomization Generator | Equipose',
+      description: 'Generate a statistically sound, reproducible stratified block randomization schema for your clinical trial. Export to R, Python, SAS, or Stata.',
+      canonicalPath: '/generator',
+    });
     // Scroll to the skeleton as soon as generation starts, giving the user
     // immediate tactile feedback that work has begun.
     effect(() => {
