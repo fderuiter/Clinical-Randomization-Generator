@@ -1,3 +1,18 @@
+# [1.29.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.28.0...v1.29.0) (2026-04-15)
+
+
+### Bug Fixes
+
+* address all PR review comments on attrition simulation ([a9791db](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/a9791db1dbcdb0fd5d47e0bc26d250cc721bd93d))
+* rename safeRate to normalizedAttritionRate; fix no-attrition summary card layout ([a06a659](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/a06a6595346da4573755df7d55b3b46ad274c1f6))
+* replace tooltip span with button to fix aria-prohibited-attr a11y violation ([ee0534c](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/ee0534ca45160bcc6225c5b098d47833855cfd84))
+* spelling normalized (American English) in worker comment ([2c1f847](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/2c1f8472a4b4fb27f31d748a20548da8654dc314))
+
+
+### Features
+
+* add attrition/dropout simulation to Monte Carlo balance verification ([a4d9385](https://github.com/fderuiter/Clinical-Randomization-Generator/commit/a4d9385d3fa8743a07060286acefb8db5ade0729))
+
 # [1.28.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.27.0...v1.28.0) (2026-04-15)
 
 
