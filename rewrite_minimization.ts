@@ -1,4 +1,8 @@
-import seedrandom from 'seedrandom';
+import * as fs from 'fs';
+
+const targetFile = 'src/app/domain/randomization-engine/core/minimization-algorithm.ts';
+
+const newContent = `import seedrandom from 'seedrandom';
 import { RandomizationConfig, GeneratedSchema, TreatmentArm } from '../../core/models/randomization.model';
 import { generateSubjectId } from './subject-id-engine';
 
@@ -49,8 +53,8 @@ function sampleLevel(
 }
 
 /**
- * Computes the Pocock-Simon imbalance score for assigning arm `candidateArmId`
- * to a subject with covariate profile `subjectProfile`.
+ * Computes the Pocock-Simon imbalance score for assigning arm \`candidateArmId\`
+ * to a subject with covariate profile \`subjectProfile\`.
  */
 function computeImbalanceScore(
   candidateArmId: string,
@@ -91,10 +95,10 @@ export function generateMinimization(
   const totalSampleSize = minimizationConfig?.totalSampleSize ?? 100;
 
   if (!Number.isFinite(p) || p < 0.5 || p > 1.0) {
-    throw new Error(`Minimization probability p must be between 0.5 and 1.0, got: ${p}`);
+    throw new Error(\`Minimization probability p must be between 0.5 and 1.0, got: \${p}\`);
   }
   if (!Number.isFinite(totalSampleSize) || totalSampleSize <= 0 || !Number.isInteger(totalSampleSize)) {
-    throw new Error(`Total sample size must be a positive integer, got: ${totalSampleSize}`);
+    throw new Error(\`Total sample size must be a positive integer, got: \${totalSampleSize}\`);
   }
 
   if (arms.length === 0 || sites.length === 0) return [];
@@ -357,3 +361,6 @@ export function generateMinimization(
 
   return schema;
 }
+`;
+
+fs.writeFileSync(targetFile, newContent, 'utf8');

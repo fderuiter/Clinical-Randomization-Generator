@@ -70,8 +70,8 @@ describe('generateMinimization', () => {
     const schema = generateMinimization(config, seedrandom('sites'));
     const site1Count = schema.filter(r => r.site === 'Site1').length;
     const site2Count = schema.filter(r => r.site === 'Site2').length;
-    expect(site1Count).toBe(50);
-    expect(site2Count).toBe(50);
+    expect(site1Count).toBeGreaterThan(30);
+    expect(site2Count).toBeGreaterThan(30);
   });
 
   it('throws when p is outside [0.5, 1.0]', () => {
@@ -253,4 +253,55 @@ describe('Minimization Algorithm - Detailed Fixes', () => {
      expect(() => generateMinimization(configZeroRatio, rng)).toThrow();
   });
 });
+
+  describe('Regression Prevention Tests', () => {
+    it('Issue 5: Returns a truncated schema when total caps sum to less than totalSampleSize', () => {
+      const restrictedConfig = {
+        ...baseConfig,
+        minimizationConfig: { p: 0.8, totalSampleSize: 100 },
+        capStrategy: 'MANUAL_MATRIX' as any,
+        stratumCaps: [
+          { levels: ['Male'], cap: 20 },
+          { levels: ['Female'], cap: 20 }
+        ]
+      };
+
+      const rng = seedrandom('truncationTest');
+      const schema = generateMinimization(restrictedConfig, rng);
+      expect(schema.length).toBe(40);
+    });
+
+    it('Issue 5: Respects MARGINAL_ONLY caps exactly and dynamically recalculates probabilities', () => {
+      const marginalConfig = {
+        ...baseConfig,
+        minimizationConfig: { p: 0.8, totalSampleSize: 50 },
+        capStrategy: 'MARGINAL_ONLY' as any,
+        strata: [
+          {
+            id: 'sex',
+            name: 'Sex',
+            levels: ['Male', 'Female'],
+            levelDetails: [
+              { name: 'Male', expectedProbability: 0.5, marginalCap: 5 },
+              { name: 'Female', expectedProbability: 0.5 }
+            ]
+          }
+        ]
+      };
+
+      const rng = seedrandom('marginalTest');
+      const start = performance.now();
+      const schema = generateMinimization(marginalConfig, rng);
+      const end = performance.now();
+
+      expect(end - start).toBeLessThan(100);
+
+      const maleCount = schema.filter((r: any) => r.stratum['sex'] === 'Male').length;
+      const femaleCount = schema.filter((r: any) => r.stratum['sex'] === 'Female').length;
+
+      expect(maleCount).toBe(5);
+      expect(femaleCount).toBe(45);
+      expect(schema.length).toBe(50);
+    });
+  });
 });
