@@ -24,7 +24,7 @@ test.describe('Code Generator Modal UI', () => {
 
     // Fill Site Details (now a tag-input component).
     // The inner <input> placeholder is hidden when chips already exist, so scope via the "Sites" label.
-    const siteInput = page.locator('label:has-text("Sites") + app-tag-input input');
+    const siteInput = page.locator('#sitesLabel + app-tag-input input');
     await expect(siteInput).toBeVisible();
     await siteInput.fill('Site-001');
     await siteInput.press('Enter');
