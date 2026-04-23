@@ -135,14 +135,24 @@ export function generateMinimization(
         stratum[factor.id] = level;
       }
 
-      const scores = arms.map(arm => ({
-        arm,
-        score: computeImbalanceScore(arm.id, arms, subjectProfile, marginals)
-      }));
+      let minScore = Infinity;
+      const armScores: number[] = [];
+      for (const arm of arms) {
+        const score = computeImbalanceScore(arm.id, arms, subjectProfile, marginals);
+        armScores.push(score);
+        if (score < minScore) minScore = score;
+      }
 
-      const minScore = Math.min(...scores.map(s => s.score));
-      const preferred = scores.filter(s => s.score === minScore).map(s => s.arm);
-      const nonPreferred = scores.filter(s => s.score > minScore).map(s => s.arm);
+      const preferred: TreatmentArm[] = [];
+      const nonPreferred: TreatmentArm[] = [];
+      for (let j = 0; j < arms.length; j++) {
+        const arm = arms[j];
+        if (armScores[j] === minScore) {
+          preferred.push(arm);
+        } else {
+          nonPreferred.push(arm);
+        }
+      }
 
       let assignedArm: TreatmentArm;
       if (preferred.length === arms.length || nonPreferred.length === 0) {
