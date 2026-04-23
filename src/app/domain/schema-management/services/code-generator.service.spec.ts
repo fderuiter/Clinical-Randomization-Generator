@@ -1149,6 +1149,101 @@ describe('CodeGeneratorService', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // MINIMIZATION code generation
+  // ---------------------------------------------------------------------------
+  describe('MINIMIZATION code generation constraints', () => {
+    let minimizationConfig: RandomizationConfig;
+
+    beforeEach(() => {
+      minimizationConfig = {
+        ...fullConfig,
+        randomizationMethod: 'MINIMIZATION',
+        minimizationConfig: {
+          p: 0.85,
+          totalSampleSize: 50
+        }
+      };
+    });
+
+    describe('R', () => {
+      it('should output full minimization logic, not just a comment', () => {
+        const code = service.generate('R', minimizationConfig);
+        expect(code).toContain('p_minimization <- 0.85');
+        expect(code).toContain('compute_imbalance_score <- function');
+      });
+
+      it('should calculate ratio-adjusted imbalance scores natively', () => {
+        const code = service.generate('R', minimizationConfig);
+        expect(code).toContain('normalized <- arm_counts[arm] / ratios[arm]');
+      });
+
+      it('should implement weighted tie-breaking natives via sample()', () => {
+        const code = service.generate('R', minimizationConfig);
+        expect(code).toContain('prob = ratios[preferred] / sum(ratios[preferred])');
+      });
+    });
+
+    describe('Python', () => {
+      it('should output full minimization logic, not just a comment', () => {
+        const code = service.generate('Python', minimizationConfig);
+        expect(code).toContain('p_minimization = 0.85');
+        expect(code).toContain('def compute_imbalance_score');
+      });
+
+      it('should calculate ratio-adjusted imbalance scores natively', () => {
+        const code = service.generate('Python', minimizationConfig);
+        expect(code).toContain('normalized = arm_counts[arm["id"]] / arm["ratio"]');
+      });
+
+      it('should implement weighted tie-breaking natives via numpy choice()', () => {
+        const code = service.generate('Python', minimizationConfig);
+        expect(code).toContain('probs = [r / sum(pref_ratios) for r in pref_ratios]');
+        expect(code).toContain('rng.choice(preferred, p=probs)');
+      });
+    });
+
+    describe('SAS', () => {
+      it('should output full minimization logic, not just a comment', () => {
+        const code = service.generate('SAS', minimizationConfig);
+        expect(code).toContain('%let p_minimization = 0.85');
+        expect(code).toContain('data _schema_minimization;');
+      });
+
+      it('should calculate ratio-adjusted imbalance scores natively', () => {
+        const code = service.generate('SAS', minimizationConfig);
+        expect(code).toContain('_normalized = _count / _ratios[_a2];');
+      });
+
+      it('should implement weighted random natively in DATA step', () => {
+        const code = service.generate('SAS', minimizationConfig);
+        expect(code).toContain('_w_sum = 0;');
+        expect(code).toContain("_r_arm = rand('Uniform') * _w_sum;");
+        expect(code).toContain('_r_arm = _r_arm - _ratios[_preferred_arms[_i]];');
+      });
+    });
+
+    describe('STATA', () => {
+      it('should output full minimization logic, not just a comment', () => {
+        const code = service.generate('STATA', minimizationConfig);
+        expect(code).toContain('local p_minimization = 0.85');
+        expect(code).toContain('postfile `_schema_fh\'');
+      });
+
+      it('should calculate ratio-adjusted imbalance scores natively', () => {
+        const code = service.generate('STATA', minimizationConfig);
+        expect(code).toContain('local normalized = `count\' / `arm_ratio_`a2\'\'');
+      });
+
+      it('should implement weighted random natively', () => {
+        const code = service.generate('STATA', minimizationConfig);
+        expect(code).toContain('local w_sum = `w_sum\' + `arm_ratio_`a\'\'');
+        expect(code).toContain('local r_arm = runiform() * `w_sum\'');
+        expect(code).toContain('local r_arm = `r_arm\' - `arm_ratio_`a\'\'');
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // generate() dispatcher and error hierarchy
   // ---------------------------------------------------------------------------
   describe('generate()', () => {
