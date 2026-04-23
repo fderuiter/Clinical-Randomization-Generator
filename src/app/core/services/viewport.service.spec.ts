@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID } from '@angular/core';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { ViewportService, ViewportSize } from './viewport.service';
+import { ViewportService } from './viewport.service';
 import { vi } from 'vitest';
 import { Subject } from 'rxjs';
 

@@ -80,8 +80,8 @@
 
               <!-- Arm Name -->
               <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Arm Name</label>
-                <input
+                <label [for]="'armName' + $index" class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Arm Name</label>
+                <input [id]="'armName' + $index"
                   type="text"
                   formControlName="name"
                   placeholder="e.g., Placebo"
@@ -92,8 +92,8 @@
 
               <!-- Ratio Stepper -->
               <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-2 uppercase tracking-wide">Allocation Ratio</label>
-                <div class="flex items-center gap-2">
+                <span id="allocationRatioLabel" class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-2 uppercase tracking-wide">Allocation Ratio</span>
+                <div class="flex items-center gap-2" aria-labelledby="allocationRatioLabel">
                   <button
                     type="button"
                     (click)="decrementRatio($index)"
@@ -136,7 +136,7 @@
           @if (strata.length === 0) {
             <p class="text-sm text-gray-600 dark:text-slate-400 italic">No stratification factors defined. Randomization will be unstratified.</p>
           }
-          @for (stratum of strata.controls; track stratum) {
+          @for (stratum of strata.controls; track stratum; let stratumIndex = $index) {
             <div
               [formGroupName]="$index"
               cdkDrag
@@ -158,8 +158,8 @@
 
                 <!-- Factor Name -->
                 <div class="flex-1">
-                  <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Factor Name</label>
-                  <input
+                  <label [for]="'factorName' + $index" class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Factor Name</label>
+                  <input [id]="'factorName' + $index"
                     type="text"
                     formControlName="name"
                     placeholder="e.g., Age Group"
@@ -177,8 +177,8 @@
 
               <!-- Levels Tag Input -->
               <div class="pl-8">
-                <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Levels</label>
-                <app-tag-input
+                <span class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide" [id]="'levelsLabel' + $index">Levels</span>
+                <app-tag-input [attr.aria-labelledby]="'levelsLabel' + $index"
                   data-testid="stratum-levels-input"
                   [control]="stratum.get('levelsStr')!"
                   placeholder="e.g., <65  then press Enter"
@@ -188,12 +188,12 @@
               <!-- Covariate Distribution for Minimization -->
               @if (randomizationMethod === 'MINIMIZATION') {
                 <div class="pl-8 mt-2">
-                  <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Expected Covariate Distribution</label>
+                  <span class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Expected Covariate Distribution</span>
                   <div class="space-y-1">
                     @for (level of getStrataLevels($index); track level) {
                       <div class="flex items-center gap-2">
-                        <label class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
-                        <input
+                        <label [for]="'levelDist' + getStrataId(stratumIndex) + '_' + level" class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
+                        <input [id]="'levelDist' + getStrataId(stratumIndex) + '_' + level"
                           type="number" inputmode="decimal" min="0" max="100"
                           [value]="getMinimizationProbability(getStrataId($index), level)"
                           (input)="setMinimizationProbability(getStrataId($index), level, +$any($event.target).value)"
@@ -251,14 +251,14 @@
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Base Probability (p)</label>
-                <input type="number" inputmode="decimal" formControlName="minimizationP" min="0.5" max="1.0" step="0.05"
+                <label for="baseProbability" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Base Probability (p)</label>
+                <input id="baseProbability" type="number" inputmode="decimal" formControlName="minimizationP" min="0.5" max="1.0" step="0.05"
                   class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border tabular-nums">
                 <p class="text-xs text-gray-600 dark:text-slate-400 mt-1">Probability the arm with lowest imbalance is selected (0.5–1.0).</p>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Total Sample Size (N)</label>
-                <input type="number" inputmode="numeric" formControlName="totalSampleSize" min="1"
+                <label for="totalSampleSize" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Total Sample Size (N)</label>
+                <input id="totalSampleSize" type="number" inputmode="numeric" formControlName="totalSampleSize" min="1"
                   class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2.5 border tabular-nums">
                 <p class="text-xs text-gray-600 dark:text-slate-400 mt-1">Total number of subjects across all sites.</p>
               </div>
@@ -280,8 +280,8 @@
           <div class="space-y-6">
             <!-- Sites Tag Input -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Sites</label>
-              <app-tag-input
+              <span id="sitesLabel" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Sites</span>
+              <app-tag-input aria-labelledby="sitesLabel"
                 [control]="form.get('sitesStr')!"
                 placeholder="Type a site ID and press Enter…"
               />
@@ -304,7 +304,7 @@
 
               <!-- Block Selection Mode -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Block Selection Mode</label>
+                <span class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Block Selection Mode</span>
                 <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup" aria-label="Block selection mode">
                   <button
                     type="button"
@@ -345,7 +345,7 @@
               <!-- Block Override Manager -->
               <div class="space-y-3">
                 <div class="flex items-center justify-between">
-                  <label class="block text-sm font-medium text-gray-700 dark:text-slate-300">Block Size Overrides</label>
+                  <span class="block text-sm font-medium text-gray-700 dark:text-slate-300">Block Size Overrides</span>
                   <button
                     type="button"
                     (click)="addBlockOverride()"
@@ -380,8 +380,8 @@
                       <!-- Target Type + Target ID -->
                       <div class="grid grid-cols-2 gap-3">
                         <div>
-                          <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Target Type</label>
-                          <select
+                          <label [for]="'targetType' + $index" class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Target Type</label>
+                          <select [id]="'targetType' + $index"
                             formControlName="targetType"
                             class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2 border"
                           >
@@ -390,8 +390,8 @@
                           </select>
                         </div>
                         <div>
-                          <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Target ID</label>
-                          <select
+                          <label [for]="'targetId' + $index" class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Target ID</label>
+                          <select [id]="'targetId' + $index"
                             formControlName="targetId"
                             class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2 border"
                           >
@@ -405,8 +405,8 @@
 
                       <!-- Override Block Sizes + Selection Mode -->
                       <div>
-                        <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Block Sizes (comma-separated)</label>
-                        <input
+                        <label [for]="'overrideBlockSizes' + $index" class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Block Sizes (comma-separated)</label>
+                        <input [id]="'overrideBlockSizes' + $index"
                           type="text"
                           inputmode="numeric"
                           formControlName="sizesStr"
@@ -415,8 +415,8 @@
                         >
                       </div>
                       <div>
-                        <label class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Selection Mode</label>
-                        <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup">
+                        <span id="selectionModeLabel" class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Selection Mode</span>
+                        <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup" aria-labelledby="selectionModeLabel">
                           <button
                             type="button"
                             (click)="override.get('selectionType')?.setValue('RANDOM_POOL')"
@@ -449,7 +449,7 @@
               <!-- Cap Strategy Section -->
               <div class="space-y-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Enrollment Cap Strategy</label>
+                  <span class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Enrollment Cap Strategy</span>
                   <!-- Strategy Selector: Segmented Control -->
                   <div class="flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden" role="radiogroup" aria-label="Cap strategy">
                     <button
@@ -503,7 +503,7 @@
                 <!-- MANUAL_MATRIX: existing caps grid -->
                 @if (capStrategy === 'MANUAL_MATRIX') {
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Max Subjects per Stratum Intersection</label>
+                    <span class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Max Subjects per Stratum Intersection</span>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" formArrayName="stratumCaps">
                       @for (capControl of stratumCaps.controls; track capControl; let i = $index) {
                         <div [formGroupName]="i" class="flex flex-col p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
@@ -592,7 +592,7 @@
                     @if (matrixComputed()) {
                       <div>
                         <div class="flex items-center gap-2 mb-2">
-                          <label class="block text-sm font-medium text-gray-700 dark:text-slate-300">Computed Intersection Caps</label>
+                          <span class="block text-sm font-medium text-gray-700 dark:text-slate-300">Computed Intersection Caps</span>
                           <span class="text-xs text-indigo-600 dark:text-indigo-400">(editable - manual changes shift strategy to Manual Matrix)</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" formArrayName="stratumCaps">

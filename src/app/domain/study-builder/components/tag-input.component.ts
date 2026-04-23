@@ -15,14 +15,14 @@ import { Subscription } from 'rxjs';
   template: `
     <div
       class="flex flex-wrap gap-1.5 items-center min-h-[44px] border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 cursor-text transition-colors"
-      (click)="tagInput.focus()"
+      (click)="tagInput.focus()" (keydown.enter)="tagInput.focus()" tabindex="0"
     >
       @for (tag of tags; track tag) {
         <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 select-none">
           {{ tag }}
           <button
             type="button"
-            (click)="removeTag(tag); $event.stopPropagation()"
+            (click)="removeTag(tag); $event.stopPropagation()" (keydown.enter)="removeTag(tag); $event.stopPropagation()" tabindex="0"
             class="ml-0.5 text-indigo-500 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 focus:outline-none leading-none font-bold"
             [attr.aria-label]="'Remove ' + tag"
           >×</button>

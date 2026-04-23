@@ -19,7 +19,6 @@ import {
 import { CanvasRenderer } from 'echarts/renderers';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { SchemaViewStateService } from '../services/schema-view-state.service';
-import { GeneratedSchema } from '../../core/models/randomization.model';
 
 // Register only the ECharts modules we need (tree-shakeable).
 echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer]);

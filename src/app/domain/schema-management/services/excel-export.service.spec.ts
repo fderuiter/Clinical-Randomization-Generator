@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { TestBed } from '@angular/core/testing';
 import { ExcelExportService } from './excel-export.service';
 import { RandomizationResult } from '../../core/models/randomization.model';
@@ -9,13 +10,13 @@ import { vi } from 'vitest';
 // ---------------------------------------------------------------------------
 
 const mockState = vi.hoisted(() => ({
-  workbooks: [] as Array<{
+  workbooks: [] as {
     creator: string;
     created: Date;
     _sheets: ReturnType<typeof createMockSheet>[];
     addWorksheet: ReturnType<typeof vi.fn>;
     xlsx: { writeBuffer: ReturnType<typeof vi.fn> };
-  }>,
+  }[],
 }));
 
 // ---------------------------------------------------------------------------
@@ -89,7 +90,7 @@ vi.mock('exceljs', () => {
     };
 
     constructor() {
-      mockState.workbooks.push(this as any);
+      mockState.workbooks.push(this as unknown as { creator: string } | any);
     }
   };
   return { default: { Workbook: WorkbookMock } };
@@ -173,7 +174,7 @@ describe('ExcelExportService', () => {
     appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((n: any) => n);
     removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation((n: any) => n);
     createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
-    revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => { /* no-op */ });
   });
 
   afterEach(() => {

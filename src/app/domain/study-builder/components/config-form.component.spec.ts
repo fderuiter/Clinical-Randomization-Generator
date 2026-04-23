@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ConfigFormComponent } from './config-form.component';
@@ -9,7 +10,7 @@ import { vi } from 'vitest';
 describe('ConfigFormComponent (domain)', () => {
   let component: ConfigFormComponent;
   let fixture: ComponentFixture<ConfigFormComponent>;
-  let mockFacade: any;
+  let mockFacade: unknown;
 
   beforeEach(async () => {
     mockFacade = {
@@ -106,7 +107,7 @@ describe('ConfigFormComponent (domain)', () => {
 
   it('should call clearResults() when a form field value changes', () => {
     component.form.get('protocolId')?.setValue('NEW-ID');
-    expect(mockFacade.clearResults).toHaveBeenCalled();
+    expect((mockFacade as any).clearResults).toHaveBeenCalled();
   });
 
   it('should load the standard preset correctly', () => {
@@ -121,42 +122,42 @@ describe('ConfigFormComponent (domain)', () => {
   describe('onSubmit()', () => {
     it('should call facade.generateSchema when the form is valid', () => {
       component.onSubmit();
-      expect(mockFacade.generateSchema).toHaveBeenCalledTimes(1);
-      const arg = mockFacade.generateSchema.mock.calls[0][0];
+      expect((mockFacade as any).generateSchema).toHaveBeenCalledTimes(1);
+      const arg = (mockFacade as any).generateSchema.mock.calls[0][0];
       expect(arg.protocolId).toBe(component.form.get('protocolId')?.value);
     });
 
     it('should NOT call facade.generateSchema when the form is invalid', () => {
       component.form.get('protocolId')?.setValue('');
       component.onSubmit();
-      expect(mockFacade.generateSchema).not.toHaveBeenCalled();
+      expect((mockFacade as any).generateSchema).not.toHaveBeenCalled();
     });
   });
 
   describe('onGenerateCode()', () => {
     it('should call facade.openCodeGenerator with the correct language when the form is valid', () => {
       component.onGenerateCode('R');
-      expect(mockFacade.openCodeGenerator).toHaveBeenCalledTimes(1);
-      const [, lang] = mockFacade.openCodeGenerator.mock.calls[0];
+      expect((mockFacade as any).openCodeGenerator).toHaveBeenCalledTimes(1);
+      const [, lang] = (mockFacade as any).openCodeGenerator.mock.calls[0];
       expect(lang).toBe('R');
     });
 
     it('should pass SAS as the language when requested', () => {
       component.onGenerateCode('SAS');
-      const [, lang] = mockFacade.openCodeGenerator.mock.calls[0];
+      const [, lang] = (mockFacade as any).openCodeGenerator.mock.calls[0];
       expect(lang).toBe('SAS');
     });
 
     it('should pass Python as the language when requested', () => {
       component.onGenerateCode('Python');
-      const [, lang] = mockFacade.openCodeGenerator.mock.calls[0];
+      const [, lang] = (mockFacade as any).openCodeGenerator.mock.calls[0];
       expect(lang).toBe('Python');
     });
 
     it('should NOT call facade.openCodeGenerator when the form is invalid', () => {
       component.form.get('protocolId')?.setValue('');
       component.onGenerateCode('Python');
-      expect(mockFacade.openCodeGenerator).not.toHaveBeenCalled();
+      expect((mockFacade as any).openCodeGenerator).not.toHaveBeenCalled();
     });
   });
 

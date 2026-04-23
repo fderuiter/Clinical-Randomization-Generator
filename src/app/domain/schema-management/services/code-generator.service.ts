@@ -760,7 +760,7 @@ else:
 /* Cap Strategy: MARGINAL_ONLY */
 /* Per-factor, per-level caps; no intersection caps needed. */
 /* Implementation: SAS DATA step with temporary arrays (base SAS 9.2+). */
-${this.buildBlockStrategySection('#', config).split('\n').map(l => l.replace(/^#/, '/*') + ' */').join('\n').replace(/\/\*  \*\//g, '')}
+${this.buildBlockStrategySection('#', config).split('\n').map(l => l.replace(/^#/, '/*') + ' */').join('\n').replace(/\/\* {2}\*\//g, '')}
 ${capAnnotations}
 ${sasMethodologyBlock}
 

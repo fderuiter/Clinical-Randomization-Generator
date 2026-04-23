@@ -121,7 +121,7 @@ type ResultsTab = 'grid' | 'balance';
                     <ul class="text-sm text-gray-700 dark:text-slate-300 space-y-1">
                       <li><span class="font-medium">Protocol:</span> {{data.metadata.protocolId}}</li>
                       <li><span class="font-medium">Total subjects:</span> {{data.schema.length}}</li>
-                      <li><span class="font-medium">Strata factors:</span> {{data.metadata.strata.length ?? 0}}</li>
+                      <li><span class="font-medium">Strata factors:</span> {{data.metadata.strata.length}}</li>
                       <li><span class="font-medium">Seed:</span> <code class="font-mono text-xs bg-gray-100 dark:bg-slate-700 px-1 rounded">{{data.metadata.seed}}</code></li>
                     </ul>
                     <p class="text-xs text-gray-600 dark:text-slate-400">Switch to a larger screen to view interactive charts.</p>

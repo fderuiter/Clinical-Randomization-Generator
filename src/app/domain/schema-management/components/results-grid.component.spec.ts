@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ResultsGridComponent, SortState } from './results-grid.component';
+import { ResultsGridComponent } from './results-grid.component';
 import { RandomizationResult } from '../../core/models/randomization.model';
 import { By } from '@angular/platform-browser';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
@@ -22,7 +24,7 @@ vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
 describe('ResultsGridComponent (domain)', () => {
   let component: ResultsGridComponent;
   let fixture: ComponentFixture<ResultsGridComponent>;
-  let mockFacade: any;
+  let mockFacade: unknown;
   let mockToastService: { showInfo: ReturnType<typeof vi.fn>; showError: ReturnType<typeof vi.fn>; showSuccess: ReturnType<typeof vi.fn> };
 
   const generateMockData = (count: number): RandomizationResult => ({
@@ -103,7 +105,7 @@ describe('ResultsGridComponent (domain)', () => {
   describe('processedData Filtering', () => {
     it('should return all items when no filters are active', () => {
       const mockResult = generateMockData(12);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       expect(component.processedData().length).toBe(12);
@@ -111,7 +113,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should filter by site (case-insensitive partial match)', () => {
       const mockResult = generateMockData(12);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       component.openColumnFilter('site');
@@ -125,7 +127,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should filter by treatmentArm', () => {
       const mockResult = generateMockData(12);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       component.openColumnFilter('treatmentArm');
@@ -139,7 +141,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should filter by stratum column', () => {
       const mockResult = generateMockData(12);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       component.openColumnFilter('stratum_site');
@@ -153,7 +155,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should return empty array when filter matches nothing', () => {
       const mockResult = generateMockData(6);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       component.openColumnFilter('site');
@@ -165,7 +167,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should clear a filter and restore full dataset', () => {
       const mockResult = generateMockData(6);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       component.openColumnFilter('site');
@@ -224,7 +226,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should sort by site ascending', () => {
       const mockResult = generateMockData(12);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       component.toggleSort('site');
@@ -234,7 +236,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should sort by site descending', () => {
       const mockResult = generateMockData(12);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       component.toggleSort('site');
@@ -245,7 +247,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should sort by blockNumber ascending (numeric)', () => {
       const mockResult = generateMockData(12);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       component.toggleSort('blockNumber');
@@ -257,7 +259,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should sort by treatmentArm', () => {
       const mockResult = generateMockData(8);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       component.toggleSort('treatmentArm');
@@ -271,7 +273,7 @@ describe('ResultsGridComponent (domain)', () => {
   describe('Blinding', () => {
     it('should default to blinded (isUnblinded = false)', () => {
       const mockResult = generateMockData(5);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       expect(component.isUnblinded()).toBe(false);
@@ -279,7 +281,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('processedData should contain all rows regardless of blinding state', () => {
       const mockResult = generateMockData(5);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       expect(component.processedData().length).toBe(5);
@@ -294,7 +296,7 @@ describe('ResultsGridComponent (domain)', () => {
     it('should show actual treatment names when unblinded (grouped view DOM)', () => {
       const mockResult = generateMockData(4);
       mockResult.schema.forEach(r => { r.blockNumber = 1; r.stratumCode = 'SC1'; r.site = 'Site 1'; r.stratum = { site: 'Site 1' }; });
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       component.viewMode.set('grouped');
       component.toggleBlinding();
       fixture.detectChanges();
@@ -310,7 +312,7 @@ describe('ResultsGridComponent (domain)', () => {
     it('should show blinded text in grouped view when blinded', () => {
       const mockResult = generateMockData(4);
       mockResult.schema.forEach(r => { r.blockNumber = 1; r.stratumCode = 'SC1'; r.site = 'Site 1'; r.stratum = { site: 'Site 1' }; });
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       component.viewMode.set('grouped');
       fixture.detectChanges();
 
@@ -327,7 +329,7 @@ describe('ResultsGridComponent (domain)', () => {
   describe('Export Spies', () => {
     it('should trigger exportCsv when CSV button is clicked', () => {
       const mockResult = generateMockData(5);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       const spy = vi.spyOn(component, 'exportCsv');
@@ -340,10 +342,10 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should trigger exportPdf when PDF button is clicked', () => {
       const mockResult = generateMockData(5);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
-      const spy = vi.spyOn(component, 'exportPdf').mockImplementation(() => {});
+      const spy = vi.spyOn(component, 'exportPdf').mockImplementation(() => { /* no-op */ });
       const buttons = fixture.debugElement.queryAll(By.css('button'));
       const pdfButton = buttons.find(b => b.nativeElement.textContent.trim().includes('PDF'));
       expect(pdfButton).toBeTruthy();
@@ -353,11 +355,11 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should trigger exportJson when JSON button is clicked', () => {
       const mockResult = generateMockData(5);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       component.isUnblinded.set(true);
       fixture.detectChanges();
 
-      const spy = vi.spyOn(component, 'exportJson').mockImplementation(() => {});
+      const spy = vi.spyOn(component, 'exportJson').mockImplementation(() => { /* no-op */ });
       const jsonButton = fixture.debugElement.query(By.css('[data-testid="export-json-btn"]'));
       expect(jsonButton).toBeTruthy();
       expect(jsonButton.nativeElement.disabled).toBe(false);
@@ -367,7 +369,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should trigger exportXlsx when Excel button is clicked', () => {
       const mockResult = generateMockData(5);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       const spy = vi.spyOn(component, 'exportXlsx').mockResolvedValue(undefined);
@@ -378,7 +380,7 @@ describe('ResultsGridComponent (domain)', () => {
     });
 
     it('should not throw when exportXlsx is called with no results', async () => {
-      mockFacade.results.set(null);
+      (mockFacade as any).results.set(null);
       fixture.detectChanges();
       await expect(component.exportXlsx()).resolves.toBeUndefined();
     });
@@ -386,7 +388,7 @@ describe('ResultsGridComponent (domain)', () => {
     it('should download a valid RandomizationResult JSON when exportJson is called', () => {
       vi.useFakeTimers();
       const mockResult = generateMockData(3);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       component.isUnblinded.set(true);
@@ -417,7 +419,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should show a toast and not download when exportJson is called while blinded', () => {
       const mockResult = generateMockData(3);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       component.isUnblinded.set(false);
@@ -433,7 +435,7 @@ describe('ResultsGridComponent (domain)', () => {
     });
 
     it('should not throw when exportJson is called with no results', () => {
-      mockFacade.results.set(null);
+      (mockFacade as any).results.set(null);
       fixture.detectChanges();
       expect(() => component.exportJson()).not.toThrow();
     });
@@ -449,7 +451,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should toggle to grouped mode when "Group by Block" button is clicked', () => {
       const mockResult = generateMockData(8);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
       const buttons = fixture.debugElement.queryAll(By.css('button'));
@@ -463,7 +465,7 @@ describe('ResultsGridComponent (domain)', () => {
 
     it('should toggle back to flat mode when "Flat List" button is clicked', () => {
       const mockResult = generateMockData(8);
-      mockFacade.results.set(mockResult);
+      (mockFacade as any).results.set(mockResult);
       component.viewMode.set('grouped');
       fixture.detectChanges();
 
@@ -477,11 +479,11 @@ describe('ResultsGridComponent (domain)', () => {
     });
 
     describe('groupedRows computed signal', () => {
-      const makeSchema = (overrides: Array<Partial<{
+      const makeSchema = (overrides: Partial<{
         subjectId: string; site: string; stratum: Record<string, string>;
         stratumCode: string; blockNumber: number; blockSize: number;
         treatmentArmId: string; treatmentArm: string;
-      }>>) => {
+      }>[]) => {
         const baseRow = {
           subjectId: 'S1', site: 'Site 1', stratum: { site: 'Site 1' },
           stratumCode: 'SC1', blockNumber: 1, blockSize: 4,
@@ -497,7 +499,7 @@ describe('ResultsGridComponent (domain)', () => {
           { subjectId: 'S3', treatmentArm: 'Active' },
           { subjectId: 'S4', treatmentArm: 'Placebo', treatmentArmId: 'a2' },
         ]);
-        mockFacade.results.set({ ...generateMockData(0), schema });
+        (mockFacade as any).results.set({ ...generateMockData(0), schema });
         fixture.detectChanges();
 
         const rows = component.groupedRows();
@@ -517,7 +519,7 @@ describe('ResultsGridComponent (domain)', () => {
           { subjectId: 'S3', blockNumber: 2, site: 'Site 1', stratumCode: 'SC1', treatmentArm: 'Active' },
           { subjectId: 'S4', blockNumber: 2, site: 'Site 1', stratumCode: 'SC1', treatmentArm: 'Placebo', treatmentArmId: 'a2' },
         ]);
-        mockFacade.results.set({ ...generateMockData(0), schema });
+        (mockFacade as any).results.set({ ...generateMockData(0), schema });
         fixture.detectChanges();
 
         const rows = component.groupedRows();
@@ -533,14 +535,14 @@ describe('ResultsGridComponent (domain)', () => {
           { subjectId: 'S1', blockNumber: 1, site: 'Site 1', stratumCode: 'SC1', treatmentArm: 'Active' },
           { subjectId: 'S2', blockNumber: 1, site: 'Site 2', stratumCode: 'SC2', treatmentArm: 'Active' },
         ]);
-        mockFacade.results.set({ ...generateMockData(0), schema });
+        (mockFacade as any).results.set({ ...generateMockData(0), schema });
         fixture.detectChanges();
 
         const rows = component.groupedRows();
         expect(rows.length).toBe(6);
-        const headers = rows.filter(r => r.type === 'header') as any[];
-        expect(headers[0].site).toBe('Site 1');
-        expect(headers[1].site).toBe('Site 2');
+        const headers = rows.filter(r => r.type === 'header') as unknown[];
+        expect((headers[0] as any).site).toBe('Site 1');
+        expect((headers[1] as any).site).toBe('Site 2');
       });
 
       it('summary tallies should be correct', () => {
@@ -550,16 +552,16 @@ describe('ResultsGridComponent (domain)', () => {
           { subjectId: 'S3', treatmentArm: 'Active' },
           { subjectId: 'S4', treatmentArm: 'Placebo', treatmentArmId: 'a2' },
         ]);
-        mockFacade.results.set({ ...generateMockData(0), schema });
+        (mockFacade as any).results.set({ ...generateMockData(0), schema });
         fixture.detectChanges();
 
         const rows = component.groupedRows();
-        const summary = rows[rows.length - 1] as any;
-        expect(summary.type).toBe('summary');
-        expect(summary.tallies['Active']).toBe(2);
-        expect(summary.tallies['Placebo']).toBe(2);
-        expect(summary.totalSubjects).toBe(4);
-        expect(summary.isIncomplete).toBe(false);
+        const summary = rows[rows.length - 1] as unknown;
+        expect((summary as any).type).toBe('summary');
+        expect((summary as any).tallies['Active']).toBe(2);
+        expect((summary as any).tallies['Placebo']).toBe(2);
+        expect((summary as any).totalSubjects).toBe(4);
+        expect((summary as any).isIncomplete).toBe(false);
       });
 
       it('should flag incomplete blocks when totalSubjects < blockSize', () => {
@@ -567,14 +569,14 @@ describe('ResultsGridComponent (domain)', () => {
           { subjectId: 'S1', blockSize: 4, treatmentArm: 'Active' },
           { subjectId: 'S2', blockSize: 4, treatmentArm: 'Placebo', treatmentArmId: 'a2' },
         ]);
-        mockFacade.results.set({ ...generateMockData(0), schema });
+        (mockFacade as any).results.set({ ...generateMockData(0), schema });
         fixture.detectChanges();
 
         const rows = component.groupedRows();
-        const summary = rows[rows.length - 1] as any;
-        expect(summary.isIncomplete).toBe(true);
-        expect(summary.totalSubjects).toBe(2);
-        expect(summary.blockSize).toBe(4);
+        const summary = rows[rows.length - 1] as unknown;
+        expect((summary as any).isIncomplete).toBe(true);
+        expect((summary as any).totalSubjects).toBe(2);
+        expect((summary as { blockSize: number }).blockSize).toBe(4);
       });
     });
 
@@ -588,7 +590,7 @@ describe('ResultsGridComponent (domain)', () => {
     describe('columnCount', () => {
       it('should count 5 fixed columns plus strata columns', () => {
         const data = generateMockData(1);
-        mockFacade.results.set(data);
+        (mockFacade as any).results.set(data);
         fixture.detectChanges();
         expect(component.columnCount()).toBe(6);
       });
@@ -596,7 +598,7 @@ describe('ResultsGridComponent (domain)', () => {
       it('should return 5 when no strata are defined', () => {
         const data = generateMockData(1);
         data.metadata.strata = [];
-        mockFacade.results.set(data);
+        (mockFacade as any).results.set(data);
         fixture.detectChanges();
         expect(component.columnCount()).toBe(5);
       });
@@ -606,7 +608,7 @@ describe('ResultsGridComponent (domain)', () => {
       it('should render header and summary rows in grouped mode (blinded)', () => {
         const mockResult = generateMockData(4);
         mockResult.schema.forEach(r => { r.blockNumber = 1; r.stratumCode = 'SC1'; r.site = 'Site 1'; r.stratum = { site: 'Site 1' }; });
-        mockFacade.results.set(mockResult);
+        (mockFacade as any).results.set(mockResult);
         component.viewMode.set('grouped');
         fixture.detectChanges();
 
@@ -620,7 +622,7 @@ describe('ResultsGridComponent (domain)', () => {
       it('should render unblinded tallies in summary row when unblinded', () => {
         const mockResult = generateMockData(4);
         mockResult.schema.forEach(r => { r.blockNumber = 1; r.stratumCode = 'SC1'; r.site = 'Site 1'; r.stratum = { site: 'Site 1' }; });
-        mockFacade.results.set(mockResult);
+        (mockFacade as any).results.set(mockResult);
         component.viewMode.set('grouped');
         component.toggleBlinding();
         fixture.detectChanges();
@@ -634,7 +636,7 @@ describe('ResultsGridComponent (domain)', () => {
       it('should show an incomplete block warning when block has fewer subjects than blockSize', () => {
         const mockResult = generateMockData(2);
         mockResult.schema.forEach(r => { r.blockNumber = 1; r.stratumCode = 'SC1'; r.site = 'Site 1'; r.stratum = { site: 'Site 1' }; });
-        mockFacade.results.set(mockResult);
+        (mockFacade as any).results.set(mockResult);
         component.viewMode.set('grouped');
         fixture.detectChanges();
 

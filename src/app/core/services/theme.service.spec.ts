@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { ThemeService, ThemeMode } from './theme.service';
+import { ThemeService } from './theme.service';
 import { vi } from 'vitest';
 
 describe('ThemeService', () => {
