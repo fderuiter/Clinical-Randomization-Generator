@@ -16,9 +16,35 @@ function sampleLevel(
   if (levels.length === 0) {
     throw new Error('Cannot sample a level from an empty levels array.');
   }
-  const raw = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p : 0));
-  const total = raw.reduce((s, v) => s + v, 0);
-  const probs = total > 0 ? raw.map(v => v / total) : levels.map(() => 1 / levels.length);
+
+  const explicitSum = expectedProbabilities.reduce(
+    (sum: number, p) => sum + (p !== undefined && p > 0 ? p : 0),
+    0
+  );
+
+  let probs: number[];
+
+  if (explicitSum > 1.0) {
+    // Normalize explicit to exactly 1.0, undefined get 0
+    probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p / explicitSum : 0));
+  } else if (explicitSum === 1.0) {
+    // Exact sum, undefined get 0
+    probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p : 0));
+  } else if (explicitSum > 0 && explicitSum < 1.0) {
+    // Distribute remainder equally among undefined levels
+    const undefinedCount = expectedProbabilities.filter(p => p === undefined).length;
+    if (undefinedCount > 0) {
+      const remainder = 1.0 - explicitSum;
+      const share = remainder / undefinedCount;
+      probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p : (p === undefined ? share : 0)));
+    } else {
+      // All levels defined but sum < 1.0, normalize proportionally
+      probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p / explicitSum : 0));
+    }
+  } else {
+    // No explicit positive probabilities, distribute evenly
+    probs = levels.map(() => 1 / levels.length);
+  }
 
   const r = rng();
   let cumulative = 0;
@@ -53,8 +79,9 @@ function computeImbalanceScore(
     let max = -Infinity;
     for (const arm of arms) {
       const count = (levelMarginals.get(arm.id) ?? 0) + (arm.id === candidateArmId ? 1 : 0);
-      if (count < min) min = count;
-      if (count > max) max = count;
+      const normalizedCount = count / arm.ratio;
+      if (normalizedCount < min) min = normalizedCount;
+      if (normalizedCount > max) max = normalizedCount;
     }
     totalScore += max - min;
   }
@@ -155,14 +182,31 @@ export function generateMinimization(
       }
 
       let assignedArm: TreatmentArm;
+
+      const selectWeightedArm = (candidates: TreatmentArm[]): TreatmentArm => {
+        const totalWeight = candidates.reduce((sum, arm) => sum + arm.ratio, 0);
+        if (totalWeight === 0) {
+          throw new Error('Total weight of tied arms is 0. Cannot select an arm.');
+        }
+
+        let rVal = rng() * totalWeight;
+        for (const arm of candidates) {
+          rVal -= arm.ratio;
+          if (rVal <= 0) {
+            return arm;
+          }
+        }
+        return candidates[candidates.length - 1];
+      };
+
       if (preferred.length === arms.length || nonPreferred.length === 0) {
-        assignedArm = preferred[Math.floor(rng() * preferred.length)];
+        assignedArm = selectWeightedArm(preferred);
       } else {
         const r = rng();
         if (r < p) {
-          assignedArm = preferred[Math.floor(rng() * preferred.length)];
+          assignedArm = selectWeightedArm(preferred);
         } else {
-          assignedArm = nonPreferred[Math.floor(rng() * nonPreferred.length)];
+          assignedArm = selectWeightedArm(nonPreferred);
         }
       }
 
