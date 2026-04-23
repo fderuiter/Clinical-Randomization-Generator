@@ -25,7 +25,13 @@ export class CodeGeneratorService {
   generate(language: 'R' | 'SAS' | 'Python' | 'STATA', config: RandomizationConfig): string {
     this.validateConfig(config);
     if (config.randomizationMethod === 'MINIMIZATION') {
-      return this.generateMinimizationHeader(language, config);
+      switch (language) {
+        case 'R':      return this.buildRMinimization(config);
+        case 'SAS':    return this.buildSasMinimization(config);
+        case 'Python': return this.buildPythonMinimization(config);
+        case 'STATA':  return this.buildStataMinimization(config);
+        default:       throw new UnsupportedLanguageError(language as string, config);
+      }
     }
     switch (language) {
       case 'R':      return this.generateR(config);
@@ -202,6 +208,336 @@ export class CodeGeneratorService {
     // Math.abs(-2147483648) === 2147483648, which exceeds the 31-bit limit; this
     // approach avoids that edge case entirely.
     return (hash >>> 0) % 2147483647;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Minimization templates
+  // ---------------------------------------------------------------------------
+
+  private buildRMinimization(config: RandomizationConfig): string {
+    const generatedAt = new Date().toISOString();
+    const sites = config.sites || [];
+    const arms = config.arms || [];
+    const strata = config.strata || [];
+    const mc = config.minimizationConfig;
+    const p = mc?.p ?? 0.8;
+    const n = mc?.totalSampleSize ?? 100;
+    const isMarginal = config.capStrategy === 'MARGINAL_ONLY';
+
+    const header = this.generateMinimizationHeader('R', config);
+
+    let setupCode = '';
+    let capsCode = '';
+    let strataLines = '';
+    let baseProbsCode = '';
+
+    try {
+      strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + l + '"').join(', ')})`).join('\n');
+
+      if (isMarginal) {
+        const marginalCaps = strata.map(s => {
+          const entries = s.levels.map((lvl, i) => {
+            const cap = s.levelDetails?.[i]?.marginalCap;
+            return cap !== undefined ? `"${lvl}" = ${cap}` : `"${lvl}" = Inf`;
+          });
+          return `  ${s.id} = c(${entries.join(', ')})`;
+        }).join(',\n');
+        capsCode = `marginal_caps <- list(\n${marginalCaps}\n)\n\n` +
+                   `marginal_counts <- list(\n` +
+                   strata.map(s => `  ${s.id} = setNames(rep(0, ${s.levels.length}), ${s.id}_levels)`).join(',\n') +
+                   `\n)`;
+      } else {
+        const caps = config.stratumCaps || [];
+        const capsVector = caps.map(c => `"${c.levels.join('_')}" = ${c.cap}`).join(',\n  ');
+        capsCode = `stratum_caps <- c(\n  ${capsVector}\n)\nintersection_counts <- list()`;
+      }
+
+      baseProbsCode = `base_probs <- list(\n` + strata.map(s => {
+        const probs = s.levels.map((lvl, i) => {
+          const expected = s.levelDetails?.[i]?.expectedProbability;
+          return expected !== undefined ? expected : 'NA';
+        });
+        return `  ${s.id} = c(${probs.join(', ')})`;
+      }).join(',\n') + `\n)`;
+
+      const strataGridArgs = [...strata.map(s => `${s.id} = ${s.id}_levels`), 'stringsAsFactors = FALSE'].join(',\n  ');
+      setupCode = `
+# Strata
+${strataLines}
+
+strata_grid <- expand.grid(
+  ${strataGridArgs}
+)
+if (nrow(strata_grid) == 0) strata_grid <- data.frame(row.names = 1L)
+
+# Expected Probabilities
+${baseProbsCode}
+
+# Caps and Counts
+${capsCode}
+
+# Treatment Arms
+arms <- c(${arms.map(a => '"' + a.id + '"').join(', ')})
+arm_names <- c(${arms.map(a => '"' + a.name + '"').join(', ')})
+ratios <- c(${arms.map(a => a.ratio).join(', ')})
+total_ratio <- sum(ratios)
+names(ratios) <- arms
+names(arm_names) <- arms
+
+# Imbalance Tracking (Global)
+marginal_imbalance <- list()
+for (factor_id in names(strata_grid)) {
+  levels <- get(paste0(factor_id, "_levels"))
+  marginal_imbalance[[factor_id]] <- list()
+  for (lvl in levels) {
+    marginal_imbalance[[factor_id]][[lvl]] <- setNames(rep(0, length(arms)), arms)
+  }
+}
+`;
+    } catch (e) {
+      throw new StrataParsingError('R', e, config);
+    }
+
+    try {
+      return `${header}
+# Note: R's set.seed() algorithm will not generate the exact same sequence as the
+# typescript web application, but the statistical properties and parameters are identical.
+
+set.seed(${this.hashCode(config.seed)})
+
+# Parameters
+p_minimization <- ${p}
+total_sample_size <- ${n}
+sites <- c(${sites.map(s => '"' + s + '"').join(', ')})
+if (length(sites) == 0) stop("Sites array is empty.")
+${setupCode}
+
+# Setup site counts
+site_subject_counts <- setNames(rep(0, length(sites)), sites)
+schema_list <- list()
+row_idx <- 1
+used_subject_ids <- character(0)
+
+# Function to generate Subject ID
+generate_subject_id <- function(mask, site, stratum_code, sequence) {
+  # Simple translation of Subject ID generation for this generated code
+  id <- sprintf("%s-%03d", site, sequence)
+  # Basic loop to ensure uniqueness
+  while (id %in% used_subject_ids) {
+     sequence <- sequence + 1
+     id <- sprintf("%s-%03d", site, sequence)
+  }
+  used_subject_ids <<- c(used_subject_ids, id)
+  return(id)
+}
+
+sample_level <- function(available_levels, probs_vector) {
+  if (length(available_levels) == 0) stop("Cannot sample from empty levels.")
+
+  if (all(is.na(probs_vector))) {
+     return(sample(available_levels, 1))
+  }
+
+  explicit_sum <- sum(probs_vector[!is.na(probs_vector)], na.rm = TRUE)
+
+  probs <- numeric(length(probs_vector))
+  if (explicit_sum > 1.0) {
+    probs <- ifelse(is.na(probs_vector), 0, probs_vector / explicit_sum)
+  } else if (explicit_sum == 1.0) {
+    probs <- ifelse(is.na(probs_vector), 0, probs_vector)
+  } else if (explicit_sum > 0 && explicit_sum < 1.0) {
+    na_count <- sum(is.na(probs_vector))
+    if (na_count > 0) {
+      share <- (1.0 - explicit_sum) / na_count
+      probs <- ifelse(is.na(probs_vector), share, probs_vector)
+    } else {
+      probs <- ifelse(is.na(probs_vector), 0, probs_vector / explicit_sum)
+    }
+  } else {
+    probs <- rep(1 / length(probs_vector), length(probs_vector))
+  }
+
+  return(sample(available_levels, 1, prob = probs))
+}
+
+compute_imbalance_score <- function(candidate_arm_id, profile, marginals) {
+  total_score <- 0
+  for (factor_id in names(profile)) {
+    level_value <- as.character(profile[[factor_id]])
+    arm_counts <- marginals[[factor_id]][[level_value]]
+
+    arm_counts[candidate_arm_id] <- arm_counts[candidate_arm_id] + 1
+
+    min_val <- Inf
+    max_val <- -Inf
+    for (arm in arms) {
+      normalized <- arm_counts[arm] / ratios[arm]
+      if (normalized < min_val) min_val <- normalized
+      if (normalized > max_val) max_val <- normalized
+    }
+    total_score <- total_score + (max_val - min_val)
+  }
+  return(total_score)
+}
+
+active_pool <- strata_grid
+
+for (s_idx in 1:total_sample_size) {
+  # Update active pool
+${isMarginal ? `
+  keep_flags <- sapply(1:nrow(active_pool), function(i) {
+    combo_row <- active_pool[i, , drop = FALSE]
+    all(sapply(names(marginal_caps), function(factor_id) {
+      level_val <- as.character(combo_row[[factor_id]])
+      cap_val <- marginal_caps[[factor_id]][[level_val]]
+      count <- marginal_counts[[factor_id]][[level_val]]
+      is.infinite(cap_val) || count < cap_val
+    }))
+  })
+` : `
+  keep_flags <- sapply(1:nrow(active_pool), function(i) {
+    combo_row <- active_pool[i, , drop = FALSE]
+    key <- paste(unlist(combo_row), collapse="_")
+    cap <- if (key %in% names(stratum_caps)) stratum_caps[[key]] else Inf
+    count <- if (is.null(intersection_counts[[key]])) 0 else intersection_counts[[key]]
+    is.infinite(cap) || count < cap
+  })
+`}
+  active_pool <- active_pool[keep_flags, , drop = FALSE]
+
+  if (nrow(active_pool) == 0) {
+    break # Exhaustion
+  }
+
+  site <- sample(sites, 1)
+
+  subject_profile <- list()
+  stratum <- list()
+  current_prefix <- list()
+  valid_subject <- TRUE
+
+  for (factor_id in names(strata_grid)) {
+    levels <- get(paste0(factor_id, "_levels"))
+    available_levels <- character(0)
+    for (lvl in levels) {
+      match_idx <- sapply(1:nrow(active_pool), function(i) {
+        combo <- active_pool[i, , drop = FALSE]
+        match_prefix <- TRUE
+        for (k in names(current_prefix)) {
+           if (combo[[k]] != current_prefix[[k]]) match_prefix <- FALSE
+        }
+        return(match_prefix && combo[[factor_id]] == lvl)
+      })
+      if (any(match_idx)) {
+         available_levels <- c(available_levels, lvl)
+      }
+    }
+
+    if (length(available_levels) == 0) {
+      valid_subject <- FALSE
+      break
+    }
+
+    prob_indices <- match(available_levels, levels)
+    probs_vector <- base_probs[[factor_id]][prob_indices]
+
+    level <- sample_level(available_levels, probs_vector)
+    subject_profile[[factor_id]] <- level
+    stratum[[factor_id]] <- level
+    current_prefix[[factor_id]] <- level
+  }
+
+  if (!valid_subject) break
+
+  # Imbalance Score per site. (Using global marginal tracking)
+  min_score <- Inf
+  arm_scores <- numeric(length(arms))
+  for (j in seq_along(arms)) {
+    score <- compute_imbalance_score(arms[j], subject_profile, marginal_imbalance)
+    arm_scores[j] <- score
+    if (score < min_score) min_score <- score
+  }
+
+  preferred <- arms[arm_scores == min_score]
+  non_preferred <- arms[arm_scores != min_score]
+
+  assigned_arm_id <- NA
+  if (length(preferred) == length(arms) || length(non_preferred) == 0) {
+    assigned_arm_id <- sample(preferred, 1, prob = ratios[preferred] / sum(ratios[preferred]))
+  } else {
+    if (runif(1) < p_minimization) {
+      assigned_arm_id <- sample(preferred, 1, prob = ratios[preferred] / sum(ratios[preferred]))
+    } else {
+      assigned_arm_id <- sample(non_preferred, 1, prob = ratios[non_preferred] / sum(ratios[non_preferred]))
+    }
+  }
+
+  # Update state
+  for (factor_id in names(subject_profile)) {
+    lvl <- subject_profile[[factor_id]]
+    marginal_imbalance[[factor_id]][[lvl]][assigned_arm_id] <- marginal_imbalance[[factor_id]][[lvl]][assigned_arm_id] + 1
+${isMarginal ? `
+    marginal_counts[[factor_id]][[lvl]] <- marginal_counts[[factor_id]][[lvl]] + 1
+` : ''}
+  }
+
+${!isMarginal ? `
+  key <- paste(unlist(subject_profile), collapse="_")
+  if (is.null(intersection_counts[[key]])) {
+    intersection_counts[[key]] <- 1
+  } else {
+    intersection_counts[[key]] <- intersection_counts[[key]] + 1
+  }
+` : ''}
+
+  site_subject_counts[site] <- site_subject_counts[site] + 1
+  stratum_code <- paste(sapply(stratum, function(v) toupper(substr(v, 1, 3))), collapse="-")
+  subject_id <- generate_subject_id("MASK", site, stratum_code, site_subject_counts[site])
+
+  row <- data.frame(
+    SubjectID = subject_id,
+    Site = site,
+    BlockNumber = 0,
+    BlockSize = 0,
+    Treatment = arm_names[assigned_arm_id],
+    TreatmentId = assigned_arm_id,
+    stringsAsFactors = FALSE
+  )
+  row <- cbind(row, as.data.frame(stratum, stringsAsFactors = FALSE))
+  schema_list[[row_idx]] <- row
+  row_idx <- row_idx + 1
+}
+
+schema <- do.call(rbind, schema_list)
+if (is.null(schema) || nrow(schema) == 0) {
+  base_schema <- data.frame(
+    SubjectID = character(0),
+    Site = character(0),
+    BlockNumber = integer(0),
+    BlockSize = integer(0),
+    Treatment = character(0),
+    TreatmentId = character(0)
+  )
+  schema <- cbind(base_schema, strata_grid[0, , drop = FALSE])
+}
+
+print(head(schema))
+
+if (nrow(schema) > 0) {
+  cat("\\n--- QC Check: Overall Allocation ---\\n")
+  print(table(schema$Treatment))
+
+  cat("\\n--- QC Check: Site-Level Balance ---\\n")
+  print(table(schema$Site, schema$Treatment))
+} else {
+  cat("\\n--- QC Check ---\\n")
+  cat("No rows generated; skipping QC tables.\\n")
+}
+`;
+    } catch (e) {
+      if (this.isKnownError(e)) throw e;
+      throw new TemplateCompilationError('R', e, config);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -482,6 +818,300 @@ if (nrow(schema) > 0) {
     }
   }
 
+  private buildPythonMinimization(config: RandomizationConfig): string {
+    const generatedAt = new Date().toISOString();
+    const sites = config.sites || [];
+    const arms = config.arms || [];
+    const strata = config.strata || [];
+    const mc = config.minimizationConfig;
+    const p = mc?.p ?? 0.8;
+    const n = mc?.totalSampleSize ?? 100;
+    const isMarginal = config.capStrategy === 'MARGINAL_ONLY';
+
+    const header = this.generateMinimizationHeader('Python', config);
+
+    let setupCode = '';
+    let capsCode = '';
+    let baseProbsCode = '';
+
+    try {
+      const strataLevelsList = strata.map(s => `    "${s.id}": [${s.levels.map(l => '"' + l + '"').join(', ')}]`).join(',\n');
+
+      if (isMarginal) {
+        const pyMarginalCaps = strata.map(s => {
+          const entries = s.levels.map((lvl, i) => {
+            const cap = s.levelDetails?.[i]?.marginalCap;
+            return cap !== undefined ? `        "${lvl}": ${cap}` : `        "${lvl}": float("inf")`;
+          });
+          return `    "${s.id}": {\n${entries.join(',\n')}\n    }`;
+        }).join(',\n');
+
+        capsCode = `marginal_caps = {\n${pyMarginalCaps}\n}\n\n` +
+                   `marginal_counts = {\n` +
+                   strata.map(s => `    "${s.id}": {lvl: 0 for lvl in strata_levels["${s.id}"]}`).join(',\n') +
+                   `\n}`;
+      } else {
+        const caps = config.stratumCaps || [];
+        const pyCapsDict = caps.map(c => `    (${c.levels.map(l => `"${l}"`).join(', ')}): ${c.cap}`).join(',\n');
+        capsCode = `stratum_caps = {\n${pyCapsDict || '    (): 0'}\n}\nintersection_counts = {}`;
+      }
+
+      baseProbsCode = `base_probs = {\n` + strata.map(s => {
+        const probs = s.levels.map((lvl, i) => {
+          const expected = s.levelDetails?.[i]?.expectedProbability;
+          return expected !== undefined ? expected : 'None';
+        });
+        return `    "${s.id}": [${probs.join(', ')}]`;
+      }).join(',\n') + `\n}`;
+
+      setupCode = `
+# Strata
+strata_levels = {
+${strataLevelsList}
+}
+strata_names = list(strata_levels.keys())
+strata_combinations = list(itertools.product(*(strata_levels[k] for k in strata_names))) if strata_names else [()]
+active_pool = [dict(zip(strata_names, c)) for c in strata_combinations]
+
+# Expected Probabilities
+${baseProbsCode}
+
+# Caps and Counts
+${capsCode}
+
+# Treatment Arms
+arms = [${arms.map(a => `{"id": "${a.id}", "name": "${a.name}", "ratio": ${a.ratio}}`).join(', ')}]
+arm_ratios = {arm["id"]: arm["ratio"] for arm in arms}
+total_ratio = sum(arm["ratio"] for arm in arms)
+
+# Imbalance Tracking (Global)
+marginal_imbalance = {
+    factor_id: {lvl: {arm["id"]: 0 for arm in arms} for lvl in levels}
+    for factor_id, levels in strata_levels.items()
+}
+`;
+    } catch (e) {
+      throw new StrataParsingError('Python', e, config);
+    }
+
+    try {
+      return `${header}
+# Note: Python's PCG64 algorithm will not generate the exact same sequence as the
+# typescript web application, but the statistical properties and parameters are identical.
+
+import numpy as np
+import itertools
+import pandas as pd
+
+# Set seed for reproducibility
+rng = np.random.default_rng(${this.hashCode(config.seed)})
+
+# Parameters
+p_minimization = ${p}
+total_sample_size = ${n}
+sites = [${sites.map(s => '"' + s + '"').join(', ')}]
+if not sites:
+    raise ValueError("Sites array is empty.")
+${setupCode}
+
+# Setup site counts
+site_subject_counts = {site: 0 for site in sites}
+schema = []
+used_subject_ids = set()
+
+# Function to generate Subject ID
+def generate_subject_id(site, sequence):
+    subj_id = f"{site}-{sequence:03d}"
+    while subj_id in used_subject_ids:
+        sequence += 1
+        subj_id = f"{site}-{sequence:03d}"
+    used_subject_ids.add(subj_id)
+    return subj_id
+
+def sample_level(available_levels, probs_vector):
+    if not available_levels:
+        raise ValueError("Cannot sample from empty levels.")
+
+    clean_probs = [p for p in probs_vector if p is not None]
+    if not clean_probs:
+        return rng.choice(available_levels)
+
+    explicit_sum = sum(clean_probs)
+    probs = []
+
+    if explicit_sum > 1.0:
+        probs = [p / explicit_sum if p is not None else 0 for p in probs_vector]
+    elif explicit_sum == 1.0:
+        probs = [p if p is not None else 0 for p in probs_vector]
+    elif explicit_sum > 0 and explicit_sum < 1.0:
+        na_count = sum(1 for p in probs_vector if p is None)
+        if na_count > 0:
+            share = (1.0 - explicit_sum) / na_count
+            probs = [p if p is not None else share for p in probs_vector]
+        else:
+            probs = [p / explicit_sum if p is not None else 0 for p in probs_vector]
+    else:
+        probs = [1.0 / len(probs_vector) for _ in probs_vector]
+
+    # Ensure sum is exactly 1.0 to avoid numpy errors
+    prob_sum = sum(probs)
+    if prob_sum > 0:
+        probs = [p / prob_sum for p in probs]
+
+    return rng.choice(available_levels, p=probs)
+
+def compute_imbalance_score(candidate_arm_id, profile, marginals):
+    total_score = 0
+    for factor_id, level_value in profile.items():
+        arm_counts = dict(marginals[factor_id][level_value])
+        arm_counts[candidate_arm_id] += 1
+
+        min_val = float('inf')
+        max_val = float('-inf')
+        for arm in arms:
+            normalized = arm_counts[arm["id"]] / arm["ratio"]
+            if normalized < min_val: min_val = normalized
+            if normalized > max_val: max_val = normalized
+        total_score += (max_val - min_val)
+    return total_score
+
+for s_idx in range(total_sample_size):
+    # Update active pool
+${isMarginal ? `
+    new_active_pool = []
+    for combo in active_pool:
+        keep = True
+        for factor_id, level_val in combo.items():
+            cap_val = marginal_caps.get(factor_id, {}).get(level_val, float('inf'))
+            count = marginal_counts.get(factor_id, {}).get(level_val, 0)
+            if count >= cap_val:
+                keep = False
+                break
+        if keep:
+            new_active_pool.append(combo)
+    active_pool = new_active_pool
+` : `
+    new_active_pool = []
+    for combo in active_pool:
+        key = tuple(combo.get(k, "") for k in strata_names)
+        cap = stratum_caps.get(key, float('inf'))
+        count = intersection_counts.get(key, 0)
+        if count < cap:
+            new_active_pool.append(combo)
+    active_pool = new_active_pool
+`}
+
+    if not active_pool:
+        break # Exhaustion
+
+    site = rng.choice(sites)
+
+    subject_profile = {}
+    current_prefix = {}
+    valid_subject = True
+
+    for factor_id in strata_names:
+        levels = strata_levels[factor_id]
+        available_levels = []
+        for lvl in levels:
+            # Check if this level exists in active pool matching current prefix
+            for combo in active_pool:
+                match_prefix = True
+                for k, v in current_prefix.items():
+                    if combo.get(k) != v:
+                        match_prefix = False
+                        break
+                if match_prefix and combo.get(factor_id) == lvl:
+                    available_levels.append(lvl)
+                    break
+
+        if not available_levels:
+            valid_subject = False
+            break
+
+        prob_indices = [levels.index(lvl) for lvl in available_levels]
+        probs_vector = [base_probs[factor_id][idx] for idx in prob_indices]
+
+        level = sample_level(available_levels, probs_vector)
+        subject_profile[factor_id] = level
+        current_prefix[factor_id] = level
+
+    if not valid_subject:
+        break
+
+    # Imbalance Score per site. (Using global marginal tracking)
+    min_score = float('inf')
+    arm_scores = []
+    for arm in arms:
+        score = compute_imbalance_score(arm["id"], subject_profile, marginal_imbalance)
+        arm_scores.append(score)
+        if score < min_score: min_score = score
+
+    preferred = [arms[i] for i, score in enumerate(arm_scores) if score == min_score]
+    non_preferred = [arms[i] for i, score in enumerate(arm_scores) if score != min_score]
+
+    assigned_arm = None
+    if len(preferred) == len(arms) or len(non_preferred) == 0:
+        pref_ratios = [arm["ratio"] for arm in preferred]
+        probs = [r / sum(pref_ratios) for r in pref_ratios]
+        assigned_arm = rng.choice(preferred, p=probs)
+    else:
+        if rng.random() < p_minimization:
+            pref_ratios = [arm["ratio"] for arm in preferred]
+            probs = [r / sum(pref_ratios) for r in pref_ratios]
+            assigned_arm = rng.choice(preferred, p=probs)
+        else:
+            non_pref_ratios = [arm["ratio"] for arm in non_preferred]
+            probs = [r / sum(non_pref_ratios) for r in non_pref_ratios]
+            assigned_arm = rng.choice(non_preferred, p=probs)
+
+    # Update state
+    for factor_id, lvl in subject_profile.items():
+        marginal_imbalance[factor_id][lvl][assigned_arm["id"]] += 1
+${isMarginal ? `
+        marginal_counts[factor_id][lvl] += 1
+` : ''}
+
+${!isMarginal ? `
+    key = tuple(subject_profile.get(k, "") for k in strata_names)
+    intersection_counts[key] = intersection_counts.get(key, 0) + 1
+` : ''}
+
+    site_subject_counts[site] += 1
+    stratum_code = "-".join([subject_profile.get(k, "")[:3].upper() for k in strata_names])
+    subject_id = generate_subject_id(site, site_subject_counts[site])
+
+    row = {
+        "SubjectID": subject_id,
+        "Site": site,
+        "BlockNumber": 0,
+        "BlockSize": 0,
+        "Treatment": assigned_arm["name"],
+        "TreatmentId": assigned_arm["id"],
+        **subject_profile
+    }
+    schema.append(row)
+
+df = pd.DataFrame(schema)
+print("\\n--- Generated Randomization Schema (First 5 Rows) ---")
+print(df.head() if not df.empty else "No rows generated.")
+
+if not df.empty:
+    print("\\n--- QC Check: Overall Allocation ---")
+    print(df['Treatment'].value_counts())
+
+    print("\\n--- QC Check: Site-Level Balance ---")
+    print(pd.crosstab(df['Site'], df['Treatment']))
+else:
+    print("\\n--- QC Check ---")
+    print("No rows generated; skipping QC tables.")
+`;
+    } catch (e) {
+      if (this.isKnownError(e)) throw e;
+      throw new TemplateCompilationError('Python', e, config);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Python – MARGINAL_ONLY template
   // ---------------------------------------------------------------------------
@@ -650,6 +1280,503 @@ else:
       if (this.isKnownError(e)) throw e;
       throw new TemplateCompilationError('Python', e, config);
     }
+  }
+
+  private buildSasMinimization(config: RandomizationConfig): string {
+    const generatedAt = new Date().toISOString();
+    const sites = config.sites || [];
+    const arms = config.arms || [];
+    const strata = config.strata || [];
+    const mc = config.minimizationConfig;
+    const p = mc?.p ?? 0.8;
+    const n = mc?.totalSampleSize ?? 100;
+    const isMarginal = config.capStrategy === 'MARGINAL_ONLY';
+    const totalRatio = arms.reduce((s, a) => s + a.ratio, 0);
+
+    const header = this.generateMinimizationHeader('SAS', config);
+
+    // Prepare macro definitions for strata levels and arms
+    const sasSites = sites.map(s => `"${s}"`).join(' ');
+    const sasArmsIds = arms.map(a => `"${a.id}"`).join(' ');
+    const sasArmsNames = arms.map(a => `"${a.name}"`).join(' ');
+    const sasRatios = arms.map(a => String(a.ratio)).join(' ');
+
+    const nFactors = strata.length;
+    const nArms = arms.length;
+
+    // Use computeCombinations to find all possible strata combinations
+    const combos = this.computeCombinations(strata);
+    const nCombos = combos.length;
+
+    // Assign a 1-based global level index to every (factorId, levelName) pair.
+    let globalIdx = 0;
+    const levelIndices = new Map<string, Map<string, number>>();
+    for (const s of strata) {
+      const m = new Map<string, number>();
+      for (const lvl of s.levels) { m.set(lvl, ++globalIdx); }
+      levelIndices.set(s.id, m);
+    }
+    const totalLevels = Math.max(globalIdx, 1);
+
+    // Marginal caps array (-1 = uncapped)
+    const capsArr: number[] = new Array(totalLevels).fill(-1);
+    if (isMarginal) {
+      for (const s of strata) {
+        for (let i = 0; i < s.levels.length; i++) {
+          const cap = s.levelDetails?.[i]?.marginalCap;
+          if (cap !== undefined) {
+            capsArr[(levelIndices.get(s.id)?.get(s.levels[i]) ?? 1) - 1] = cap;
+          }
+        }
+      }
+    }
+
+    // Intersection caps array
+    const intersectionCapsArr: number[] = new Array(nCombos).fill(-1);
+    if (!isMarginal) {
+      const capsDict = new Map<string, number>();
+      for (const c of config.stratumCaps || []) {
+        capsDict.set(c.levels.join('|'), c.cap);
+      }
+      for (let i = 0; i < combos.length; i++) {
+        const combo = combos[i];
+        const key = strata.map(s => combo[s.id] || '').join('|');
+        if (capsDict.has(key)) {
+          intersectionCapsArr[i] = capsDict.get(key) as number;
+        }
+      }
+    }
+
+    // Base probabilities mapping
+    const baseProbsArr: number[] = new Array(totalLevels).fill(-1); // -1 signifies undefined/uniform
+    for (const s of strata) {
+      for (let i = 0; i < s.levels.length; i++) {
+        const expected = s.levelDetails?.[i]?.expectedProbability;
+        if (expected !== undefined) {
+          baseProbsArr[(levelIndices.get(s.id)?.get(s.levels[i]) ?? 1) - 1] = expected;
+        }
+      }
+    }
+
+    // Combo-to-global-level-index flat mapping (row-major: combo × factor)
+    const comboFidxArr: number[] = [];
+    for (const combo of combos) {
+      for (const s of strata) {
+        comboFidxArr.push(levelIndices.get(s.id)?.get(combo[s.id] ?? s.levels[0] ?? '') ?? 1);
+      }
+    }
+
+    // Per-factor character arrays mapping level index to string values
+    const factorLevelArrays = strata.map(s => ({
+      id: s.id,
+      values: s.levels.map(lvl => lvl.replace(/'/g, "''"))
+    }));
+
+    const charArrayDecls = factorLevelArrays.map(f => {
+      // Find start and end indices for this factor's levels in the global indexing
+      const startIdx = levelIndices.get(f.id)?.get(f.values[0]) ?? 1;
+      const endIdx = startIdx + f.values.length - 1;
+      // Initialize a full array but only put values in the relevant slots.
+      // (SAS arrays are 1-based by default)
+      // To simplify, we'll map the global ID directly
+      return `  array _lvl_name_${f.id}[${totalLevels}] $50 _temporary_ ;`;
+    }).join('\n');
+
+    const charArrayInits = factorLevelArrays.map(f => {
+      let initBlock = '';
+      for (const val of f.values) {
+        const idx = levelIndices.get(f.id)?.get(val) ?? 1;
+        initBlock += `  _lvl_name_${f.id}[${idx}] = '${val}';\n`;
+      }
+      return initBlock;
+    }).join('');
+
+    const strataAssign = factorLevelArrays.map(f =>
+      `      ${f.id} = _lvl_name_${f.id}[_subj_profile[${strata.indexOf(strata.find(s=>s.id===f.id)!)+1}]];`
+    ).join('\n');
+
+    const levelMapComment = strata.map(s =>
+      `  /* ${s.id}: ${s.levels.map(lvl => `${lvl}->${levelIndices.get(s.id)?.get(lvl) ?? '?'}`).join(', ')} */`
+    ).join('\n');
+
+    let code = `${header}
+/* Note: SAS's PRNG algorithm will not generate the exact same sequence as the
+typescript web application, but the statistical properties and parameters are identical. */
+
+%let seed = ${this.hashCode(config.seed)};
+%let total_ratio = ${totalRatio};
+
+/* User-defined Parameters */
+%let arms_ids = ${sasArmsIds};
+%let arms_names = ${sasArmsNames};
+%let ratios = ${sasRatios};
+%let sites = ${sasSites};
+%let p_minimization = ${p};
+%let total_sample_size = ${n};
+%let n_factors = ${nFactors};
+%let n_arms = ${nArms};
+%let n_combos = ${nCombos};
+%let total_levels = ${totalLevels};
+
+/* Level-index map for global indexing: */
+${levelMapComment}
+
+data _schema_minimization;
+  length SubjectID $50 Site $50 Treatment $50 TreatmentId $50${nFactors > 0 ? ' ' + strata.map(s => `${s.id} $50`).join(' ') : ''};
+  call streaminit(&seed.);
+
+  /* Active pool flag (1=active, 0=inactive) */
+  array _active[&n_combos.] _temporary_;
+
+  /* Combo-to-level-index flat mapping: _combo_fidx[(combo-1)*n_factors + factor_pos] */
+${nFactors > 0 ? `  array _combo_fidx[${comboFidxArr.length}] _temporary_ (${comboFidxArr.join(' ')});` : '  /* No strata factors defined */'}
+
+${isMarginal ? `
+  /* Marginal caps array (1-based index, -1 = uncapped) */
+  array _caps[&total_levels.] _temporary_ (${capsArr.join(' ')});
+  /* Enrollment count array for marginals */
+  array _counts[&total_levels.] _temporary_;
+` : `
+  /* Intersection caps array (1-based index, -1 = uncapped) */
+  array _caps[&n_combos.] _temporary_ (${intersectionCapsArr.join(' ')});
+  /* Enrollment count array for intersections */
+  array _counts[&n_combos.] _temporary_;
+`}
+
+  /* Base Expected Probabilities (-1 = missing/undefined) */
+${totalLevels > 0 ? `  array _base_probs[&total_levels.] _temporary_ (${baseProbsArr.join(' ')});` : ''}
+
+  /* Marginal imbalance tracking: _imbalance[(level_idx - 1)*n_arms + arm_idx] */
+${totalLevels > 0 && nArms > 0 ? `  array _imbalance[${totalLevels * nArms}] _temporary_;` : '  /* No levels or arms */'}
+
+  /* Treatment Ratios Array */
+  array _ratios[&n_arms.] _temporary_;
+
+  /* Name arrays */
+  array _site_names[100] $50 _temporary_;
+  array _arm_ids[&n_arms.] $50 _temporary_;
+  array _arm_names[&n_arms.] $50 _temporary_;
+
+  /* Current Subject Profile Factor Indices */
+  array _subj_profile[&n_factors.] _temporary_;
+  array _available_levels[&total_levels.] _temporary_;
+  array _level_probs[&total_levels.] _temporary_;
+
+  /* Score calculation arrays */
+  array _arm_scores[&n_arms.] _temporary_;
+  array _preferred_arms[&n_arms.] _temporary_;
+  array _non_preferred_arms[&n_arms.] _temporary_;
+
+${charArrayDecls}
+
+  /* Initialization Block */
+  if _N_ = 1 then do;
+${charArrayInits}
+
+    _n_sites = countw("&sites.", ' ', 'q');
+    do _i = 1 to _n_sites;
+      _site_names[_i] = dequote(scan("&sites.", _i, ' ', 'q'));
+    end;
+
+    do _i = 1 to &n_arms.;
+      _arm_ids[_i] = dequote(scan("&arms_ids.", _i, ' ', 'q'));
+      _arm_names[_i] = dequote(scan("&arms_names.", _i, ' ', 'q'));
+      _ratios[_i] = input(scan("&ratios.", _i, ' '), best.);
+    end;
+
+    do _i = 1 to &n_combos.; _active[_i] = 1; end;
+${isMarginal ? `
+    do _i = 1 to &total_levels.; _counts[_i] = 0; end;
+` : `
+    do _i = 1 to &n_combos.; _counts[_i] = 0; end;
+`}
+    do _i = 1 to ${totalLevels * nArms}; _imbalance[_i] = 0; end;
+  end;
+
+  /* Setup site counts map (using parallel array since SAS lacks hash dict in standard variables easily across iterations) */
+  array _site_counts[100] _temporary_;
+  do _i = 1 to 100; _site_counts[_i] = 0; end;
+
+  /* Main Minimization Loop over Total Sample Size */
+  do _s = 1 to &total_sample_size.;
+
+    /* 1. Prune Active Pool */
+    _n_active = 0;
+    do _i = 1 to &n_combos.;
+      if _active[_i] = 1 then do;
+        _keep = 1;
+${isMarginal ? `
+        do _f = 1 to &n_factors.;
+          _lidx = _combo_fidx[(_i - 1) * &n_factors. + _f];
+          if _caps[_lidx] >= 0 and _counts[_lidx] >= _caps[_lidx] then do;
+            _keep = 0;
+            _f = &n_factors. + 1; /* exit loop */
+          end;
+        end;
+` : `
+        if _caps[_i] >= 0 and _counts[_i] >= _caps[_i] then _keep = 0;
+`}
+        if _keep = 0 then _active[_i] = 0;
+        else _n_active = _n_active + 1;
+      end;
+    end;
+
+    if _n_active = 0 then leave; /* Exhaustion */
+
+    /* 2. Select Random Site */
+    _rand_site_idx = floor(rand('Uniform') * _n_sites) + 1;
+    Site = _site_names[_rand_site_idx];
+
+    /* 3. Sample Subject Profile sequentially by factor */
+    _valid_subject = 1;
+    do _f = 1 to &n_factors.;
+      /* Find available levels for this factor given current prefix in active pool */
+      _n_available = 0;
+      do _lvl_i = 1 to &total_levels.; _available_levels[_lvl_i] = 0; end;
+
+      do _i = 1 to &n_combos.;
+        if _active[_i] = 1 then do;
+          /* Check prefix match */
+          _match_prefix = 1;
+          do _pf = 1 to _f - 1;
+            if _combo_fidx[(_i - 1) * &n_factors. + _pf] ^= _subj_profile[_pf] then do;
+              _match_prefix = 0;
+              _pf = _f; /* break inner */
+            end;
+          end;
+
+          if _match_prefix = 1 then do;
+            _lidx = _combo_fidx[(_i - 1) * &n_factors. + _f];
+            if _available_levels[_lidx] = 0 then do;
+               _available_levels[_lidx] = 1;
+               _n_available = _n_available + 1;
+            end;
+          end;
+        end;
+      end;
+
+      if _n_available = 0 then do;
+        _valid_subject = 0;
+        _f = &n_factors. + 1; /* break */
+      end;
+      else do;
+        /* Sample Level logic */
+        _explicit_sum = 0;
+        _na_count = 0;
+
+        do _lidx = 1 to &total_levels.;
+          if _available_levels[_lidx] = 1 then do;
+             _p = _base_probs[_lidx];
+             if _p ^= -1 then _explicit_sum = _explicit_sum + _p;
+             else _na_count = _na_count + 1;
+          end;
+        end;
+
+        do _lidx = 1 to &total_levels.;
+          if _available_levels[_lidx] = 1 then do;
+            _p = _base_probs[_lidx];
+            if _explicit_sum > 1.0 then do;
+               if _p ^= -1 then _level_probs[_lidx] = _p / _explicit_sum;
+               else _level_probs[_lidx] = 0;
+            end;
+            else if _explicit_sum = 1.0 then do;
+               if _p ^= -1 then _level_probs[_lidx] = _p;
+               else _level_probs[_lidx] = 0;
+            end;
+            else if _explicit_sum > 0 then do;
+               if _na_count > 0 then do;
+                 _share = (1.0 - _explicit_sum) / _na_count;
+                 if _p ^= -1 then _level_probs[_lidx] = _p;
+                 else _level_probs[_lidx] = _share;
+               end;
+               else do;
+                 if _p ^= -1 then _level_probs[_lidx] = _p / _explicit_sum;
+                 else _level_probs[_lidx] = 0;
+               end;
+            end;
+            else do;
+               _level_probs[_lidx] = 1.0 / _n_available;
+            end;
+          end;
+        end;
+
+        /* Normalize and cumulative selection */
+        _prob_sum = 0;
+        do _lidx = 1 to &total_levels.;
+          if _available_levels[_lidx] = 1 then _prob_sum = _prob_sum + _level_probs[_lidx];
+        end;
+
+        _r = rand('Uniform') * _prob_sum;
+        _cumulative = 0;
+        _chosen_lvl = -1;
+        do _lidx = 1 to &total_levels.;
+          if _available_levels[_lidx] = 1 then do;
+             _cumulative = _cumulative + _level_probs[_lidx];
+             if _r <= _cumulative then do;
+                _chosen_lvl = _lidx;
+                _lidx = &total_levels. + 1; /* break */
+             end;
+             _last_lvl = _lidx; /* Fallback */
+          end;
+        end;
+        if _chosen_lvl = -1 then _chosen_lvl = _last_lvl;
+
+        _subj_profile[_f] = _chosen_lvl;
+      end;
+    end; /* factor loop */
+
+    if _valid_subject = 0 then leave;
+
+    /* 4. Calculate Imbalance Scores */
+    _min_score = 9999999;
+    do _a = 1 to &n_arms.;
+      _total_score = 0;
+      do _f = 1 to &n_factors.;
+        _lidx = _subj_profile[_f];
+
+        /* Calculate min and max normalized counts across arms, simulating if candidate arm was chosen */
+        _min_val = 9999999;
+        _max_val = -9999999;
+
+        do _a2 = 1 to &n_arms.;
+          _imb_idx = (_lidx - 1) * &n_arms. + _a2;
+          _count = _imbalance[_imb_idx];
+          if _a2 = _a then _count = _count + 1;
+
+          _normalized = _count / _ratios[_a2];
+          if _normalized < _min_val then _min_val = _normalized;
+          if _normalized > _max_val then _max_val = _normalized;
+        end;
+
+        _total_score = _total_score + (_max_val - _min_val);
+      end;
+      _arm_scores[_a] = _total_score;
+      if _total_score < _min_score then _min_score = _total_score;
+    end;
+
+    /* 5. Separate Preferred and Non-Preferred */
+    _n_pref = 0;
+    _n_nonpref = 0;
+    do _a = 1 to &n_arms.;
+      if _arm_scores[_a] = _min_score then do;
+        _n_pref = _n_pref + 1;
+        _preferred_arms[_n_pref] = _a;
+      end;
+      else do;
+        _n_nonpref = _n_nonpref + 1;
+        _non_preferred_arms[_n_nonpref] = _a;
+      end;
+    end;
+
+    /* 6. Assign Arm */
+    _assigned_arm_idx = -1;
+
+    if _n_pref = &n_arms. or _n_nonpref = 0 then do;
+      /* Weighted random from preferred */
+      _w_sum = 0;
+      do _i = 1 to _n_pref; _w_sum = _w_sum + _ratios[_preferred_arms[_i]]; end;
+      _r_arm = rand('Uniform') * _w_sum;
+      do _i = 1 to _n_pref;
+        _r_arm = _r_arm - _ratios[_preferred_arms[_i]];
+        if _r_arm <= 0 then do;
+          _assigned_arm_idx = _preferred_arms[_i];
+          _i = _n_pref + 1;
+        end;
+      end;
+      if _assigned_arm_idx = -1 then _assigned_arm_idx = _preferred_arms[_n_pref];
+    end;
+    else do;
+      if rand('Uniform') < &p_minimization. then do;
+        _w_sum = 0;
+        do _i = 1 to _n_pref; _w_sum = _w_sum + _ratios[_preferred_arms[_i]]; end;
+        _r_arm = rand('Uniform') * _w_sum;
+        do _i = 1 to _n_pref;
+          _r_arm = _r_arm - _ratios[_preferred_arms[_i]];
+          if _r_arm <= 0 then do;
+            _assigned_arm_idx = _preferred_arms[_i];
+            _i = _n_pref + 1;
+          end;
+        end;
+        if _assigned_arm_idx = -1 then _assigned_arm_idx = _preferred_arms[_n_pref];
+      end;
+      else do;
+        _w_sum = 0;
+        do _i = 1 to _n_nonpref; _w_sum = _w_sum + _ratios[_non_preferred_arms[_i]]; end;
+        _r_arm = rand('Uniform') * _w_sum;
+        do _i = 1 to _n_nonpref;
+          _r_arm = _r_arm - _ratios[_non_preferred_arms[_i]];
+          if _r_arm <= 0 then do;
+            _assigned_arm_idx = _non_preferred_arms[_i];
+            _i = _n_nonpref + 1;
+          end;
+        end;
+        if _assigned_arm_idx = -1 then _assigned_arm_idx = _non_preferred_arms[_n_nonpref];
+      end;
+    end;
+
+    /* 7. Update State (Imbalance & Counts) */
+    do _f = 1 to &n_factors.;
+      _lidx = _subj_profile[_f];
+      _imb_idx = (_lidx - 1) * &n_arms. + _assigned_arm_idx;
+      _imbalance[_imb_idx] = _imbalance[_imb_idx] + 1;
+${isMarginal ? `
+      _counts[_lidx] = _counts[_lidx] + 1;
+` : ''}
+    end;
+
+${!isMarginal ? `
+    /* Find matching combo index for intersection count update */
+    _matched_combo = 0;
+    do _i = 1 to &n_combos.;
+      _match = 1;
+      do _f = 1 to &n_factors.;
+        if _combo_fidx[(_i - 1) * &n_factors. + _f] ^= _subj_profile[_f] then do;
+           _match = 0;
+           _f = &n_factors. + 1;
+        end;
+      end;
+      if _match = 1 then do;
+         _matched_combo = _i;
+         _i = &n_combos. + 1;
+      end;
+    end;
+    if _matched_combo > 0 then _counts[_matched_combo] = _counts[_matched_combo] + 1;
+` : ''}
+
+    /* 8. Output Subject */
+    TreatmentId = _arm_ids[_assigned_arm_idx];
+    Treatment = _arm_names[_assigned_arm_idx];
+    BlockSize = 0;
+    BlockNumber = 0;
+
+    _site_counts[_rand_site_idx] = _site_counts[_rand_site_idx] + 1;
+    SubjectID = cats(Site, "-", put(_site_counts[_rand_site_idx], z3.));
+
+${strataAssign}
+
+    output;
+  end; /* Main subject loop */
+
+  drop _:;
+run;
+
+/* Quality Control (QC) Checks */
+proc freq data=_schema_minimization;
+  title "Overall Treatment Balance";
+  tables Treatment / nocum;
+run;
+
+proc freq data=_schema_minimization;
+  title "Site-Level Treatment Balance";
+  tables Site * Treatment / nocol nopercent;
+run;
+
+title "Randomization Schema Preview";
+proc print data=_schema_minimization(obs=20);
+run;
+title;
+`;
+    return code.trim() + '\n';
   }
 
   // ---------------------------------------------------------------------------
@@ -1581,6 +2708,455 @@ title;
     } catch (e) {
       if (this.isKnownError(e)) throw e;
       throw new TemplateCompilationError('SAS', e, config);
+    }
+  }
+
+  private buildStataMinimization(config: RandomizationConfig): string {
+    const generatedAt = new Date().toISOString();
+    const sites = config.sites || [];
+    const arms = config.arms || [];
+    const strata = config.strata || [];
+    const mc = config.minimizationConfig;
+    const p = mc?.p ?? 0.8;
+    const n = mc?.totalSampleSize ?? 100;
+    const isMarginal = config.capStrategy === 'MARGINAL_ONLY';
+
+    const header = this.generateMinimizationHeader('STATA', config);
+
+    const n_arms = arms.length;
+
+    // Use computeCombinations to find all possible strata combinations
+    const combos = this.computeCombinations(strata);
+    const nCombos = combos.length;
+
+    // Sanitised variable names for strata factors
+    const varNames = strata.map(s => this.sanitizeStataVarName(s.id));
+
+    // Assign a 1-based global level index to every (factorId, levelName) pair.
+    let globalIdx = 0;
+    const levelIndices = new Map<string, Map<string, number>>();
+    for (const s of strata) {
+      const m = new Map<string, number>();
+      for (const lvl of s.levels) { m.set(lvl, ++globalIdx); }
+      levelIndices.set(s.id, m);
+    }
+    const totalLevels = Math.max(globalIdx, 1);
+
+    const UNCAPPED = 2147483647; // Stata missing . gets messy in math loops, use large int
+
+    // Macros for Caps
+    const capMacroLines: string[] = [];
+    if (isMarginal) {
+      for (const s of strata) {
+        for (const lvl of s.levels) {
+          const lidx = levelIndices.get(s.id)?.get(lvl) ?? 1;
+          const capEntry = (s.levelDetails ?? []).find(d => d.name === lvl);
+          const capVal = capEntry !== undefined && Number.isFinite(capEntry.marginalCap)
+            ? capEntry.marginalCap : UNCAPPED;
+          capMacroLines.push(`local cap_${lidx} = ${capVal}`);
+        }
+      }
+    } else {
+      const capsDict = new Map<string, number>();
+      for (const c of config.stratumCaps || []) {
+        capsDict.set(c.levels.join('|'), c.cap);
+      }
+      for (let i = 0; i < combos.length; i++) {
+        const combo = combos[i];
+        const key = strata.map(s => combo[s.id] || '').join('|');
+        const capVal = capsDict.has(key) ? capsDict.get(key) : UNCAPPED;
+        capMacroLines.push(`local cap_${i+1} = ${capVal}`);
+      }
+    }
+
+    // Macros for Base Probabilities (-1 means undefined)
+    const baseProbsMacroLines: string[] = [];
+    for (const s of strata) {
+      for (const lvl of s.levels) {
+        const lidx = levelIndices.get(s.id)?.get(lvl) ?? 1;
+        const expected = (s.levelDetails ?? []).find(d => d.name === lvl)?.expectedProbability;
+        const probVal = expected !== undefined ? expected : -1;
+        baseProbsMacroLines.push(`local bprob_${lidx} = ${probVal}`);
+      }
+    }
+
+    // Combo mapping macros for quick access
+    const comboMapLines: string[] = [];
+    for (let i = 0; i < nCombos; i++) {
+      const combo = combos[i];
+      for (let f = 0; f < strata.length; f++) {
+        const lidx = levelIndices.get(strata[f].id)?.get(combo[strata[f].id] || '') ?? 1;
+        comboMapLines.push(`local combo_${i+1}_f${f+1} = ${lidx}`);
+      }
+    }
+
+    // Value label definitions
+    const labelDefs = strata.length > 0
+      ? strata.map((s, si) => {
+          const lvlDefs = s.levels.map((lvl, j) => `${j + 1} "${lvl.replace(/"/g, "'")}"`).join(' ');
+          return `label define lbl_${varNames[si]} ${lvlDefs}, replace`;
+        }).join('\n')
+      : '';
+
+    // label values statements
+    const labelValues = varNames.length > 0
+      ? varNames.map(v => `label values ${v} lbl_${v}`).join('\n')
+      : '';
+
+    // postfile strata variable declarations
+    const postfileStrataDecl = varNames.length > 0
+      ? ' ' + varNames.map(v => `int ${v}`).join(' ')
+      : '';
+
+    // Post args for strata variables
+    const postStrataArgs = varNames.length > 0
+      ? ' ' + varNames.map((_, i) => `(\`subj_prof_${i+1}')`).join(' ')
+      : '';
+
+    try {
+      // Site macro declarations
+      const siteMacros = sites.map((s, i) => `local site_${i + 1} "${s}"`).join('\n');
+
+      // Arm macro declarations
+      const armMacros = arms.map((a, i) =>
+        `local arm_id_${i + 1} "${a.id}"\nlocal arm_name_${i + 1} "${a.name}"\nlocal arm_ratio_${i + 1} = ${a.ratio}`
+      ).join('\n');
+
+      let code = `${header}
+* Note: Stata's PRNG algorithm will not generate the exact same sequence as the
+* typescript web application, but the statistical properties and parameters are identical.
+
+version 17
+set more off
+set seed ${this.hashCode(config.seed)}
+
+* ─── User-defined Parameters ────────────────────────────────────────────────
+local p_minimization = ${p}
+local total_sample_size = ${n}
+local n_arms = ${n_arms}
+local n_sites = ${sites.length}
+local n_factors = ${strata.length}
+local n_combos = ${nCombos}
+local total_levels = ${totalLevels}
+
+${siteMacros}
+${armMacros}
+
+* ─── Caps and Base Probs ────────────────────────────────────────────────────
+${capMacroLines.join('\n')}
+${baseProbsMacroLines.join('\n')}
+
+* ─── Combo Factor Mapping ───────────────────────────────────────────────────
+${comboMapLines.join('\n')}
+
+* ─── Value Labels ──────────────────────────────────────────────────────────
+${labelDefs}
+
+* ─── Initialization ─────────────────────────────────────────────────────────
+* Initialize active pool
+forvalues i = 1/\`n_combos' {
+    local active_\`i' = 1
+${isMarginal ? '' : `    local count_\`i' = 0`}
+}
+
+${isMarginal ? `
+* Initialize marginal counts
+forvalues i = 1/\`total_levels' {
+    local count_\`i' = 0
+}
+` : ''}
+
+* Initialize Imbalance Matrix
+forvalues i = 1/\`total_levels' {
+    forvalues a = 1/\`n_arms' {
+        local imb_\`i'_\`a' = 0
+    }
+}
+
+* Initialize Site Counts
+forvalues i = 1/\`n_sites' {
+    local site_count_\`i' = 0
+}
+
+* ─── Schema Generation ──────────────────────────────────────────────────────
+tempfile _schema_data
+tempname _schema_fh
+postfile \`_schema_fh' str50 SubjectID str50 Site int BlockNumber int BlockSize ///
+    str50 Treatment str50 TreatmentId${postfileStrataDecl} ///
+    using \`_schema_data', replace
+
+forvalues s_idx = 1/\`total_sample_size' {
+
+    * 1. Prune Active Pool
+    local n_active = 0
+    forvalues i = 1/\`n_combos' {
+        if \`active_\`i'' == 1 {
+            local keep = 1
+${isMarginal ? `
+            forvalues f = 1/\`n_factors' {
+                local lidx = \`combo_\`i'_f\`f''
+                if \`cap_\`lidx'' < ${UNCAPPED} & \`count_\`lidx'' >= \`cap_\`lidx'' {
+                    local keep = 0
+                    continue, break
+                }
+            }
+` : `
+            if \`cap_\`i'' < ${UNCAPPED} & \`count_\`i'' >= \`cap_\`i'' {
+                local keep = 0
+            }
+`}
+            if \`keep' == 0 local active_\`i' = 0
+            else local n_active = \`n_active' + 1
+        }
+    }
+
+    if \`n_active' == 0 continue, break // Exhaustion
+
+    * 2. Select Random Site
+    local r_site = ceil(runiform() * \`n_sites')
+    local site "\`site_\`r_site''"
+
+    * 3. Sample Subject Profile sequentially
+    local valid_subject = 1
+    forvalues f = 1/\`n_factors' {
+        local n_available = 0
+        forvalues lidx = 1/\`total_levels' {
+            local avail_\`lidx' = 0
+        }
+
+        forvalues i = 1/\`n_combos' {
+            if \`active_\`i'' == 1 {
+                local match_prefix = 1
+                local stop_pf = \`f' - 1
+                if \`stop_pf' >= 1 {
+                    forvalues pf = 1/\`stop_pf' {
+                        if \`combo_\`i'_f\`pf'' != \`subj_prof_\`pf'' {
+                            local match_prefix = 0
+                            continue, break
+                        }
+                    }
+                }
+                if \`match_prefix' == 1 {
+                    local lidx = \`combo_\`i'_f\`f''
+                    if \`avail_\`lidx'' == 0 {
+                        local avail_\`lidx' = 1
+                        local available_\`n_available' = \`lidx'
+                        local n_available = \`n_available' + 1
+                    }
+                }
+            }
+        }
+
+        if \`n_available' == 0 {
+            local valid_subject = 0
+            continue, break
+        }
+
+        local explicit_sum = 0
+        local na_count = 0
+
+        forvalues lidx = 1/\`total_levels' {
+            if \`avail_\`lidx'' == 1 {
+                if \`bprob_\`lidx'' != -1 local explicit_sum = \`explicit_sum' + \`bprob_\`lidx''
+                else local na_count = \`na_count' + 1
+            }
+        }
+
+        local prob_sum = 0
+        forvalues lidx = 1/\`total_levels' {
+            if \`avail_\`lidx'' == 1 {
+                if \`explicit_sum' > 1.0 {
+                    if \`bprob_\`lidx'' != -1 local lvlprob_\`lidx' = \`bprob_\`lidx'' / \`explicit_sum'
+                    else local lvlprob_\`lidx' = 0
+                }
+                else if \`explicit_sum' == 1.0 {
+                    if \`bprob_\`lidx'' != -1 local lvlprob_\`lidx' = \`bprob_\`lidx''
+                    else local lvlprob_\`lidx' = 0
+                }
+                else if \`explicit_sum' > 0 {
+                    if \`na_count' > 0 {
+                        local share = (1.0 - \`explicit_sum') / \`na_count'
+                        if \`bprob_\`lidx'' != -1 local lvlprob_\`lidx' = \`bprob_\`lidx''
+                        else local lvlprob_\`lidx' = \`share'
+                    }
+                    else {
+                        if \`bprob_\`lidx'' != -1 local lvlprob_\`lidx' = \`bprob_\`lidx'' / \`explicit_sum'
+                        else local lvlprob_\`lidx' = 0
+                    }
+                }
+                else {
+                    local lvlprob_\`lidx' = 1.0 / \`n_available'
+                }
+                local prob_sum = \`prob_sum' + \`lvlprob_\`lidx''
+            }
+        }
+
+        local r = runiform() * \`prob_sum'
+        local cumulative = 0
+        local chosen_lvl = -1
+
+        forvalues lidx = 1/\`total_levels' {
+            if \`avail_\`lidx'' == 1 {
+                local cumulative = \`cumulative' + \`lvlprob_\`lidx''
+                if \`r' <= \`cumulative' {
+                    local chosen_lvl = \`lidx'
+                    continue, break
+                }
+                local last_lvl = \`lidx'
+            }
+        }
+        if \`chosen_lvl' == -1 local chosen_lvl = \`last_lvl'
+
+        local subj_prof_\`f' = \`chosen_lvl'
+    } // factor loop
+
+    if \`valid_subject' == 0 continue, break
+
+    * 4. Calculate Imbalance Scores
+    local min_score = 9999999
+    forvalues a = 1/\`n_arms' {
+        local total_score = 0
+        forvalues f = 1/\`n_factors' {
+            local lidx = \`subj_prof_\`f''
+
+            local min_val = 9999999
+            local max_val = -9999999
+            forvalues a2 = 1/\`n_arms' {
+                local count = \`imb_\`lidx'_\`a2''
+                if \`a2' == \`a' local count = \`count' + 1
+
+                local normalized = \`count' / \`arm_ratio_\`a2''
+                if \`normalized' < \`min_val' local min_val = \`normalized'
+                if \`normalized' > \`max_val' local max_val = \`normalized'
+            }
+            local total_score = \`total_score' + (\`max_val' - \`min_val')
+        }
+        local arm_score_\`a' = \`total_score'
+        if \`total_score' < \`min_score' local min_score = \`total_score'
+    }
+
+    * 5. Separate Preferred and Non-Preferred
+    local n_pref = 0
+    local n_nonpref = 0
+    forvalues a = 1/\`n_arms' {
+        if reldif(\`arm_score_\`a'', \`min_score') < 1e-6 {
+            local n_pref = \`n_pref' + 1
+            local pref_\`n_pref' = \`a'
+        }
+        else {
+            local n_nonpref = \`n_nonpref' + 1
+            local nonpref_\`n_nonpref' = \`a'
+        }
+    }
+
+    * 6. Assign Arm
+    local assigned_arm_idx = -1
+    if \`n_pref' == \`n_arms' | \`n_nonpref' == 0 {
+        local w_sum = 0
+        forvalues i = 1/\`n_pref' {
+            local a = \`pref_\`i''
+            local w_sum = \`w_sum' + \`arm_ratio_\`a''
+        }
+        local r_arm = runiform() * \`w_sum'
+        forvalues i = 1/\`n_pref' {
+            local a = \`pref_\`i''
+            local r_arm = \`r_arm' - \`arm_ratio_\`a''
+            if \`r_arm' <= 0 {
+                local assigned_arm_idx = \`a'
+                continue, break
+            }
+        }
+        if \`assigned_arm_idx' == -1 local assigned_arm_idx = \`pref_\`n_pref''
+    }
+    else {
+        if runiform() < \`p_minimization' {
+            local w_sum = 0
+            forvalues i = 1/\`n_pref' {
+                local a = \`pref_\`i''
+                local w_sum = \`w_sum' + \`arm_ratio_\`a''
+            }
+            local r_arm = runiform() * \`w_sum'
+            forvalues i = 1/\`n_pref' {
+                local a = \`pref_\`i''
+                local r_arm = \`r_arm' - \`arm_ratio_\`a''
+                if \`r_arm' <= 0 {
+                    local assigned_arm_idx = \`a'
+                    continue, break
+                }
+            }
+            if \`assigned_arm_idx' == -1 local assigned_arm_idx = \`pref_\`n_pref''
+        }
+        else {
+            local w_sum = 0
+            forvalues i = 1/\`n_nonpref' {
+                local a = \`nonpref_\`i''
+                local w_sum = \`w_sum' + \`arm_ratio_\`a''
+            }
+            local r_arm = runiform() * \`w_sum'
+            forvalues i = 1/\`n_nonpref' {
+                local a = \`nonpref_\`i''
+                local r_arm = \`r_arm' - \`arm_ratio_\`a''
+                if \`r_arm' <= 0 {
+                    local assigned_arm_idx = \`a'
+                    continue, break
+                }
+            }
+            if \`assigned_arm_idx' == -1 local assigned_arm_idx = \`nonpref_\`n_nonpref''
+        }
+    }
+
+    * 7. Update State
+    forvalues f = 1/\`n_factors' {
+        local lidx = \`subj_prof_\`f''
+        local imb_\`lidx'_\`assigned_arm_idx' = \`imb_\`lidx'_\`assigned_arm_idx'' + 1
+${isMarginal ? `        local count_\`lidx' = \`count_\`lidx'' + 1` : ''}
+    }
+
+${!isMarginal ? `
+    local matched_combo = 0
+    forvalues i = 1/\`n_combos' {
+        local match = 1
+        forvalues f = 1/\`n_factors' {
+            if \`combo_\`i'_f\`f'' != \`subj_prof_\`f'' {
+                local match = 0
+                continue, break
+            }
+        }
+        if \`match' == 1 {
+            local matched_combo = \`i'
+            continue, break
+        }
+    }
+    if \`matched_combo' > 0 local count_\`matched_combo' = \`count_\`matched_combo'' + 1
+` : ''}
+
+    * 8. Output Subject
+    local site_count_\`r_site' = \`site_count_\`r_site'' + 1
+    local subj_id = "\`site'" + "-" + string(\`site_count_\`r_site'', "%03.0f")
+
+    post \`_schema_fh' ("\`subj_id'") ("\`site'") (0) (0) ("\`arm_name_\`assigned_arm_idx''") ("\`arm_id_\`assigned_arm_idx''")${postStrataArgs}
+
+} // End total sample size loop
+
+postclose \`_schema_fh'
+use \`_schema_data', clear
+
+* Apply value labels
+${labelValues}
+
+* ─── QC Checks ─────────────────────────────────────────────────────────────
+di _newline "--- QC Check: Overall Allocation ---"
+tabulate Treatment
+
+di _newline "--- QC Check: Site-Level Balance ---"
+tabulate Site Treatment, chi2
+
+list in 1/20, clean noobs
+`;
+      return code.trim() + '\n';
+    } catch (e) {
+      if (this.isKnownError(e)) throw e;
+      throw new TemplateCompilationError('STATA', e, config);
     }
   }
 
