@@ -185,7 +185,11 @@ export class CodeGeneratorService {
     // When no seed is provided the generator picks a random numeric seed.
     // The range [0, MAX_AUTO_SEED) is well within the valid seed range for
     // R set.seed(), Python SeedSequence, and SAS call streaminit (0..2^31-2).
-    if (!str) return Math.floor(Math.random() * CodeGeneratorService.MAX_AUTO_SEED);
+    if (!str) {
+      const array = new Uint32Array(1);
+      globalThis.crypto.getRandomValues(array);
+      return array[0] % CodeGeneratorService.MAX_AUTO_SEED;
+    }
     const s = String(str);
     let hash = 0;
     for (let i = 0; i < s.length; i++) {
