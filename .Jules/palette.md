@@ -1,5 +1,0 @@
-## 2026-04-23 - Accessibility Label Associations and Strict TS Mocks
-**Learning:** Fixing `@angular-eslint/template/label-has-associated-control` in Angular forms often requires adding explicit `[for]` and `[id]` attributes dynamically for loops (e.g. `[for]="'field' + $index"`), or replacing visual-only labels with `<span>` and using `aria-labelledby`.
-Additionally, fixing ESLint's `@typescript-eslint/no-explicit-any` warning in spec files by changing `any` to `unknown` breaks mock object chaining unless explicitly cast or suppressed (e.g. `mockFacade as any`). It's safer to use explicit specific object shapes or `as any` casting scoped strictly to test files than globally disabling rules or letting the codebase break.
-
-**Action:** Ensure all dynamic loops (`@for`) generate unique IDs for screen readers and label associations. For Vitest mock interfaces, temporarily override strict ESLint types (`as any`) directly on the test methods if complex objects like `mockFacade` have chained properties not easily declared with `unknown`.
