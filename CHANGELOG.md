@@ -1,3 +1,10 @@
+## [1.29.1](https://github.com/fderuiter/Equipose/compare/v1.29.0...v1.29.1) (2026-04-23)
+
+
+### Performance Improvements
+
+* optimize imbalance score calculation in minimization algorithm ([da00f16](https://github.com/fderuiter/Equipose/commit/da00f16ad16f3f01296f69936424cb434a63d24b))
+
 # [1.29.0](https://github.com/fderuiter/Clinical-Randomization-Generator/compare/v1.28.0...v1.29.0) (2026-04-15)
 
 
