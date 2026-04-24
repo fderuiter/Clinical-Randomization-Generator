@@ -1,3 +1,10 @@
+## [1.29.3](https://github.com/fderuiter/Equipose/compare/v1.29.2...v1.29.3) (2026-04-24)
+
+
+### Bug Fixes
+
+* alias loop index correctly in minimization distribution UI ([9a80492](https://github.com/fderuiter/Equipose/commit/9a804922f81d5fe967e487873c0c32fffbefcc14))
+
 ## [1.29.2](https://github.com/fderuiter/Equipose/compare/v1.29.1...v1.29.2) (2026-04-24)
 
 
