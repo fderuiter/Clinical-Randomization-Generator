@@ -3,10 +3,8 @@ import { RandomizationConfig, GeneratedSchema, TreatmentArm } from '../../core/m
 import { generateSubjectId } from './subject-id-engine';
 
 /**
- * Samples a level for one stratification factor based on expected probabilities.
- * Any positive weights are normalized to sum to 1 before sampling.
- * Falls back to uniform sampling only when no positive weights are present
- * (all values are undefined, zero, or negative).
+ * Samples a level for one stratification factor based on expected probabilities,
+ * filtering out levels that have reached their caps or are no longer valid.
  */
 function sampleLevel(
   levels: string[],
@@ -16,9 +14,30 @@ function sampleLevel(
   if (levels.length === 0) {
     throw new Error('Cannot sample a level from an empty levels array.');
   }
-  const raw = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p : 0));
-  const total = raw.reduce((s, v) => s + v, 0);
-  const probs = total > 0 ? raw.map(v => v / total) : levels.map(() => 1 / levels.length);
+
+  const explicitSum = expectedProbabilities.reduce(
+    (sum: number, p) => sum + (p !== undefined && p > 0 ? p : 0),
+    0
+  );
+
+  let probs: number[];
+
+  if (explicitSum > 1.0) {
+    probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p / explicitSum : 0));
+  } else if (explicitSum === 1.0) {
+    probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p : 0));
+  } else if (explicitSum > 0 && explicitSum < 1.0) {
+    const undefinedCount = expectedProbabilities.filter(p => p === undefined).length;
+    if (undefinedCount > 0) {
+      const remainder = 1.0 - explicitSum;
+      const share = remainder / undefinedCount;
+      probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p : (p === undefined ? share : 0)));
+    } else {
+      probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p / explicitSum : 0));
+    }
+  } else {
+    probs = levels.map(() => 1 / levels.length);
+  }
 
   const r = rng();
   let cumulative = 0;
@@ -32,9 +51,6 @@ function sampleLevel(
 /**
  * Computes the Pocock-Simon imbalance score for assigning arm `candidateArmId`
  * to a subject with covariate profile `subjectProfile`.
- *
- * Score = sum over all factors of: range of arm counts (max - min) after the
- * hypothetical assignment, considering only levels present in the subject.
  */
 function computeImbalanceScore(
   candidateArmId: string,
@@ -53,23 +69,19 @@ function computeImbalanceScore(
     let max = -Infinity;
     for (const arm of arms) {
       const count = (levelMarginals.get(arm.id) ?? 0) + (arm.id === candidateArmId ? 1 : 0);
-      if (count < min) min = count;
-      if (count > max) max = count;
+      const normalizedCount = count / arm.ratio;
+      if (normalizedCount < min) min = normalizedCount;
+      if (normalizedCount > max) max = normalizedCount;
     }
     totalScore += max - min;
   }
   return totalScore;
 }
 
-/**
- * Generates a randomization schema using the Pocock-Simon minimization method.
- *
- * 1. Simulates N virtual subjects by sampling factor levels from user-defined distributions.
- * 2. For each subject, computes the imbalance score for each arm.
- * 3. The preferred arm(s) - those with the minimum imbalance score - are assigned with
- *    probability p; remaining probability (1-p) is shared equally among non-preferred arms.
- * 4. When multiple arms tie for minimum, one is chosen uniformly at random.
- */
+function computeStratumCode(strata: RandomizationConfig['strata'], stratum: Record<string, string>): string {
+  return strata.map(s => (stratum[s.id] || '').substring(0, 3).toUpperCase()).join('-');
+}
+
 export function generateMinimization(
   config: RandomizationConfig,
   rng: seedrandom.PRNG
@@ -90,26 +102,78 @@ export function generateMinimization(
   const schema: GeneratedSchema[] = [];
   const usedSubjectIds = new Set<string>();
 
-  const basePerSite = Math.floor(totalSampleSize / sites.length);
-  const remainder = totalSampleSize % sites.length;
-
-  // Precompute probability vectors per factor (once, outside the site/subject loops).
-  const factorProbVectors = new Map<string, (number | undefined)[]>();
+  // Precompute expected probabilities from config.
+  const baseProbabilities = new Map<string, Map<string, number | undefined>>();
   for (const factor of strata) {
-    const levelDetailsByName = new Map(
-      (factor.levelDetails ?? []).map(d => [d.name, d.expectedProbability] as const)
-    );
-    factorProbVectors.set(
-      factor.id,
-      factor.levels.map(levelName => levelDetailsByName.get(levelName))
-    );
+    const pMap = new Map<string, number | undefined>();
+    for (const level of factor.levels) {
+      const details = factor.levelDetails?.find(d => d.name === level);
+      pMap.set(level, details?.expectedProbability);
+    }
+    baseProbabilities.set(factor.id, pMap);
   }
 
-  for (let siteIdx = 0; siteIdx < sites.length; siteIdx++) {
-    const site = sites[siteIdx];
-    const siteN = basePerSite + (siteIdx < remainder ? 1 : 0);
+  // Setup caps and state tracking
+  const isMarginal = config.capStrategy === 'MARGINAL_ONLY';
 
-    // marginals[factorId][levelValue][armId] = count
+  // MARGINAL tracking
+  const marginalCapMap = new Map<string, Map<string, number | undefined>>();
+  const marginalCounts = new Map<string, Map<string, number>>();
+
+  // INTERSECTION tracking (MANUAL_MATRIX or PROPORTIONAL)
+  const capsDict: Record<string, number> = {};
+  const intersectionCounts: Record<string, number> = {};
+
+  if (isMarginal) {
+    for (const factor of strata) {
+      const capMap = new Map<string, number | undefined>();
+      const countMap = new Map<string, number>();
+      for (const level of factor.levels) {
+        const details = factor.levelDetails?.find(d => d.name === level);
+        capMap.set(level, details?.marginalCap);
+        countMap.set(level, 0);
+      }
+      marginalCapMap.set(factor.id, capMap);
+      marginalCounts.set(factor.id, countMap);
+    }
+  } else {
+    (config.stratumCaps || []).forEach(c => {
+      capsDict[c.levels.join('|')] = c.cap;
+    });
+  }
+
+  // Precompute all strata combinations to form the initial valid pool for intersection caps.
+  let activePool: Record<string, string>[] = [{}];
+  for (const factor of strata) {
+    const newCombinations: Record<string, string>[] = [];
+    for (const combo of activePool) {
+      for (const level of factor.levels) {
+        newCombinations.push({ ...combo, [factor.id]: level });
+      }
+    }
+    activePool = newCombinations;
+  }
+
+  if (!isMarginal) {
+    // Filter activePool immediately for any combinations that have a cap of 0
+    activePool = activePool.filter(combo => {
+      const key = strata.map(s => combo[s.id] || '').join('|');
+      const cap = capsDict[key];
+      return cap === undefined || cap > 0;
+    });
+  }
+
+  const siteSubjectCounts = new Map<string, number>();
+  for (const site of sites) {
+    siteSubjectCounts.set(site, 0);
+  }
+
+  // marginals[site][factorId][levelValue][armId] = count (for imbalance score calculation per site)
+  // Or is minimization global or per-site? Usually minimization balances per site by adding Site as a factor or tracking marginals per site.
+  // The original code reset marginals PER SITE loop, which implies imbalance is tracked purely PER SITE.
+  // We'll maintain a Map of marginals per site.
+  const siteMarginals = new Map<string, Map<string, Map<string, Map<string, number>>>>();
+  for (const site of sites) {
     const marginals = new Map<string, Map<string, Map<string, number>>>();
     for (const factor of strata) {
       const factorMap = new Map<string, Map<string, number>>();
@@ -122,80 +186,173 @@ export function generateMinimization(
       }
       marginals.set(factor.id, factorMap);
     }
+    siteMarginals.set(site, marginals);
+  }
 
-    let siteSubjectCount = 0;
-
-    for (let i = 0; i < siteN; i++) {
-      const subjectProfile: Record<string, string> = {};
-      const stratum: Record<string, string> = {};
-      for (const factor of strata) {
-        const rawProbs = factorProbVectors.get(factor.id) ?? factor.levels.map(() => undefined);
-        const level = sampleLevel(factor.levels, rawProbs, rng);
-        subjectProfile[factor.id] = level;
-        stratum[factor.id] = level;
-      }
-
-      let minScore = Infinity;
-      const armScores: number[] = [];
-      for (const arm of arms) {
-        const score = computeImbalanceScore(arm.id, arms, subjectProfile, marginals);
-        armScores.push(score);
-        if (score < minScore) minScore = score;
-      }
-
-      const preferred: TreatmentArm[] = [];
-      const nonPreferred: TreatmentArm[] = [];
-      for (let j = 0; j < arms.length; j++) {
-        const arm = arms[j];
-        if (armScores[j] === minScore) {
-          preferred.push(arm);
-        } else {
-          nonPreferred.push(arm);
-        }
-      }
-
-      let assignedArm: TreatmentArm;
-      if (preferred.length === arms.length || nonPreferred.length === 0) {
-        assignedArm = preferred[Math.floor(rng() * preferred.length)];
-      } else {
-        const r = rng();
-        if (r < p) {
-          assignedArm = preferred[Math.floor(rng() * preferred.length)];
-        } else {
-          assignedArm = nonPreferred[Math.floor(rng() * nonPreferred.length)];
-        }
-      }
-
-      for (const factor of strata) {
-        const levelValue = subjectProfile[factor.id];
-        if (levelValue) {
-          marginals.get(factor.id)?.get(levelValue)?.set(
-            assignedArm.id,
-            (marginals.get(factor.id)?.get(levelValue)?.get(assignedArm.id) ?? 0) + 1
-          );
-        }
-      }
-
-      siteSubjectCount++;
-      const stratumCode = strata.map(s => (stratum[s.id] || '').substring(0, 3).toUpperCase()).join('-');
-
-      const subjectId = generateSubjectId(
-        config.subjectIdMask,
-        { site, stratumCode, sequence: siteSubjectCount },
-        usedSubjectIds
+  // Generate subjects one by one up to totalSampleSize
+  for (let s = 0; s < totalSampleSize; s++) {
+    // Determine active pool dynamically. If MARGINAL_ONLY, filter based on marginal counts.
+    if (isMarginal) {
+      activePool = activePool.filter(combo =>
+        strata.every(factor => {
+          const level = combo[factor.id] || '';
+          const cap = marginalCapMap.get(factor.id)?.get(level);
+          const count = marginalCounts.get(factor.id)?.get(level) ?? 0;
+          return cap === undefined || count < cap;
+        })
       );
-
-      schema.push({
-        subjectId,
-        site,
-        stratum,
-        stratumCode,
-        blockNumber: 0,
-        blockSize: 0,
-        treatmentArm: assignedArm.name,
-        treatmentArmId: assignedArm.id
+    } else {
+      activePool = activePool.filter(combo => {
+        const key = strata.map(f => combo[f.id] || '').join('|');
+        const cap = capsDict[key];
+        const count = intersectionCounts[key] ?? 0;
+        return cap === undefined || count < cap;
       });
     }
+
+    if (activePool.length === 0) {
+      // No more valid combinations exist; exhaustion reached.
+      break;
+    }
+
+    // Determine available sites (all sites are uniformly available for now, since no site caps exist)
+    // Select site uniformly
+    const siteIdx = Math.floor(rng() * sites.length);
+    const site = sites[siteIdx];
+
+    const subjectProfile: Record<string, string> = {};
+    const stratum: Record<string, string> = {};
+
+    let currentCombinationPrefix: Record<string, string> = {};
+
+    let validSubject = true;
+
+    // Sample each factor sequentially, dynamically adjusting probabilities based on active pool
+    for (const factor of strata) {
+      // Find levels that are still present in at least one combination in the activePool
+      // that matches the already sampled prefix.
+      const availableLevels = factor.levels.filter(level =>
+        activePool.some(combo => {
+          // check if combo matches current prefix
+          for (const [k, v] of Object.entries(currentCombinationPrefix)) {
+            if (combo[k] !== v) return false;
+          }
+          return combo[factor.id] === level;
+        })
+      );
+
+      if (availableLevels.length === 0) {
+        validSubject = false;
+        break; // Should not happen given activePool > 0
+      }
+
+      const expectedProbs = availableLevels.map(lvl => baseProbabilities.get(factor.id)?.get(lvl));
+
+      const level = sampleLevel(availableLevels, expectedProbs, rng);
+      subjectProfile[factor.id] = level;
+      stratum[factor.id] = level;
+      currentCombinationPrefix[factor.id] = level;
+    }
+
+    if (!validSubject) break;
+
+    // We have a valid subject profile. Now calculate Imbalance Score per site.
+    const marginals = siteMarginals.get(site)!;
+
+    let minScore = Infinity;
+    const armScores: number[] = [];
+    for (const arm of arms) {
+      const score = computeImbalanceScore(arm.id, arms, subjectProfile, marginals);
+      armScores.push(score);
+      if (score < minScore) minScore = score;
+    }
+
+    const preferred: TreatmentArm[] = [];
+    const nonPreferred: TreatmentArm[] = [];
+    for (let j = 0; j < arms.length; j++) {
+      const arm = arms[j];
+      if (armScores[j] === minScore) {
+        preferred.push(arm);
+      } else {
+        nonPreferred.push(arm);
+      }
+    }
+
+    let assignedArm: TreatmentArm;
+
+    const selectWeightedArm = (candidates: TreatmentArm[]): TreatmentArm => {
+      const totalWeight = candidates.reduce((sum, arm) => sum + arm.ratio, 0);
+      if (totalWeight === 0) {
+        throw new Error('Total weight of tied arms is 0. Cannot select an arm.');
+      }
+
+      let rVal = rng() * totalWeight;
+      for (const arm of candidates) {
+        rVal -= arm.ratio;
+        if (rVal <= 0) {
+          return arm;
+        }
+      }
+      return candidates[candidates.length - 1];
+    };
+
+    if (preferred.length === arms.length || nonPreferred.length === 0) {
+      assignedArm = selectWeightedArm(preferred);
+    } else {
+      const r = rng();
+      if (r < p) {
+        assignedArm = selectWeightedArm(preferred);
+      } else {
+        assignedArm = selectWeightedArm(nonPreferred);
+      }
+    }
+
+    // Update marginals for imbalance tracking
+    for (const factor of strata) {
+      const levelValue = subjectProfile[factor.id];
+      if (levelValue) {
+        marginals.get(factor.id)?.get(levelValue)?.set(
+          assignedArm.id,
+          (marginals.get(factor.id)?.get(levelValue)?.get(assignedArm.id) ?? 0) + 1
+        );
+      }
+    }
+
+    // Update state tracking
+    if (isMarginal) {
+      for (const factor of strata) {
+        const lvl = subjectProfile[factor.id];
+        if (lvl) {
+          const map = marginalCounts.get(factor.id)!;
+          map.set(lvl, (map.get(lvl) ?? 0) + 1);
+        }
+      }
+    } else {
+      const key = strata.map(f => subjectProfile[f.id] || '').join('|');
+      intersectionCounts[key] = (intersectionCounts[key] ?? 0) + 1;
+    }
+
+    siteSubjectCounts.set(site, siteSubjectCounts.get(site)! + 1);
+    const siteSeq = siteSubjectCounts.get(site)!;
+
+    const stratumCode = computeStratumCode(strata, stratum);
+
+    const subjectId = generateSubjectId(
+      config.subjectIdMask,
+      { site, stratumCode, sequence: siteSeq },
+      usedSubjectIds
+    );
+
+    schema.push({
+      subjectId,
+      site,
+      stratum,
+      stratumCode,
+      blockNumber: 0,
+      blockSize: 0,
+      treatmentArm: assignedArm.name,
+      treatmentArmId: assignedArm.id
+    });
   }
 
   return schema;

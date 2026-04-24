@@ -193,10 +193,10 @@
                     @for (level of getStrataLevels($index); track level) {
                       <div class="flex items-center gap-2">
                         <label [for]="'levelDist' + getStrataId(stratumIndex) + '_' + level" class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
-                        <input [id]="'levelDist' + getStrataId(stratumIndex) + '_' + level"
+                        <input #probInput [id]="'levelDist' + getStrataId(stratumIndex) + '_' + level"
                           type="number" inputmode="decimal" min="0" max="100"
                           [value]="getMinimizationProbability(getStrataId($index), level)"
-                          (input)="setMinimizationProbability(getStrataId($index), level, +$any($event.target).value)"
+                          (input)="setMinimizationProbability(getStrataId($index), level, +probInput.value)"
                           class="w-20 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums"
                           placeholder="%">
                         <span class="text-xs text-gray-600 dark:text-slate-400">%</span>
@@ -559,13 +559,13 @@
                           <div class="flex items-center gap-2 mb-1">
                             <label [for]="factor.id + '-pct-' + level" class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
                             <input
-                              [id]="factor.id + '-pct-' + level"
+                              #pctInput [id]="factor.id + '-pct-' + level"
                               type="number"
                               inputmode="numeric"
                               min="0"
                               max="100"
                               [value]="getPercentage(factor.id, level)"
-                              (input)="setPercentage(factor.id, level, +$any($event.target).value)"
+                              (input)="setPercentage(factor.id, level, +pctInput.value)"
                               class="w-20 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums"
                               placeholder="%"
                             >
@@ -630,12 +630,12 @@
                           <div class="flex items-center gap-2 mb-1">
                             <label [for]="factor.id + '-margcap-' + level" class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
                             <input
-                              [id]="factor.id + '-margcap-' + level"
+                              #margCapInput [id]="factor.id + '-margcap-' + level"
                               type="number"
                               inputmode="numeric"
                               min="0"
                               [value]="getMarginalCap(factor.id, level) ?? ''"
-                              (input)="setMarginalCap(factor.id, level, parseMarginalCapInput($any($event.target).value))"
+                              (input)="setMarginalCap(factor.id, level, parseMarginalCapInput(margCapInput.value))"
                               class="w-24 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums"
                               placeholder="Max"
                             >
@@ -770,25 +770,25 @@
         </div>
         <div class="flex items-center gap-3">
           <input
-            id="attritionRateSlider"
+            #attritionSlider id="attritionRateSlider"
             type="range"
             min="0"
             max="50"
             step="1"
             [value]="attritionRate()"
-            (input)="attritionRate.set(+$any($event.target).value)"
+            (input)="attritionRate.set(+attritionSlider.value)"
             class="flex-1 h-2 accent-purple-600 cursor-pointer"
             data-testid="attrition-rate-slider"
             aria-label="Attrition rate slider"
           />
           <input
-            id="attritionRateInput"
+            #attritionInput id="attritionRateInput"
             type="number"
             min="0"
             max="50"
             step="1"
             [value]="attritionRate()"
-            (change)="attritionRate.set(clampAttritionRate(+$any($event.target).value))"
+            (change)="attritionRate.set(clampAttritionRate(+attritionInput.value))"
             class="w-16 text-center rounded-md border border-purple-200 dark:border-purple-700 bg-white dark:bg-slate-700 text-sm text-gray-800 dark:text-slate-100 py-1 px-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
             data-testid="attrition-rate-input"
             aria-label="Attrition rate percentage"
