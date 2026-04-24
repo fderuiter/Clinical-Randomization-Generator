@@ -190,22 +190,22 @@
                 <div class="pl-8 mt-2">
                   <span class="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1 uppercase tracking-wide">Expected Covariate Distribution</span>
                   <div class="space-y-1">
-                    @for (level of getStrataLevels($index); track level) {
+                    @for (level of getStrataLevels(stratumIndex); track level) {
                       <div class="flex items-center gap-2">
                         <label [for]="'levelDist' + getStrataId(stratumIndex) + '_' + level" class="flex-1 text-xs text-gray-600 dark:text-slate-400 truncate" [title]="level">{{ level }}</label>
                         <input #probInput [id]="'levelDist' + getStrataId(stratumIndex) + '_' + level"
                           type="number" inputmode="decimal" min="0" max="100"
-                          [value]="getMinimizationProbability(getStrataId($index), level)"
-                          (input)="setMinimizationProbability(getStrataId($index), level, +probInput.value)"
+                          [value]="getMinimizationProbability(getStrataId(stratumIndex), level)"
+                          (input)="setMinimizationProbability(getStrataId(stratumIndex), level, +probInput.value)"
                           class="w-20 rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1 border tabular-nums"
                           placeholder="%">
                         <span class="text-xs text-gray-600 dark:text-slate-400">%</span>
                       </div>
                     }
                     <p class="text-xs mt-0.5"
-                       [class.text-red-600]="isMinimizationProbabilityInvalid(getStrataId($index))"
-                       [class.text-gray-600]="!isMinimizationProbabilityInvalid(getStrataId($index))">
-                      Total: {{ getMinimizationProbabilityTotal(getStrataId($index), getStrataLevels($index)) }}% (must sum to 100%)
+                       [class.text-red-600]="isMinimizationProbabilityInvalid(getStrataId(stratumIndex))"
+                       [class.text-gray-600]="!isMinimizationProbabilityInvalid(getStrataId(stratumIndex))">
+                      Total: {{ getMinimizationProbabilityTotal(getStrataId(stratumIndex), getStrataLevels(stratumIndex)) }}% (must sum to 100%)
                     </p>
                   </div>
                 </div>
