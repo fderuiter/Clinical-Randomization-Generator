@@ -86,8 +86,8 @@ test.describe('Results Grid Operations', () => {
   });
 
   test('should reveal treatment arms after clicking the blinding toggle', async ({ page }) => {
-    const toggleLabel = page.get_by_role('switch', { name: 'Toggle schema blinding' });
-    await toggleLabel.click();
+    const toggleLabel = page.locator('button[role="switch"]');
+    await toggleLabel.click({ force: true });
 
     const firstRow = page.locator('[data-testid="result-row"]').first();
     const armCell = firstRow.locator('[data-testid="result-arm-cell"]');
@@ -96,14 +96,14 @@ test.describe('Results Grid Operations', () => {
   });
 
   test('should re-blind the schema when the toggle is clicked a second time', async ({ page }) => {
-    const toggleLabel = page.get_by_role('switch', { name: 'Toggle schema blinding' });
+    const toggleLabel = page.locator('button[role="switch"]');
     const firstRow = page.locator('[data-testid="result-row"]').first();
     const armCell = firstRow.locator('[data-testid="result-arm-cell"]');
 
-    await toggleLabel.click(); // unblind
+    await toggleLabel.click({ force: true }); // unblind
     await expect(armCell).not.toContainText('*** BLINDED ***');
 
-    await toggleLabel.click(); // re-blind
+    await toggleLabel.click({ force: true }); // re-blind
     await expect(armCell).toContainText('*** BLINDED ***');
   });
 

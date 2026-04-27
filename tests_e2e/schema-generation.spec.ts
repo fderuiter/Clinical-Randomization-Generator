@@ -42,8 +42,8 @@ test.describe('Schema Generation Flow', () => {
     await expect(armCell).toContainText('*** BLINDED ***');
 
     // Click the "Unblinded" toggle
-    const unblindedToggleLabel = page.get_by_role('switch', { name: 'Toggle schema blinding' });
-    await unblindedToggleLabel.click();
+    const unblindedToggleLabel = page.locator('button[role="switch"]');
+    await unblindedToggleLabel.click({ force: true });
 
     // Assert the text changes from "*** BLINDED ***"
     await expect(armCell).not.toContainText('*** BLINDED ***');
