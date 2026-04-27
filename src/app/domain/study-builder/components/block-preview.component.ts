@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 /** One arm's data passed from the parent. */
@@ -111,6 +111,7 @@ export function buildPreviews(arms: ArmInput[], blockSizes: number[]): BlockPrev
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-block-preview',
   standalone: true,
   imports: [MatTooltipModule],
