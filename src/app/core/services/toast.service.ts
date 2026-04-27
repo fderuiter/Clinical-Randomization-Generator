@@ -74,7 +74,7 @@ export class ToastService {
   // ---------------------------------------------------------------------------
 
   private show(message: string, type: ToastType): void {
-    const id = Math.random().toString(36).substring(2);
+    const id = globalThis.crypto.randomUUID();
     const toast: ToastMessage = { id, message, type };
 
     this.toasts.update(ts => [...ts, toast]);
