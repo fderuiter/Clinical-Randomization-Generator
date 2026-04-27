@@ -141,6 +141,7 @@
                   (click)="openRowMenu(row)"
                   class="inline-flex items-center justify-center w-11 h-11 rounded-full text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
                   [attr.aria-label]="'Actions for subject ' + row.subjectId"
+                  [attr.title]="'Actions for subject ' + row.subjectId"
                 >
                   <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <circle cx="12" cy="5" r="1.5"/>
@@ -182,7 +183,7 @@
                   <!-- Subject ID – pinned column (intersection: z-30) -->
                   <th scope="col"
                       class="sticky left-0 z-30 bg-gray-50 dark:bg-slate-900/50 border-r border-gray-200 dark:border-slate-600 px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
-                    <button (click)="toggleSort('subjectId')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" aria-label="Sort by Subject ID">
+                    <button (click)="toggleSort('subjectId')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" aria-label="Sort by Subject ID" title="Sort by Subject ID">
                       Subject ID
                       <!-- Chevron sort indicator -->
                       <svg class="h-3 w-3 transition-transform"
@@ -198,7 +199,7 @@
                   <!-- Site column with sort + filter -->
                   <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
                     <div class="inline-flex items-center gap-1">
-                      <button (click)="toggleSort('site')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Site">
+                      <button (click)="toggleSort('site')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Site" title="Sort by Site">
                         Site
                         <svg class="h-3 w-3 transition-transform"
                              [class.text-indigo-500]="sortState().column === 'site'"
@@ -215,7 +216,8 @@
                               class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
                               [class.text-indigo-500]="hasActiveFilter('site')"
                               [class.text-gray-400]="!hasActiveFilter('site')"
-                              aria-label="Filter Site">
+                              aria-label="Filter Site"
+                              title="Filter Site">
                         <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                           <path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clip-rule="evenodd"/>
                         </svg>
@@ -227,7 +229,7 @@
                   @for (stratum of data.metadata.strata; track stratum.id) {
                     <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
                       <div class="inline-flex items-center gap-1">
-                        <button (click)="toggleSort('stratum_' + stratum.id)" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" [attr.aria-label]="'Sort by ' + (stratum.name || stratum.id)">
+                        <button (click)="toggleSort('stratum_' + stratum.id)" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" [attr.aria-label]="'Sort by ' + (stratum.name || stratum.id)" [attr.title]="'Sort by ' + (stratum.name || stratum.id)">
                           {{stratum.name || stratum.id}}
                           <svg class="h-3 w-3 transition-transform"
                                [class.text-indigo-500]="sortState().column === 'stratum_' + stratum.id"
@@ -243,7 +245,8 @@
                                 class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
                                 [class.text-indigo-500]="hasActiveFilter('stratum_' + stratum.id)"
                                 [class.text-gray-400]="!hasActiveFilter('stratum_' + stratum.id)"
-                                [attr.aria-label]="'Filter ' + (stratum.name || stratum.id)">
+                                [attr.aria-label]="'Filter ' + (stratum.name || stratum.id)"
+                                [attr.title]="'Filter ' + (stratum.name || stratum.id)">
                           <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clip-rule="evenodd"/>
                           </svg>
@@ -254,7 +257,7 @@
 
                   <!-- Block column -->
                   <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
-                    <button (click)="toggleSort('blockNumber')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Block">
+                    <button (click)="toggleSort('blockNumber')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Block" title="Sort by Block">
                       Block
                       <svg class="h-3 w-3 transition-transform"
                            [class.text-indigo-500]="sortState().column === 'blockNumber'"
@@ -269,7 +272,7 @@
                   <!-- Treatment Arm column with sort + filter -->
                   <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
                     <div class="inline-flex items-center gap-1">
-                      <button (click)="toggleSort('treatmentArm')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Treatment Arm">
+                      <button (click)="toggleSort('treatmentArm')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Treatment Arm" title="Sort by Treatment Arm">
                         Treatment Arm
                         <svg class="h-3 w-3 transition-transform"
                              [class.text-indigo-500]="sortState().column === 'treatmentArm'"
@@ -285,7 +288,8 @@
                               class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
                               [class.text-indigo-500]="hasActiveFilter('treatmentArm')"
                               [class.text-gray-400]="!hasActiveFilter('treatmentArm')"
-                              aria-label="Filter Treatment Arm">
+                              aria-label="Filter Treatment Arm"
+                              title="Filter Treatment Arm">
                         <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                           <path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clip-rule="evenodd"/>
                         </svg>
@@ -338,6 +342,7 @@
                       (click)="openRowMenu(row)"
                       class="inline-flex items-center justify-center w-11 h-11 rounded-full text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
                       [attr.aria-label]="'Actions for subject ' + row.subjectId"
+                            [attr.title]="'Actions for subject ' + row.subjectId"
                     >
                       <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <circle cx="12" cy="5" r="1.5"/>
@@ -363,7 +368,7 @@
                   @if (kv.value) {
                     <span class="inline-flex items-center gap-1 bg-indigo-100 dark:bg-indigo-800/60 px-2 py-0.5 rounded-full">
                       <span>{{kv.key}}: "{{kv.value}}"</span>
-                      <button (click)="clearColumnFilter(kv.key)" class="hover:text-red-500 transition-colors" [attr.aria-label]="'Clear filter for ' + kv.key">&#x2715;</button>
+                      <button (click)="clearColumnFilter(kv.key)" class="hover:text-red-500 transition-colors" [attr.aria-label]="'Clear filter for ' + kv.key" [attr.title]="'Clear filter for ' + kv.key">&#x2715;</button>
                     </span>
                   }
                 }
@@ -438,6 +443,7 @@
                             (click)="openRowMenu($any(item).data)"
                             class="inline-flex items-center justify-center w-11 h-11 rounded-full text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
                             [attr.aria-label]="'Actions for subject ' + $any(item).data.subjectId"
+                            [attr.title]="'Actions for subject ' + $any(item).data.subjectId"
                           >
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                               <circle cx="12" cy="5" r="1.5"/>
