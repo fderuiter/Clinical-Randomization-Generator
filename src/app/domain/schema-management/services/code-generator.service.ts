@@ -215,7 +215,6 @@ export class CodeGeneratorService {
   // ---------------------------------------------------------------------------
 
   private buildRMinimization(config: RandomizationConfig): string {
-    const generatedAt = new Date().toISOString();
     const sites = config.sites || [];
     const arms = config.arms || [];
     const strata = config.strata || [];
@@ -819,7 +818,6 @@ if (nrow(schema) > 0) {
   }
 
   private buildPythonMinimization(config: RandomizationConfig): string {
-    const generatedAt = new Date().toISOString();
     const sites = config.sites || [];
     const arms = config.arms || [];
     const strata = config.strata || [];
@@ -1283,7 +1281,6 @@ else:
   }
 
   private buildSasMinimization(config: RandomizationConfig): string {
-    const generatedAt = new Date().toISOString();
     const sites = config.sites || [];
     const arms = config.arms || [];
     const strata = config.strata || [];
@@ -1373,9 +1370,6 @@ else:
     }));
 
     const charArrayDecls = factorLevelArrays.map(f => {
-      // Find start and end indices for this factor's levels in the global indexing
-      const startIdx = levelIndices.get(f.id)?.get(f.values[0]) ?? 1;
-      const endIdx = startIdx + f.values.length - 1;
       // Initialize a full array but only put values in the relevant slots.
       // (SAS arrays are 1-based by default)
       // To simplify, we'll map the global ID directly
@@ -1399,7 +1393,7 @@ else:
       `  /* ${s.id}: ${s.levels.map(lvl => `${lvl}->${levelIndices.get(s.id)?.get(lvl) ?? '?'}`).join(', ')} */`
     ).join('\n');
 
-    let code = `${header}
+    const code = `${header}
 /* Note: SAS's PRNG algorithm will not generate the exact same sequence as the
 typescript web application, but the statistical properties and parameters are identical. */
 
@@ -2712,7 +2706,6 @@ title;
   }
 
   private buildStataMinimization(config: RandomizationConfig): string {
-    const generatedAt = new Date().toISOString();
     const sites = config.sites || [];
     const arms = config.arms || [];
     const strata = config.strata || [];
@@ -2822,7 +2815,7 @@ title;
         `local arm_id_${i + 1} "${a.id}"\nlocal arm_name_${i + 1} "${a.name}"\nlocal arm_ratio_${i + 1} = ${a.ratio}`
       ).join('\n');
 
-      let code = `${header}
+      const code = `${header}
 * Note: Stata's PRNG algorithm will not generate the exact same sequence as the
 * typescript web application, but the statistical properties and parameters are identical.
 

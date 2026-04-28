@@ -144,17 +144,17 @@ export function generateMinimization(
 
   // Precompute all strata combinations to form the initial valid pool for intersection caps.
   let activePool: Record<string, string>[] = [{}];
-  for (const factor of strata) {
-    const newCombinations: Record<string, string>[] = [];
-    for (const combo of activePool) {
-      for (const level of factor.levels) {
-        newCombinations.push({ ...combo, [factor.id]: level });
-      }
-    }
-    activePool = newCombinations;
-  }
-
   if (!isMarginal) {
+    for (const factor of strata) {
+      const newCombinations: Record<string, string>[] = [];
+      for (const combo of activePool) {
+        for (const level of factor.levels) {
+          newCombinations.push({ ...combo, [factor.id]: level });
+        }
+      }
+      activePool = newCombinations;
+    }
+
     // Filter activePool immediately for any combinations that have a cap of 0
     activePool = activePool.filter(combo => {
       const key = strata.map(s => combo[s.id] || '').join('|');
@@ -193,14 +193,16 @@ export function generateMinimization(
   for (let s = 0; s < totalSampleSize; s++) {
     // Determine active pool dynamically. If MARGINAL_ONLY, filter based on marginal counts.
     if (isMarginal) {
-      activePool = activePool.filter(combo =>
-        strata.every(factor => {
-          const level = combo[factor.id] || '';
+      const isExhausted = strata.some(factor => {
+        return factor.levels.every(level => {
           const cap = marginalCapMap.get(factor.id)?.get(level);
           const count = marginalCounts.get(factor.id)?.get(level) ?? 0;
-          return cap === undefined || count < cap;
-        })
-      );
+          return cap !== undefined && count >= cap;
+        });
+      });
+      if (isExhausted) {
+        break;
+      }
     } else {
       activePool = activePool.filter(combo => {
         const key = strata.map(f => combo[f.id] || '').join('|');
@@ -208,11 +210,11 @@ export function generateMinimization(
         const count = intersectionCounts[key] ?? 0;
         return cap === undefined || count < cap;
       });
-    }
 
-    if (activePool.length === 0) {
-      // No more valid combinations exist; exhaustion reached.
-      break;
+      if (activePool.length === 0) {
+        // No more valid combinations exist; exhaustion reached.
+        break;
+      }
     }
 
     // Determine available sites (all sites are uniformly available for now, since no site caps exist)
@@ -223,27 +225,37 @@ export function generateMinimization(
     const subjectProfile: Record<string, string> = {};
     const stratum: Record<string, string> = {};
 
-    let currentCombinationPrefix: Record<string, string> = {};
+    const currentCombinationPrefix: Record<string, string> = {};
 
     let validSubject = true;
 
     // Sample each factor sequentially, dynamically adjusting probabilities based on active pool
     for (const factor of strata) {
-      // Find levels that are still present in at least one combination in the activePool
-      // that matches the already sampled prefix.
-      const availableLevels = factor.levels.filter(level =>
-        activePool.some(combo => {
-          // check if combo matches current prefix
-          for (const [k, v] of Object.entries(currentCombinationPrefix)) {
-            if (combo[k] !== v) return false;
-          }
-          return combo[factor.id] === level;
-        })
-      );
+      let availableLevels: string[];
+
+      if (isMarginal) {
+        availableLevels = factor.levels.filter(level => {
+          const cap = marginalCapMap.get(factor.id)?.get(level);
+          const count = marginalCounts.get(factor.id)?.get(level) ?? 0;
+          return cap === undefined || count < cap;
+        });
+      } else {
+        // Find levels that are still present in at least one combination in the activePool
+        // that matches the already sampled prefix.
+        availableLevels = factor.levels.filter(level =>
+          activePool.some(combo => {
+            // check if combo matches current prefix
+            for (const [k, v] of Object.entries(currentCombinationPrefix)) {
+              if (combo[k] !== v) return false;
+            }
+            return combo[factor.id] === level;
+          })
+        );
+      }
 
       if (availableLevels.length === 0) {
         validSubject = false;
-        break; // Should not happen given activePool > 0
+        break; // Should not happen given exhaustion check > 0
       }
 
       const expectedProbs = availableLevels.map(lvl => baseProbabilities.get(factor.id)?.get(lvl));

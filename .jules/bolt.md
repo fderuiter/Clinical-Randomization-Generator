@@ -1,0 +1,3 @@
+## 2024-05-18 - Precomputing Cartesian Product OOM/Perf issues
+**Learning:** Precomputing all strata combinations (`activePool`) into an array of dimension `levels_1 * levels_2 * ... * levels_n` scales exponentially. With e.g. 10 factors of 3 levels, `activePool` has 59,049 entries. The algorithm iteratively iterates `activePool` over `totalSampleSize` (e.g. 1000). Filtering `activePool` inside the loop causes massive CPU and memory issues.
+**Action:** Remove `activePool` generation when using `MARGINAL_ONLY` caps strategy, as we can check caps dynamically without retaining the full matrix of combinations.
