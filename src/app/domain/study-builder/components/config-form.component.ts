@@ -11,6 +11,7 @@ import { previewSubjectIdMask, validateSubjectIdMask } from '../../randomization
 import { BlockPreviewComponent, ArmInput } from './block-preview.component';
 import { computeProportionalCaps, validateProportionalPercentages } from '../../randomization-engine/core/cap-strategy';
 import { CapStrategy } from '../../core/models/randomization.model';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-config-form',
@@ -23,6 +24,7 @@ export class ConfigFormComponent implements OnInit {
   readonly facade = inject(RandomizationEngineFacade);
   readonly store = inject(StudyBuilderStore);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly toastService = inject(ToastService);
 
   dropdownOpen = false;
   /** Controls visibility of the Advanced Settings accordion section. */
@@ -529,14 +531,14 @@ export class ConfigFormComponent implements OnInit {
   onGenerateCode(language: 'R' | 'SAS' | 'Python'): void {
     if (this.form.valid) {
       try { this.facade.openCodeGenerator(this.store.buildConfig(this.buildFormValue()), language); this.dropdownOpen = false; }
-      catch (e) { console.error('Error generating code config:', e); alert('Error generating code. Please check your configuration.'); }
+      catch (e) { console.error('Error generating code config:', e); this.toastService.showError('Error generating code. Please check your configuration.'); }
     }
   }
 
   onRunMonteCarlo(): void {
     if (this.form.valid) {
       try { this.facade.runMonteCarlo(this.store.buildConfig(this.buildFormValue()), this.attritionRate()); }
-      catch (e) { console.error('Error starting Monte Carlo simulation:', e); alert('Error starting simulation. Please check your configuration.'); }
+      catch (e) { console.error('Error starting Monte Carlo simulation:', e); this.toastService.showError('Error starting simulation. Please check your configuration.'); }
     }
   }
 
@@ -548,7 +550,7 @@ export class ConfigFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.valid) {
       try { this.facade.generateSchema(this.store.buildConfig(this.buildFormValue())); }
-      catch (e) { console.error('Error generating schema config:', e); alert('Error generating schema. Please check your configuration.'); }
+      catch (e) { console.error('Error generating schema config:', e); this.toastService.showError('Error generating schema. Please check your configuration.'); }
     }
   }
 
