@@ -1,3 +1,10 @@
+## [1.30.1](https://github.com/fderuiter/Equipose/compare/v1.30.0...v1.30.1) (2026-04-29)
+
+
+### Bug Fixes
+
+* update frontend license text to AGPL-3.0 ([cd9139d](https://github.com/fderuiter/Equipose/commit/cd9139d09732029732be49735fa908c8474f82fe))
+
 # [1.30.0](https://github.com/fderuiter/Equipose/compare/v1.29.3...v1.30.0) (2026-04-27)
 
 
