@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { AbstractControl } from '@angular/forms';
 import { Subscription } from 'rxjs';
 
@@ -12,6 +12,8 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-tag-input',
   standalone: true,
+  // ⚡ Bolt: Performance optimization - prevents unnecessary re-renders when inputs haven't changed
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
       class="flex flex-wrap gap-1.5 items-center min-h-[44px] border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 cursor-text transition-colors"
