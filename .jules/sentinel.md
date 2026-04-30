@@ -1,0 +1,4 @@
+## 2025-05-18 - Sanitize filenames in export outputs
+**Vulnerability:** User-controlled values (`protocolId` and `seed`) were interpolated directly into `download` filename attributes for CSV and PDF exports without sanitization. While the JSON export correctly sanitized inputs, the CSV and PDF methods allowed arbitrary characters.
+**Learning:** In client-side file generation, inconsistent sanitization across export formats can lead to path traversal or injection vulnerabilities if malicious inputs are crafted. It's crucial to apply a single, reusable sanitization function across all export pathways.
+**Prevention:** Always abstract filename sanitization into a dedicated, reusable function (e.g., `sanitizeFilename(s: string) { return s.replace(/[^A-Za-z0-9._-]/g, '_').trim(); }`) and apply it consistently to all user-provided data interpolated into file names before triggering downloads.
