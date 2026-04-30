@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs/operators';
@@ -16,6 +16,8 @@ import { ToastService } from '../../../core/services/toast.service';
 @Component({
   selector: 'app-config-form',
   standalone: true,
+  // ⚡ Bolt: Performance optimization - prevents unnecessary re-renders since component state is driven by RxJS and Signals
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, MatTooltipModule, BlockPreviewComponent],
   templateUrl: './config-form.component.html'
 })
