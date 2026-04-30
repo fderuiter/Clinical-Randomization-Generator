@@ -322,6 +322,12 @@ export class ResultsGridComponent {
   hasActiveFilter(column: string): boolean {
     return !!(this.filterState()[column]);
   }
+
+  /** Sanitizes a string for use in filenames by replacing invalid characters with underscores. */
+  private sanitizeFilename(s: string): string {
+    return s.replace(/[^A-Za-z0-9._-]/g, '_').trim();
+  }
+
   /** Copies the audit hash to the clipboard and briefly shows a ✓ icon. */
   copyAuditHash(): void {
     const hash = this.state.results()?.metadata.auditHash;
@@ -375,8 +381,9 @@ export class ResultsGridComponent {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
+    const safeProtocol = this.sanitizeFilename(data.metadata.protocolId);
     link.setAttribute('href', url);
-    link.setAttribute('download', `randomization_${data.metadata.protocolId}_${this.isUnblinded() ? 'unblinded' : 'blinded'}.csv`);
+    link.setAttribute('download', `randomization_${safeProtocol}_${this.isUnblinded() ? 'unblinded' : 'blinded'}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -404,9 +411,8 @@ export class ResultsGridComponent {
       return;
     }
 
-    const sanitize = (s: string) => s.replace(/[^A-Za-z0-9._-]/g, '_').trim();
-    const safeProtocol = sanitize(data.metadata.protocolId);
-    const safeSeed = sanitize(data.metadata.seed);
+    const safeProtocol = this.sanitizeFilename(data.metadata.protocolId);
+    const safeSeed = this.sanitizeFilename(data.metadata.seed);
 
     const exportPayload = {
       ...data,
@@ -543,6 +549,7 @@ export class ResultsGridComponent {
       }
     });
 
-    doc.save(`randomization_${data.metadata.protocolId}_${this.isUnblinded() ? 'unblinded' : 'blinded'}.pdf`);
+    const safeProtocol = this.sanitizeFilename(data.metadata.protocolId);
+    doc.save(`randomization_${safeProtocol}_${this.isUnblinded() ? 'unblinded' : 'blinded'}.pdf`);
   }
 }
