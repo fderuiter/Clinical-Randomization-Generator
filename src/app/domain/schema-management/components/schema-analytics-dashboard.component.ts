@@ -46,8 +46,9 @@ const BLINDED_COLOUR = '#94a3b8'; // slate-400
                 {{ viewState.activeFilter()!.value }}
                 <button
                   (click)="viewState.clearFilter()"
-                  class="ml-1 hover:text-indigo-600 dark:hover:text-indigo-200 leading-none"
+                  class="ml-1 hover:text-indigo-600 dark:hover:text-indigo-200 leading-none rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   aria-label="Remove filter"
+                  title="Remove filter"
                 >✕</button>
               </span>
               <button

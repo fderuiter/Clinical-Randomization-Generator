@@ -55,6 +55,7 @@ import {APP_VERSION} from '../environments/version';
                 (click)="toggleThemeMenu($event)"
                 class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-indigo-100 dark:text-slate-300 hover:bg-indigo-600 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-white/30"
                 aria-label="Toggle colour theme"
+                title="Toggle colour theme"
                 [attr.aria-expanded]="themeMenuOpen()"
                 aria-haspopup="true"
               >
@@ -112,6 +113,7 @@ import {APP_VERSION} from '../environments/version';
               (click)="toggleThemeMenu($event)"
               class="flex items-center rounded-lg p-2 text-indigo-100 hover:bg-indigo-600 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-white/30"
               aria-label="Toggle colour theme"
+              title="Toggle colour theme"
               [attr.aria-expanded]="themeMenuOpen()"
             >
               @if (theme.mode() === 'Light') {
@@ -139,6 +141,7 @@ import {APP_VERSION} from '../environments/version';
               [attr.aria-expanded]="mobileMenuOpen()"
               aria-controls="mobile-menu"
               aria-label="Toggle navigation menu"
+              title="Toggle navigation menu"
             >
               @if (!mobileMenuOpen()) {
                 <!-- Hamburger icon -->

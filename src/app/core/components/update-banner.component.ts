@@ -40,6 +40,7 @@ import { UpdateNotificationService } from '../services/update-notification.servi
           type="button"
           (click)="updateService.dismiss()"
           aria-label="Dismiss update notification"
+          title="Dismiss update notification"
           class="rounded-md p-1 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
