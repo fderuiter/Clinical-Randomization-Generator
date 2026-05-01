@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild , ChangeDetectionStrategy} from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs/operators';
@@ -14,6 +14,7 @@ import { CapStrategy } from '../../core/models/randomization.model';
 import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-config-form',
   standalone: true,
   imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, MatTooltipModule, BlockPreviewComponent],

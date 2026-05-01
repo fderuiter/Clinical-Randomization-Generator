@@ -1,0 +1,3 @@
+## 2024-05-01 - Add ChangeDetectionStrategy.OnPush to missing Angular components
+**Learning:** This codebase relies heavily on Signals and RxJS, and the prompt instructions state: "To optimize frontend performance and prevent unnecessary re-renders in this Angular application (which relies heavily on Signals and RxJS), ensure components implement ChangeDetectionStrategy.OnPush." Several components in the `src/app/domain` folder were missing this.
+**Action:** Added `ChangeDetectionStrategy.OnPush` to `TagInputComponent`, `BlockPreviewComponent`, `ConfigFormComponent`, `ResultsGridComponent`, and `CodeGeneratorModalComponent`.

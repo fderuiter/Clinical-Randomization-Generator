@@ -1,10 +1,11 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit , ChangeDetectionStrategy} from '@angular/core';
 import { JsonPipe } from '@angular/common';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { CodeGeneratorService } from '../services/code-generator.service';
 import { CodeGenerationError } from '../errors/code-generation-errors';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-code-generator-modal',
   standalone: true,
   imports: [JsonPipe],

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Component, computed, effect, signal, inject } from '@angular/core';
+import { Component, computed, effect, signal, inject , ChangeDetectionStrategy} from '@angular/core';
 import { KeyValuePipe } from '@angular/common';
 import { CdkMenuModule } from '@angular/cdk/menu';
 import { ScrollingModule } from '@angular/cdk/scrolling';
@@ -52,6 +52,7 @@ export type GridRow = BlockHeader | DataRow | BlockSummary;
 // ---------------------------------------------------------------------------
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-results-grid',
   standalone: true,
   imports: [CdkMenuModule, ScrollingModule, KeyValuePipe],

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef , ChangeDetectionStrategy} from '@angular/core';
 import { AbstractControl } from '@angular/forms';
 import { Subscription } from 'rxjs';
 
@@ -10,6 +10,7 @@ import { Subscription } from 'rxjs';
  *   <app-tag-input [control]="form.get('sitesStr')" placeholder="Type a site ID…" />
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-tag-input',
   standalone: true,
   template: `
