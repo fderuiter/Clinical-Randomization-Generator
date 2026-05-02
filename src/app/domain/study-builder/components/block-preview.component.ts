@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 /** One arm's data passed from the parent. */
@@ -110,9 +110,14 @@ export function buildPreviews(arms: ArmInput[], blockSizes: number[]): BlockPrev
     });
 }
 
+/**
+ * ⚡ Bolt Performance Optimization:
+ * Added ChangeDetectionStrategy.OnPush to minimize unnecessary re-renders.
+ */
 @Component({
   selector: 'app-block-preview',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatTooltipModule],
   styles: [`
     .invalid-slot {

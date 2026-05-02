@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs/operators';
@@ -13,9 +13,14 @@ import { computeProportionalCaps, validateProportionalPercentages } from '../../
 import { CapStrategy } from '../../core/models/randomization.model';
 import { ToastService } from '../../../core/services/toast.service';
 
+/**
+ * ⚡ Bolt Performance Optimization:
+ * Added ChangeDetectionStrategy.OnPush to minimize unnecessary re-renders.
+ */
 @Component({
   selector: 'app-config-form',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, MatTooltipModule, BlockPreviewComponent],
   templateUrl: './config-form.component.html'
 })

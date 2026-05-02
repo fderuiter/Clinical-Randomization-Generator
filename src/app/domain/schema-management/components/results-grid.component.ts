@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Component, computed, effect, signal, inject } from '@angular/core';
+import { Component, computed, effect, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { KeyValuePipe } from '@angular/common';
 import { CdkMenuModule } from '@angular/cdk/menu';
 import { ScrollingModule } from '@angular/cdk/scrolling';
@@ -51,9 +51,14 @@ export type GridRow = BlockHeader | DataRow | BlockSummary;
 
 // ---------------------------------------------------------------------------
 
+/**
+ * ⚡ Bolt Performance Optimization:
+ * Added ChangeDetectionStrategy.OnPush to minimize unnecessary re-renders.
+ */
 @Component({
   selector: 'app-results-grid',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CdkMenuModule, ScrollingModule, KeyValuePipe],
   templateUrl: './results-grid.component.html',
   styles: [`

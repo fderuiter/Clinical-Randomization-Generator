@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectionStrategy, inject, ChangeDetectorRef } from '@angular/core';
 import { AbstractControl } from '@angular/forms';
 import { Subscription } from 'rxjs';
 
@@ -9,9 +9,15 @@ import { Subscription } from 'rxjs';
  * Usage:
  *   <app-tag-input [control]="form.get('sitesStr')" placeholder="Type a site ID…" />
  */
+/**
+ * ⚡ Bolt Performance Optimization:
+ * Added ChangeDetectionStrategy.OnPush to minimize unnecessary re-renders.
+ * View updates are now isolated to true input changes or explicit ChangeDetectorRef marks.
+ */
 @Component({
   selector: 'app-tag-input',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
       class="flex flex-wrap gap-1.5 items-center min-h-[44px] border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 cursor-text transition-colors"
@@ -57,12 +63,18 @@ export class TagInputComponent implements OnInit, OnDestroy {
 
   private sub: Subscription | null = null;
 
+  // ChangeDetectorRef injected to support OnPush when external form updates occur.
+  private readonly cdr = inject(ChangeDetectorRef);
+
   ngOnInit(): void {
     this.tags = this.parseValue(this.control.value);
     this.sub = this.control.valueChanges.subscribe(v => {
       // Only sync inward if the change came from outside (e.g. loadPreset)
       if (v !== this.toStr()) {
         this.tags = this.parseValue(v);
+        // Explicitly mark for check because this component uses OnPush
+        // and form control value changes are asynchronous/external.
+        this.cdr.markForCheck();
       }
     });
   }
