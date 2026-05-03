@@ -59,7 +59,8 @@ function computeImbalanceScore(
   marginals: Map<string, Map<string, Map<string, number>>>
 ): number {
   let totalScore = 0;
-  for (const [factorId, levelValue] of Object.entries(subjectProfile)) {
+  for (const factorId in subjectProfile) {
+    const levelValue = subjectProfile[factorId];
     const factorMarginals = marginals.get(factorId);
     if (!factorMarginals) continue;
     const levelMarginals = factorMarginals.get(levelValue);
@@ -143,22 +144,26 @@ export function generateMinimization(
   }
 
   // Precompute all strata combinations to form the initial valid pool for intersection caps.
-  let activePool: Record<string, string>[] = [{}];
+  // Precompute all strata combinations to form the initial valid pool for intersection caps.
+  let tempPool: Record<string, string>[] = [{}];
+  let activePool: { profile: Record<string, string>; key: string }[] = [];
   if (!isMarginal) {
     for (const factor of strata) {
       const newCombinations: Record<string, string>[] = [];
-      for (const combo of activePool) {
+      for (const combo of tempPool) {
         for (const level of factor.levels) {
           newCombinations.push({ ...combo, [factor.id]: level });
         }
       }
-      activePool = newCombinations;
+      tempPool = newCombinations;
     }
 
     // Filter activePool immediately for any combinations that have a cap of 0
-    activePool = activePool.filter(combo => {
-      const key = strata.map(s => combo[s.id] || '').join('|');
-      const cap = capsDict[key];
+    activePool = tempPool.map(combo => ({
+      profile: combo,
+      key: strata.map(s => combo[s.id] || '').join('|')
+    })).filter(combo => {
+      const cap = capsDict[combo.key];
       return cap === undefined || cap > 0;
     });
   }
@@ -204,13 +209,6 @@ export function generateMinimization(
         break;
       }
     } else {
-      activePool = activePool.filter(combo => {
-        const key = strata.map(f => combo[f.id] || '').join('|');
-        const cap = capsDict[key];
-        const count = intersectionCounts[key] ?? 0;
-        return cap === undefined || count < cap;
-      });
-
       if (activePool.length === 0) {
         // No more valid combinations exist; exhaustion reached.
         break;
@@ -242,13 +240,14 @@ export function generateMinimization(
       } else {
         // Find levels that are still present in at least one combination in the activePool
         // that matches the already sampled prefix.
+        const prefixKeys = Object.keys(currentCombinationPrefix);
         availableLevels = factor.levels.filter(level =>
           activePool.some(combo => {
             // check if combo matches current prefix
-            for (const [k, v] of Object.entries(currentCombinationPrefix)) {
-              if (combo[k] !== v) return false;
+            for (const k of prefixKeys) {
+              if (combo.profile[k] !== currentCombinationPrefix[k]) return false;
             }
-            return combo[factor.id] === level;
+            return combo.profile[factor.id] === level;
           })
         );
       }
@@ -342,6 +341,11 @@ export function generateMinimization(
     } else {
       const key = strata.map(f => subjectProfile[f.id] || '').join('|');
       intersectionCounts[key] = (intersectionCounts[key] ?? 0) + 1;
+
+      const cap = capsDict[key];
+      if (cap !== undefined && intersectionCounts[key] >= cap) {
+        activePool = activePool.filter(c => c.key !== key);
+      }
     }
 
     siteSubjectCounts.set(site, siteSubjectCounts.get(site)! + 1);
