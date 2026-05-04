@@ -154,9 +154,9 @@ function generateStandard(
   for (const site of resolvedConfig.sites) {
     let siteSubjectCount = 0;
     for (const stratum of strataCombinations) {
-      const comboKey = resolvedConfig.strata.map(s => stratum[s.id] || '').join('|');
+      const comboKey = stratum['_key'];
       const maxSubjectsPerStratum = capsDict[comboKey] || 0;
-      const stratumCode = computeStratumCode(resolvedConfig.strata, stratum);
+      const stratumCode = stratum['_stratumCode'];
 
       let stratumSubjectCount = 0;
       let blockNumber = 1;
@@ -179,7 +179,10 @@ function generateStandard(
             usedSubjectIds
           );
 
-          schema.push({ subjectId, site, stratum, stratumCode, blockNumber, blockSize, treatmentArm: arm.name, treatmentArmId: arm.id });
+          const cleanStratum = { ...stratum };
+          delete cleanStratum['_key'];
+          delete cleanStratum['_stratumCode'];
+          schema.push({ subjectId, site, stratum: cleanStratum, stratumCode, blockNumber, blockSize, treatmentArm: arm.name, treatmentArmId: arm.id });
 
           if (stratumSubjectCount >= maxSubjectsPerStratum) break;
         }
@@ -274,7 +277,7 @@ function generateMarginalOnly(
       const stratum = activePool[poolIdx];
 
       // Resolve block rule and pick a block size using the hierarchical strategy.
-      const stratumCode = computeStratumCode(resolvedConfig.strata, stratum);
+      const stratumCode = stratum['_stratumCode'];
       const rule = resolveBlockRule(resolvedConfig, site, stratumCode);
       if (!siteBlockStates.has(stratumCode)) {
         siteBlockStates.set(stratumCode, newBlockState());
@@ -308,8 +311,11 @@ function generateMarginalOnly(
           usedSubjectIds
         );
 
+        const cleanStratum = { ...stratum };
+        delete cleanStratum['_key'];
+        delete cleanStratum['_stratumCode'];
         schema.push({
-          subjectId, site, stratum, stratumCode,
+          subjectId, site, stratum: cleanStratum, stratumCode,
           blockNumber,
           blockSize,
           treatmentArm: arm.name,
@@ -370,6 +376,12 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
     }
     strataCombinations = newCombinations;
   }
+
+  // Precalculate invariant keys for performance
+  strataCombinations.forEach(combo => {
+    combo['_key'] = resolvedConfig.strata.map(s => combo[s.id] || '').join('|');
+    combo['_stratumCode'] = computeStratumCode(resolvedConfig.strata, combo);
+  });
 
   // Calculate total ratio sum
   const totalRatio = resolvedConfig.arms.reduce((sum, arm) => sum + arm.ratio, 0);

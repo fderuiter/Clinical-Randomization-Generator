@@ -158,6 +158,7 @@ export function generateMinimization(
     // Filter activePool immediately for any combinations that have a cap of 0
     activePool = activePool.filter(combo => {
       const key = strata.map(s => combo[s.id] || '').join('|');
+      combo['_key'] = key;
       const cap = capsDict[key];
       return cap === undefined || cap > 0;
     });
@@ -205,9 +206,9 @@ export function generateMinimization(
       }
     } else {
       activePool = activePool.filter(combo => {
-        const key = strata.map(f => combo[f.id] || '').join('|');
-        const cap = capsDict[key];
-        const count = intersectionCounts[key] ?? 0;
+        const key = combo['_key'];
+        const cap = capsDict[key!];
+        const count = intersectionCounts[key!] ?? 0;
         return cap === undefined || count < cap;
       });
 
