@@ -79,12 +79,14 @@
       <div [formGroup]="designGroup" class="space-y-4">
         <section>
           <h2 class="text-lg font-semibold mb-2">Randomization Algorithm</h2>
-          <div class="flex rounded-lg border overflow-hidden">
+          <div class="flex rounded-lg border overflow-hidden" role="radiogroup" aria-label="Randomization algorithm">
             <button type="button" (click)="designGroup.get('randomizationMethod')?.setValue('BLOCK')" class="flex-1 px-3 py-2 text-sm"
+                    role="radio" [attr.aria-checked]="randomizationMethod === 'BLOCK'"
                     [class.bg-indigo-600]="randomizationMethod === 'BLOCK'" [class.text-white]="randomizationMethod === 'BLOCK'">
               Stratified Block
             </button>
             <button type="button" (click)="designGroup.get('randomizationMethod')?.setValue('MINIMIZATION')" class="flex-1 px-3 py-2 text-sm border-l"
+                    role="radio" [attr.aria-checked]="randomizationMethod === 'MINIMIZATION'"
                     [class.bg-indigo-600]="randomizationMethod === 'MINIMIZATION'" [class.text-white]="randomizationMethod === 'MINIMIZATION'">
               Minimization
             </button>
@@ -144,7 +146,7 @@
             @for (stratum of strata.controls; track stratum; let stratumIndex = $index) {
               <div [formGroupName]="$index" cdkDrag class="rounded-xl border p-4 space-y-3">
                 <div class="flex items-start gap-2">
-                  <button type="button" cdkDragHandle class="mt-2 text-xs text-gray-500">⋮⋮</button>
+                  <button type="button" cdkDragHandle aria-label="Drag to reorder factor" class="mt-2 text-xs text-gray-500">⋮⋮</button>
                   <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label [for]="'factorName' + $index" class="block text-xs uppercase tracking-wide mb-1">Factor Name</label>
@@ -204,10 +206,12 @@
 
             <div>
               <span class="block text-sm mb-2">Block Selection Mode</span>
-              <div class="flex rounded-lg border overflow-hidden">
+              <div class="flex rounded-lg border overflow-hidden" role="radiogroup" aria-label="Block selection mode">
                 <button type="button" (click)="allocationGroup.get('blockSelectionType')?.setValue('RANDOM_POOL')" class="flex-1 px-3 py-2 text-sm"
+                        role="radio" [attr.aria-checked]="blockSelectionType === 'RANDOM_POOL'"
                         [class.bg-indigo-600]="blockSelectionType === 'RANDOM_POOL'" [class.text-white]="blockSelectionType === 'RANDOM_POOL'">Random</button>
                 <button type="button" (click)="allocationGroup.get('blockSelectionType')?.setValue('FIXED_SEQUENCE')" class="flex-1 px-3 py-2 text-sm border-l"
+                        role="radio" [attr.aria-checked]="blockSelectionType === 'FIXED_SEQUENCE'"
                         [class.bg-indigo-600]="blockSelectionType === 'FIXED_SEQUENCE'" [class.text-white]="blockSelectionType === 'FIXED_SEQUENCE'">Fixed</button>
               </div>
             </div>
@@ -239,10 +243,12 @@
                       </div>
                     </div>
                     <input type="text" formControlName="sizesStr" class="w-full rounded-lg border px-3 py-1.5 text-sm" placeholder="e.g., 2, 4">
-                    <div class="flex rounded-lg border overflow-hidden">
+                    <div class="flex rounded-lg border overflow-hidden" role="radiogroup" aria-label="Override block selection mode">
                       <button type="button" (click)="override.get('selectionType')?.setValue('RANDOM_POOL')" class="flex-1 px-3 py-1.5 text-xs"
+                              role="radio" [attr.aria-checked]="override.get('selectionType')?.value === 'RANDOM_POOL'"
                               [class.bg-indigo-600]="override.get('selectionType')?.value === 'RANDOM_POOL'" [class.text-white]="override.get('selectionType')?.value === 'RANDOM_POOL'">Random</button>
                       <button type="button" (click)="override.get('selectionType')?.setValue('FIXED_SEQUENCE')" class="flex-1 px-3 py-1.5 text-xs border-l"
+                              role="radio" [attr.aria-checked]="override.get('selectionType')?.value === 'FIXED_SEQUENCE'"
                               [class.bg-indigo-600]="override.get('selectionType')?.value === 'FIXED_SEQUENCE'" [class.text-white]="override.get('selectionType')?.value === 'FIXED_SEQUENCE'">Fixed</button>
                     </div>
                     <button type="button" (click)="removeBlockOverride(i)" class="text-xs text-red-500">Remove Override</button>
@@ -284,18 +290,21 @@
       <div [formGroup]="capsGroup" class="space-y-4">
         @if (capsResetWarning()) {
           <div class="rounded-lg border border-amber-300 bg-amber-50 text-amber-800 px-3 py-2 text-sm">
-            Stratification changed in a previous step. Cap matrices and percentages were reset and recalculated.
+            Stratification changed in a previous step. Cap combinations were refreshed and proportional/marginal inputs were reset.
           </div>
         }
 
         <div>
           <span class="block text-sm mb-2">Enrollment Cap Strategy</span>
-          <div class="flex rounded-lg border overflow-hidden">
+          <div class="flex rounded-lg border overflow-hidden" role="radiogroup" aria-label="Enrollment cap strategy">
             <button type="button" (click)="capsGroup.get('capStrategy')?.setValue('MANUAL_MATRIX')" class="flex-1 px-3 py-2 text-xs"
+                    role="radio" [attr.aria-checked]="capStrategy === 'MANUAL_MATRIX'"
                     [class.bg-indigo-600]="capStrategy === 'MANUAL_MATRIX'" [class.text-white]="capStrategy === 'MANUAL_MATRIX'">Manual Matrix</button>
             <button type="button" (click)="capsGroup.get('capStrategy')?.setValue('PROPORTIONAL')" class="flex-1 px-3 py-2 text-xs border-l"
+                    role="radio" [attr.aria-checked]="capStrategy === 'PROPORTIONAL'"
                     [class.bg-indigo-600]="capStrategy === 'PROPORTIONAL'" [class.text-white]="capStrategy === 'PROPORTIONAL'">Proportional</button>
             <button type="button" (click)="capsGroup.get('capStrategy')?.setValue('MARGINAL_ONLY')" class="flex-1 px-3 py-2 text-xs border-l"
+                    role="radio" [attr.aria-checked]="capStrategy === 'MARGINAL_ONLY'"
                     [class.bg-indigo-600]="capStrategy === 'MARGINAL_ONLY'" [class.text-white]="capStrategy === 'MARGINAL_ONLY'">Marginal Only</button>
           </div>
         </div>

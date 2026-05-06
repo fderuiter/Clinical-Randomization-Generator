@@ -234,6 +234,16 @@ describe('ConfigFormComponent (domain)', () => {
       expect((component.strata.at(1).value as { id: string }).id).toBe(firstId);
     });
 
+    it('should not recompute stratum caps immediately when reordering strata', () => {
+      const syncStratumCapsSpy = vi.spyOn(component as any, 'syncStratumCaps');
+      component.loadPreset('complex');
+      syncStratumCapsSpy.mockClear();
+
+      component.onStrataDrop({ previousIndex: 0, currentIndex: 1 } as any);
+
+      expect(syncStratumCapsSpy).not.toHaveBeenCalled();
+    });
+
     it('should not change strata when onStrataDrop() has equal indices', () => {
       component.loadPreset('standard');
       const snapshot = component.strata.value;
@@ -300,40 +310,36 @@ describe('ConfigFormComponent (domain)', () => {
     });
   });
 
-  describe('Advanced Settings accordion', () => {
-    it('should initialize showAdvanced signal to false', () => {
-      expect(component.showAdvanced()).toBe(false);
-    });
+  describe('caps strategy state', () => {
+    it('should switch to MANUAL_MATRIX and disable global cap after editing a computed cap', () => {
+      component.form.get('capsGroup.capStrategy')?.setValue('PROPORTIONAL');
+      component.setPercentage('age', '<65', 50);
+      component.setPercentage('age', '>=65', 50);
 
-    it('should toggle showAdvanced from false to true when toggleAdvanced() is called', () => {
-      expect(component.showAdvanced()).toBe(false);
-      component.toggleAdvanced();
-      expect(component.showAdvanced()).toBe(true);
-    });
+      component.computeMatrix();
+      expect(component.matrixComputed()).toBe(true);
 
-    it('should toggle showAdvanced back to false on a second call', () => {
-      component.toggleAdvanced();
-      component.toggleAdvanced();
-      expect(component.showAdvanced()).toBe(false);
-    });
+      component.stratumCaps.at(0).get('cap')?.setValue(15);
 
-    it('should preserve seed and subjectIdMask values regardless of showAdvanced state', () => {
-      expect(component.form.get('metadataGroup.seed')?.value).toBeDefined();
+      expect(component.form.get('capsGroup.capStrategy')?.value).toBe('MANUAL_MATRIX');
+      expect(component.form.get('capsGroup.globalCap')?.disabled).toBe(true);
+    });
+  });
+
+  describe('metadata fields', () => {
+    it('should preserve seed and subjectIdMask values after metadata edits', () => {
       expect(component.form.get('metadataGroup.subjectIdMask')?.value).toBe('{SITE}-{STRATUM}-{SEQ:3}');
-
-      component.toggleAdvanced(); // open
       component.form.get('metadataGroup.seed')?.setValue('my-custom-seed');
-      component.toggleAdvanced(); // close
-      component.toggleAdvanced(); // re-open
+      component.form.get('metadataGroup.subjectIdMask')?.setValue('{SITE}-{SEQ:4}');
 
       expect(component.form.get('metadataGroup.seed')?.value).toBe('my-custom-seed');
+      expect(component.form.get('metadataGroup.subjectIdMask')?.value).toBe('{SITE}-{SEQ:4}');
     });
 
-    it('should keep the form valid regardless of whether the advanced section is open or closed', () => {
+    it('should keep the form valid after metadata field edits', () => {
       expect(component.form.valid).toBe(true);
-      component.toggleAdvanced();
-      expect(component.form.valid).toBe(true);
-      component.toggleAdvanced();
+      component.form.get('metadataGroup.seed')?.setValue('seed-42');
+      component.form.get('metadataGroup.subjectIdMask')?.setValue('{SITE}-{STRATUM}-{SEQ:3}');
       expect(component.form.valid).toBe(true);
     });
   });

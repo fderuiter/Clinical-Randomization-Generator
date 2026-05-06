@@ -4,7 +4,6 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs/operators';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { CdkStepperModule, StepperSelectionEvent } from '@angular/cdk/stepper';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
 import { TagInputComponent } from './tag-input.component';
@@ -22,7 +21,7 @@ import { ToastService } from '../../../core/services/toast.service';
   selector: 'app-config-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, CdkStepperModule, TagInputComponent, MatTooltipModule, BlockPreviewComponent],
+  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, CdkStepperModule, TagInputComponent, BlockPreviewComponent],
   templateUrl: './config-form.component.html'
 })
 export class ConfigFormComponent implements OnInit {
@@ -34,8 +33,6 @@ export class ConfigFormComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
 
   dropdownOpen = false;
-  /** Controls visibility of the Advanced Settings accordion section. */
-  readonly showAdvanced = signal(false);
   @ViewChild('dropdownContainer') dropdownContainer!: ElementRef;
 
   /** Live preview text for the subject ID mask input. Reactive via RxJS → Signal. */
@@ -80,7 +77,7 @@ export class ConfigFormComponent implements OnInit {
     'Enrollment Caps',
     'Review & Generate'
   ] as const;
-  readonly activeStepIndex = signal(0);
+  readonly CAPS_STEP_INDEX = this.stepLabels.indexOf('Enrollment Caps');
   readonly capsResetWarning = signal(false);
   private readonly capsDirtyFromStrata = signal(true);
   private readonly hasVisitedCapsStep = signal(false);
@@ -179,7 +176,7 @@ export class ConfigFormComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         if (this.matrixComputed()) {
-          this.form.get('capsGroup.capStrategy')?.setValue('MANUAL_MATRIX', { emitEvent: false });
+          this.form.get('capsGroup.capStrategy')?.setValue('MANUAL_MATRIX');
           this.matrixComputed.set(false);
         }
       });
@@ -445,9 +442,8 @@ export class ConfigFormComponent implements OnInit {
   }
 
   onStepSelectionChange(event: StepperSelectionEvent): void {
-    this.activeStepIndex.set(event.selectedIndex);
     this.capsResetWarning.set(false);
-    if (event.selectedIndex === 4) {
+    if (event.selectedIndex === this.CAPS_STEP_INDEX) {
       const capsWereDirty = this.capsDirtyFromStrata();
       const shouldWarn = this.hasVisitedCapsStep() && capsWereDirty;
       if (capsWereDirty) {
@@ -483,8 +479,6 @@ export class ConfigFormComponent implements OnInit {
     this.proportionalPercentages.set(zeroedPercentages);
     this.marginalCaps.set(emptiedMarginalCaps);
   }
-
-  toggleAdvanced(): void { this.showAdvanced.update(v => !v); }
 
   loadPreset(type: 'simple' | 'standard' | 'complex'): void {
     const { protocolId, studyName, phase, sitesStr, blockSizesStr, subjectIdMask, arms, strata } =
@@ -600,8 +594,10 @@ export class ConfigFormComponent implements OnInit {
     const control = this.strata.at(event.previousIndex);
     this.strata.removeAt(event.previousIndex, { emitEvent: false });
     this.strata.insert(event.currentIndex, control, { emitEvent: false });
-    this.store.setStrata(this.strata.value as StratumFormValue[]);
-    this.syncStratumCaps();
+    const reorderedStrata = this.strata.value as StratumFormValue[];
+    this.store.setStrata(reorderedStrata);
+    this.syncLevelDetails(reorderedStrata);
+    this.markCapsStale();
   }
 
   onGenerateCode(language: 'R' | 'SAS' | 'Python'): void {
