@@ -1,8 +1,9 @@
-import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild, ChangeDetectionStrategy } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectorRef, Component, computed, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs/operators';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
+import { CdkStepperModule, StepperSelectionEvent } from '@angular/cdk/stepper';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
@@ -21,7 +22,7 @@ import { ToastService } from '../../../core/services/toast.service';
   selector: 'app-config-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, TagInputComponent, MatTooltipModule, BlockPreviewComponent],
+  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, CdkStepperModule, TagInputComponent, MatTooltipModule, BlockPreviewComponent],
   templateUrl: './config-form.component.html'
 })
 export class ConfigFormComponent implements OnInit {
@@ -30,6 +31,7 @@ export class ConfigFormComponent implements OnInit {
   readonly store = inject(StudyBuilderStore);
   private readonly destroyRef = inject(DestroyRef);
   private readonly toastService = inject(ToastService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   dropdownOpen = false;
   /** Controls visibility of the Advanced Settings accordion section. */
@@ -70,36 +72,59 @@ export class ConfigFormComponent implements OnInit {
   /** Expected attrition/dropout rate for the Monte Carlo simulation (0–50 %). */
   readonly attritionRate = signal(0);
 
+  readonly stepLabels = [
+    'Setup & Metadata',
+    'Algorithm & Arms',
+    'Sites & Stratification',
+    'Allocation Mechanics',
+    'Enrollment Caps',
+    'Review & Generate'
+  ] as const;
+  readonly activeStepIndex = signal(0);
+  readonly capsResetWarning = signal(false);
+  private readonly capsDirtyFromStrata = signal(true);
+  private readonly hasVisitedCapsStep = signal(false);
+
   form: FormGroup = this.fb.group(
     {
-      protocolId: ['PRT-001', Validators.required],
-      studyName: ['Demo Study', Validators.required],
-      phase: ['III', Validators.required],
-      arms: this.fb.array([
-        this.fb.group({ id: ['A'], name: ['Active'], ratio: [1, [Validators.required, Validators.min(1)]] }),
-        this.fb.group({ id: ['B'], name: ['Placebo'], ratio: [1, [Validators.required, Validators.min(1)]] })
-      ]),
-      strata: this.fb.array([
-        this.fb.group({ id: ['age'], name: ['Age Group'], levelsStr: ['<65, >=65', Validators.required] })
-      ]),
-      sitesStr: ['101, 102, 103', Validators.required],
-      blockSizesStr: ['4, 6', Validators.required],
-      blockSelectionType: ['RANDOM_POOL'],
-      blockOverrides: this.fb.array([]),
-      stratumCaps: this.fb.array([]),
-      seed: [''],
-      subjectIdMask: ['{SITE}-{STRATUM}-{SEQ:3}', Validators.required],
-      capStrategy: ['MANUAL_MATRIX'],
-      globalCap: [100, [Validators.required, Validators.min(1)]],
-      randomizationMethod: ['BLOCK'],
-      minimizationP: [0.8, [Validators.required, Validators.min(0.5), Validators.max(1.0)]],
-      totalSampleSize: [120, [Validators.required, Validators.min(1)]]
+      metadataGroup: this.fb.group({
+        protocolId: ['PRT-001', Validators.required],
+        studyName: ['Demo Study', Validators.required],
+        phase: ['III', Validators.required],
+        subjectIdMask: ['{SITE}-{STRATUM}-{SEQ:3}', Validators.required],
+        seed: ['']
+      }),
+      designGroup: this.fb.group({
+        randomizationMethod: ['BLOCK'],
+        arms: this.fb.array([
+          this.fb.group({ id: ['A'], name: ['Active'], ratio: [1, [Validators.required, Validators.min(1)]] }),
+          this.fb.group({ id: ['B'], name: ['Placebo'], ratio: [1, [Validators.required, Validators.min(1)]] })
+        ])
+      }),
+      strataGroup: this.fb.group({
+        sitesStr: ['101, 102, 103', Validators.required],
+        strata: this.fb.array([
+          this.fb.group({ id: ['age'], name: ['Age Group'], levelsStr: ['<65, >=65', Validators.required] })
+        ])
+      }),
+      allocationGroup: this.fb.group({
+        blockSizesStr: ['4, 6', Validators.required],
+        blockSelectionType: ['RANDOM_POOL'],
+        blockOverrides: this.fb.array([]),
+        minimizationP: [{ value: 0.8, disabled: true }, [Validators.required, Validators.min(0.5), Validators.max(1.0)]],
+        totalSampleSize: [{ value: 120, disabled: true }, [Validators.required, Validators.min(1)]]
+      }, { validators: this.blockSizesValidator.bind(this) }),
+      capsGroup: this.fb.group({
+        capStrategy: ['MANUAL_MATRIX'],
+        globalCap: [100, [Validators.required, Validators.min(1)]],
+        stratumCaps: this.fb.array([])
+      })
     },
-    { validators: [this.blockSizesValidator.bind(this), this.minimizationProbabilitiesValidator.bind(this)] }
+    { validators: [this.minimizationProbabilitiesValidator.bind(this)] }
   );
 
   constructor() {
-    const maskCtrl = this.form.get('subjectIdMask')!;
+    const maskCtrl = this.form.get('metadataGroup.subjectIdMask')!;
     const mask$ = maskCtrl.valueChanges.pipe(
       startWith(maskCtrl.value as string),
       map((v: string) => v ?? '')
@@ -113,13 +138,13 @@ export class ConfigFormComponent implements OnInit {
       { initialValue: !validateSubjectIdMask(maskCtrl.value as string).valid }
     );
 
-    const armsCtrl = this.form.get('arms')!;
+    const armsCtrl = this.form.get('designGroup.arms')!;
     this.armsSignal = toSignal(
       armsCtrl.valueChanges.pipe(startWith(armsCtrl.value as ArmInput[])),
       { initialValue: armsCtrl.value as ArmInput[] }
     );
 
-    const blockSizesCtrl = this.form.get('blockSizesStr')!;
+    const blockSizesCtrl = this.form.get('allocationGroup.blockSizesStr')!;
     const parseBlockSizes = (v: string | null | undefined): number[] =>
       (v ?? '').split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
     this.blockSizesSignal = toSignal(
@@ -132,20 +157,22 @@ export class ConfigFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.form.get('strata')?.valueChanges
+    this.form.get('strataGroup.strata')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((s: StratumFormValue[]) => {
         this.store.setStrata(s);
-        this.syncStratumCaps();
         this.syncLevelDetails(s);
-        this.matrixComputed.set(false);
+        this.markCapsStale();
       });
     this.store.setStrata(this.strata.value as StratumFormValue[]);
-    this.syncStratumCaps();
     this.syncLevelDetails(this.strata.value as StratumFormValue[]);
+    this.syncStratumCaps();
     this.form.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.facade.clearResults());
+    this.arms.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.allocationGroup.updateValueAndValidity({ emitEvent: false }));
 
     // When the user manually edits a computed cap, switch strategy back to Manual Matrix.
     // The `matrixComputed()` guard ensures this only fires AFTER the user has clicked
@@ -155,23 +182,23 @@ export class ConfigFormComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         if (this.matrixComputed()) {
-          this.form.get('capStrategy')?.setValue('MANUAL_MATRIX', { emitEvent: false });
+          this.form.get('capsGroup.capStrategy')?.setValue('MANUAL_MATRIX', { emitEvent: false });
           this.matrixComputed.set(false);
         }
       });
 
     // When the global cap changes, the computed matrix is stale - reset it.
-    this.form.get('globalCap')?.valueChanges
+    this.form.get('capsGroup.globalCap')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.matrixComputed.set(false));
 
     // Enable/disable globalCap validators based on the active cap strategy.
     // When not in PROPORTIONAL mode the field is hidden and irrelevant, so we
     // disable the control to prevent it from invalidating the form.
-    this.form.get('capStrategy')?.valueChanges
+    this.form.get('capsGroup.capStrategy')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((strategy: string) => {
-        const globalCapCtrl = this.form.get('globalCap');
+        const globalCapCtrl = this.form.get('capsGroup.globalCap');
         if (strategy === 'PROPORTIONAL') {
           globalCapCtrl?.enable();
         } else {
@@ -180,18 +207,18 @@ export class ConfigFormComponent implements OnInit {
       });
     // Initialise: disable when not starting in PROPORTIONAL mode.
     if (this.capStrategy !== 'PROPORTIONAL') {
-      this.form.get('globalCap')?.disable();
+      this.form.get('capsGroup.globalCap')?.disable();
     }
 
     // Enable/disable mode-specific controls based on the randomization method.
-    this.form.get('randomizationMethod')?.valueChanges
+    this.form.get('designGroup.randomizationMethod')?.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((method: string) => {
-        const minimizationP = this.form.get('minimizationP');
-        const totalSampleSize = this.form.get('totalSampleSize');
-        const blockSizesStr = this.form.get('blockSizesStr');
-        const blockSelectionType = this.form.get('blockSelectionType');
-        const blockOverrides = this.form.get('blockOverrides');
+        const minimizationP = this.form.get('allocationGroup.minimizationP');
+        const totalSampleSize = this.form.get('allocationGroup.totalSampleSize');
+        const blockSizesStr = this.form.get('allocationGroup.blockSizesStr');
+        const blockSelectionType = this.form.get('allocationGroup.blockSelectionType');
+        const blockOverrides = this.form.get('allocationGroup.blockOverrides');
         if (method === 'MINIMIZATION') {
           minimizationP?.enable();
           totalSampleSize?.enable();
@@ -209,12 +236,12 @@ export class ConfigFormComponent implements OnInit {
       });
     // Initialise: disable controls that are irrelevant for the starting method.
     if (this.randomizationMethod === 'MINIMIZATION') {
-      this.form.get('blockSizesStr')?.disable();
-      this.form.get('blockSelectionType')?.disable();
-      this.form.get('blockOverrides')?.disable();
+      this.form.get('allocationGroup.blockSizesStr')?.disable();
+      this.form.get('allocationGroup.blockSelectionType')?.disable();
+      this.form.get('allocationGroup.blockOverrides')?.disable();
     } else {
-      this.form.get('minimizationP')?.disable();
-      this.form.get('totalSampleSize')?.disable();
+      this.form.get('allocationGroup.minimizationP')?.disable();
+      this.form.get('allocationGroup.totalSampleSize')?.disable();
     }
   }
 
@@ -224,24 +251,29 @@ export class ConfigFormComponent implements OnInit {
       this.dropdownOpen = false;
   }
 
-  get arms(): FormArray { return this.form.get('arms') as FormArray; }
-  get strata(): FormArray { return this.form.get('strata') as FormArray; }
-  get stratumCaps(): FormArray { return this.form.get('stratumCaps') as FormArray; }
-  get blockOverrides(): FormArray { return this.form.get('blockOverrides') as FormArray; }
+  get metadataGroup(): FormGroup { return this.form.get('metadataGroup') as FormGroup; }
+  get designGroup(): FormGroup { return this.form.get('designGroup') as FormGroup; }
+  get strataGroup(): FormGroup { return this.form.get('strataGroup') as FormGroup; }
+  get allocationGroup(): FormGroup { return this.form.get('allocationGroup') as FormGroup; }
+  get capsGroup(): FormGroup { return this.form.get('capsGroup') as FormGroup; }
+  get arms(): FormArray { return this.form.get('designGroup.arms') as FormArray; }
+  get strata(): FormArray { return this.form.get('strataGroup.strata') as FormArray; }
+  get stratumCaps(): FormArray { return this.form.get('capsGroup.stratumCaps') as FormArray; }
+  get blockOverrides(): FormArray { return this.form.get('allocationGroup.blockOverrides') as FormArray; }
   get totalRatio(): number { return this.arms.controls.reduce((s, c) => s + (c.get('ratio')?.value || 0), 0); }
 
   /** Current block selection type for the global strategy. */
   get blockSelectionType(): 'RANDOM_POOL' | 'FIXED_SEQUENCE' {
-    return (this.form.get('blockSelectionType')?.value as 'RANDOM_POOL' | 'FIXED_SEQUENCE') ?? 'RANDOM_POOL';
+    return (this.form.get('allocationGroup.blockSelectionType')?.value as 'RANDOM_POOL' | 'FIXED_SEQUENCE') ?? 'RANDOM_POOL';
   }
 
   /** Current randomization method. */
   get randomizationMethod(): 'BLOCK' | 'MINIMIZATION' {
-    return (this.form.get('randomizationMethod')?.value as 'BLOCK' | 'MINIMIZATION') ?? 'BLOCK';
+    return (this.form.get('designGroup.randomizationMethod')?.value as 'BLOCK' | 'MINIMIZATION') ?? 'BLOCK';
   }
 
   /** Current cap strategy value. */
-  get capStrategy(): CapStrategy { return (this.form.get('capStrategy')?.value as CapStrategy) ?? 'MANUAL_MATRIX'; }
+  get capStrategy(): CapStrategy { return (this.form.get('capsGroup.capStrategy')?.value as CapStrategy) ?? 'MANUAL_MATRIX'; }
 
   /** Parsed list of strata with their levels for the cap strategy UI. */
   get strataWithLevels(): { id: string; name: string; levels: string[] }[] {
@@ -262,7 +294,7 @@ export class ConfigFormComponent implements OnInit {
 
   /** True when the global cap control is valid and its value is an integer. */
   private get isGlobalCapValidForCompute(): boolean {
-    const globalCapControl = this.form.get('globalCap');
+    const globalCapControl = this.form.get('capsGroup.globalCap');
     if (!globalCapControl?.valid) return false;
     return Number.isInteger(Number(globalCapControl.value));
   }
@@ -335,7 +367,7 @@ export class ConfigFormComponent implements OnInit {
   computeMatrix(): void {
     const strata = this.strataWithLevels;
     if (!strata.length) return;
-    const globalCap = this.form.get('globalCap')?.value as number ?? 100;
+    const globalCap = this.form.get('capsGroup.globalCap')?.value as number ?? 100;
     const percentages = this.proportionalPercentages();
 
     const caps = computeProportionalCaps(
@@ -415,12 +447,53 @@ export class ConfigFormComponent implements OnInit {
     });
   }
 
+  onStepSelectionChange(event: StepperSelectionEvent): void {
+    this.activeStepIndex.set(event.selectedIndex);
+    this.capsResetWarning.set(false);
+    if (event.selectedIndex === 4) {
+      const shouldWarn = this.hasVisitedCapsStep() && this.capsDirtyFromStrata();
+      if (this.capsDirtyFromStrata()) {
+        this.syncStratumCaps();
+        this.resetCapLevelInputs();
+        this.matrixComputed.set(false);
+      }
+      this.capsDirtyFromStrata.set(false);
+      this.hasVisitedCapsStep.set(true);
+      if (shouldWarn) {
+        this.capsResetWarning.set(true);
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  private markCapsStale(): void {
+    this.capsDirtyFromStrata.set(true);
+    this.capsResetWarning.set(false);
+    this.matrixComputed.set(false);
+  }
+
+  private resetCapLevelInputs(): void {
+    const zeroedPercentages: Record<string, Record<string, number>> = {};
+    const emptiedMarginalCaps: Record<string, Record<string, number | undefined>> = {};
+    for (const s of this.strataWithLevels) {
+      zeroedPercentages[s.id] = {};
+      emptiedMarginalCaps[s.id] = {};
+      for (const level of s.levels) {
+        zeroedPercentages[s.id][level] = 0;
+      }
+    }
+    this.proportionalPercentages.set(zeroedPercentages);
+    this.marginalCaps.set(emptiedMarginalCaps);
+  }
+
   toggleAdvanced(): void { this.showAdvanced.update(v => !v); }
 
   loadPreset(type: 'simple' | 'standard' | 'complex'): void {
     const { protocolId, studyName, phase, sitesStr, blockSizesStr, subjectIdMask, arms, strata } =
       this.store.getPreset(type);
-    this.form.patchValue({ protocolId, studyName, phase, sitesStr, blockSizesStr, subjectIdMask, seed: '' }, { emitEvent: false });
+    this.metadataGroup.patchValue({ protocolId, studyName, phase, subjectIdMask, seed: '' }, { emitEvent: false });
+    this.strataGroup.patchValue({ sitesStr }, { emitEvent: false });
+    this.allocationGroup.patchValue({ blockSizesStr }, { emitEvent: false });
     this.arms.clear({ emitEvent: false });
     arms.forEach(a => this.arms.push(
       this.fb.group({ id: [a.id], name: [a.name], ratio: [a.ratio, [Validators.required, Validators.min(1)]] }),
@@ -432,10 +505,11 @@ export class ConfigFormComponent implements OnInit {
       { emitEvent: false }
     ));
     this.form.updateValueAndValidity();
+    this.allocationGroup.updateValueAndValidity({ emitEvent: false });
     this.store.setStrata(this.strata.value as StratumFormValue[]);
     this.syncStratumCaps();
     this.syncLevelDetails(this.strata.value as StratumFormValue[]);
-    this.matrixComputed.set(false);
+    this.markCapsStale();
   }
 
   parseCommaSeparated(value: string | null | undefined): string[] {
@@ -477,7 +551,7 @@ export class ConfigFormComponent implements OnInit {
     this.blockOverrides.push(this.fb.group({
       targetType: ['site'],
       targetId: [''],
-      sizesStr: [this.form.get('blockSizesStr')?.value ?? '4, 6'],
+      sizesStr: [this.form.get('allocationGroup.blockSizesStr')?.value ?? '4, 6'],
       selectionType: ['RANDOM_POOL']
     }));
   }
@@ -494,7 +568,7 @@ export class ConfigFormComponent implements OnInit {
   getBlockOverrideTargetOptions(index: number): string[] {
     const targetType = this.blockOverrides.at(index)?.get('targetType')?.value as string;
     if (targetType === 'site') {
-      return (this.form.get('sitesStr')?.value as string ?? '')
+      return (this.form.get('strataGroup.sitesStr')?.value as string ?? '')
         .split(',').map(s => s.trim()).filter(s => s);
     }
     // For stratum: return computed stratum codes
@@ -589,13 +663,32 @@ export class ConfigFormComponent implements OnInit {
       selectionType: 'RANDOM_POOL' | 'FIXED_SEQUENCE';
     }[]).filter(ov => ov.targetId?.trim());
 
-    return { ...base, levelDetails, blockOverrides };
+    return {
+      protocolId: base.metadataGroup.protocolId,
+      studyName: base.metadataGroup.studyName,
+      phase: base.metadataGroup.phase,
+      arms: base.designGroup.arms,
+      strata: base.strataGroup.strata,
+      sitesStr: base.strataGroup.sitesStr,
+      blockSizesStr: base.allocationGroup.blockSizesStr,
+      blockSelectionType: base.allocationGroup.blockSelectionType,
+      blockOverrides,
+      stratumCaps: base.capsGroup.stratumCaps,
+      seed: base.metadataGroup.seed,
+      subjectIdMask: base.metadataGroup.subjectIdMask,
+      capStrategy: base.capsGroup.capStrategy,
+      globalCap: base.capsGroup.globalCap,
+      randomizationMethod: base.designGroup.randomizationMethod,
+      minimizationP: base.allocationGroup.minimizationP,
+      totalSampleSize: base.allocationGroup.totalSampleSize,
+      levelDetails
+    };
   }
 
-  private blockSizesValidator(group: FormGroup): { invalidBlockSize: true } | null {
-    const method = group.get('randomizationMethod')?.value as string;
+  private blockSizesValidator(group: AbstractControl): ValidationErrors | null {
+    const method = this.form?.get('designGroup.randomizationMethod')?.value as string;
     if (method === 'MINIMIZATION') return null;
-    const arms = group.get('arms') as FormArray;
+    const arms = this.form?.get('designGroup.arms') as FormArray;
     const blockSizesStr = group.get('blockSizesStr')?.value as string;
     if (!arms || !blockSizesStr) return null;
     const total = arms.controls.reduce((s, c) => s + (c.get('ratio')?.value || 0), 0);
@@ -610,9 +703,9 @@ export class ConfigFormComponent implements OnInit {
    * and every individual probability must be finite and within [0, 100].
    */
   private minimizationProbabilitiesValidator(group: FormGroup): { minimizationProbabilitiesInvalid: true } | null {
-    const method = group.get('randomizationMethod')?.value as string;
+    const method = group.get('designGroup.randomizationMethod')?.value as string;
     if (method !== 'MINIMIZATION') return null;
-    const strata = (group.get('strata') as FormArray).value as StratumFormValue[];
+    const strata = (group.get('strataGroup.strata') as FormArray).value as StratumFormValue[];
     const probs = this.minimizationProbabilities();
     for (const s of strata) {
       const levels = s.levelsStr.split(',').map(l => l.trim()).filter(l => l);
@@ -664,5 +757,13 @@ export class ConfigFormComponent implements OnInit {
     }));
     // Re-run form-level validator since probability data lives outside the FormGroup.
     this.form.updateValueAndValidity();
+  }
+
+  get reviewConfigJson(): string {
+    try {
+      return JSON.stringify(this.store.buildConfig(this.buildFormValue()), null, 2);
+    } catch {
+      return '{}';
+    }
   }
 }
