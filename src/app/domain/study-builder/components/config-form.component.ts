@@ -77,7 +77,7 @@ export class ConfigFormComponent implements OnInit {
     'Enrollment Caps',
     'Review & Generate'
   ] as const;
-  readonly CAPS_STEP_INDEX = this.stepLabels.indexOf('Enrollment Caps');
+  readonly capsStepIndex = this.stepLabels.indexOf('Enrollment Caps');
   readonly capsResetWarning = signal(false);
   private readonly capsDirtyFromStrata = signal(true);
   private readonly hasVisitedCapsStep = signal(false);
@@ -176,7 +176,8 @@ export class ConfigFormComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         if (this.matrixComputed()) {
-          this.form.get('capsGroup.capStrategy')?.setValue('MANUAL_MATRIX');
+          this.form.get('capsGroup.capStrategy')?.setValue('MANUAL_MATRIX', { emitEvent: false });
+          this.form.get('capsGroup.globalCap')?.disable();
           this.matrixComputed.set(false);
         }
       });
@@ -443,7 +444,7 @@ export class ConfigFormComponent implements OnInit {
 
   onStepSelectionChange(event: StepperSelectionEvent): void {
     this.capsResetWarning.set(false);
-    if (event.selectedIndex === this.CAPS_STEP_INDEX) {
+    if (event.selectedIndex === this.capsStepIndex) {
       const capsWereDirty = this.capsDirtyFromStrata();
       const shouldWarn = this.hasVisitedCapsStep() && capsWereDirty;
       if (capsWereDirty) {
