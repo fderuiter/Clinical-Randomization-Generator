@@ -39,8 +39,8 @@ importers:
         specifier: 21.2.7
         version: 21.2.7(@angular/core@21.2.7(@angular/compiler@21.2.7)(rxjs@7.8.2)(zone.js@0.16.1))(rxjs@7.8.2)
       '@angular/ssr':
-        specifier: 21.2.8
-        version: 21.2.8(fdbce40933a20b7036aec1b70c106f2f)
+        specifier: 21.2.9
+        version: 21.2.9(fdbce40933a20b7036aec1b70c106f2f)
       '@fontsource-variable/inter':
         specifier: ^5.2.8
         version: 5.2.8
@@ -77,7 +77,7 @@ importers:
     devDependencies:
       '@angular/build':
         specifier: 21.2.8
-        version: 21.2.8(2ff09f137711b7d3539f67c94094a088)
+        version: 21.2.8(dda67a424b0f6090ca09d20228eb78a0)
       '@angular/cli':
         specifier: 21.2.8
         version: 21.2.8(@types/node@25.6.0)(chokidar@5.0.0)
@@ -463,8 +463,8 @@ packages:
       '@angular/core': 21.2.7
       rxjs: ^6.5.3 || ^7.4.0
 
-  '@angular/ssr@21.2.8':
-    resolution: {integrity: sha512-drCtujdTkYuIENKDzyU/2QAc/E4FwzZ1QIiouwy52+9Ij6DyI5pe75XdM4WD1FOssAa84DhPE7Rb0Zs9nsqhHg==}
+  '@angular/ssr@21.2.9':
+    resolution: {integrity: sha512-kNOCyk3l3fxC1x6KoIRpeVke4HHlnSjaPdK5b0DA2YBgVT02Kz+Bzn818b/a1HCCMFfPBUh3xb623mC5LSyvlw==}
     peerDependencies:
       '@angular/common': ^21.0.0
       '@angular/core': ^21.0.0
@@ -5231,7 +5231,7 @@ snapshots:
       eslint: 9.39.4(jiti@2.6.1)
       typescript: 5.9.3
 
-  '@angular/build@21.2.8(2ff09f137711b7d3539f67c94094a088)':
+  '@angular/build@21.2.8(dda67a424b0f6090ca09d20228eb78a0)':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@angular-devkit/architect': 0.2102.8(chokidar@5.0.0)
@@ -5269,7 +5269,7 @@ snapshots:
       '@angular/platform-browser': 21.2.7(@angular/common@21.2.7(@angular/core@21.2.7(@angular/compiler@21.2.7)(rxjs@7.8.2)(zone.js@0.16.1))(rxjs@7.8.2))(@angular/core@21.2.7(@angular/compiler@21.2.7)(rxjs@7.8.2)(zone.js@0.16.1))
       '@angular/platform-server': 21.2.7(@angular/common@21.2.7(@angular/core@21.2.7(@angular/compiler@21.2.7)(rxjs@7.8.2)(zone.js@0.16.1))(rxjs@7.8.2))(@angular/compiler@21.2.7)(@angular/core@21.2.7(@angular/compiler@21.2.7)(rxjs@7.8.2)(zone.js@0.16.1))(@angular/platform-browser@21.2.7(@angular/common@21.2.7(@angular/core@21.2.7(@angular/compiler@21.2.7)(rxjs@7.8.2)(zone.js@0.16.1))(rxjs@7.8.2))(@angular/core@21.2.7(@angular/compiler@21.2.7)(rxjs@7.8.2)(zone.js@0.16.1)))(rxjs@7.8.2)
       '@angular/service-worker': 21.2.7(@angular/core@21.2.7(@angular/compiler@21.2.7)(rxjs@7.8.2)(zone.js@0.16.1))(rxjs@7.8.2)
-      '@angular/ssr': 21.2.8(fdbce40933a20b7036aec1b70c106f2f)
+      '@angular/ssr': 21.2.9(fdbce40933a20b7036aec1b70c106f2f)
       lmdb: 3.5.1
       postcss: 8.5.12
       tailwindcss: 4.2.4
@@ -5415,7 +5415,7 @@ snapshots:
       rxjs: 7.8.2
       tslib: 2.8.1
 
-  '@angular/ssr@21.2.8(fdbce40933a20b7036aec1b70c106f2f)':
+  '@angular/ssr@21.2.9(fdbce40933a20b7036aec1b70c106f2f)':
     dependencies:
       '@angular/common': 21.2.7(@angular/core@21.2.7(@angular/compiler@21.2.7)(rxjs@7.8.2)(zone.js@0.16.1))(rxjs@7.8.2)
       '@angular/core': 21.2.7(@angular/compiler@21.2.7)(rxjs@7.8.2)(zone.js@0.16.1)
