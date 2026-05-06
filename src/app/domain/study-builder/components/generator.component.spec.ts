@@ -258,7 +258,9 @@ describe('GeneratorComponent (domain)', () => {
   it('should always render the intro heading', () => {
     const fixture = TestBed.createComponent(GeneratorComponent);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Study-Agnostic Randomization');
+    const heading = fixture.nativeElement.querySelector('[data-testid="generator-heading"]');
+    expect(heading).toBeTruthy();
+    expect(heading?.textContent).toContain('Build Your Randomization Schema');
   });
 
   it('should always render the config form', () => {
