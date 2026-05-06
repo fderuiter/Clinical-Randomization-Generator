@@ -29,6 +29,7 @@ test.describe('Code Generator Modal UI', () => {
     const generateCodeBtn = page.getByRole('button', { name: /Generate Code/i });
     await expect(generateCodeBtn).toBeVisible();
     await generateCodeBtn.click();
+    await expect(page.getByRole('menuitem', { name: /Stata Script/i })).toHaveCount(0);
     await page.getByRole('menuitem', { name: /R Script/i }).click();
 
     const modalHeading = page.getByRole('heading', { name: /Code Generator/i });

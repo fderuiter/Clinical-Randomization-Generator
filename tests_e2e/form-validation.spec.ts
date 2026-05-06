@@ -98,11 +98,10 @@ test.describe('Form Validation and Configuration', () => {
     await goToStep(page, 2);
     const armRows = page.locator('[formArrayName="arms"] > div');
     await expect(armRows).toHaveCount(2);
-    const initialCount = await armRows.count();
 
     await page.getByRole('button', { name: /\+ Add Arm/i }).click();
 
-    await expect(armRows).toHaveCount(initialCount + 1);
+    await expect(armRows).toHaveCount(3);
   });
 
   // ---------------------------------------------------------------------------
@@ -139,6 +138,7 @@ test.describe('Form Validation and Configuration', () => {
     await levelsInput.press('Enter');
     await levelsInput.press('Tab');
 
+    // Move from Step 3 (Sites & Stratification) to Step 5 (Enrollment Caps).
     await page.getByRole('button', { name: /^Next$/i }).click();
     await page.getByRole('button', { name: /^Next$/i }).click();
     const capRows = page.locator('[formArrayName="stratumCaps"] > div');
