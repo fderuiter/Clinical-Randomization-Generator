@@ -188,7 +188,7 @@
 
       <div class="pt-4 border-t flex justify-between">
         <button type="button" cdkStepperPrevious class="px-4 py-2 rounded-lg border">Previous</button>
-        <button type="button" cdkStepperNext [disabled]="strataGroup.invalid" class="px-4 py-2 rounded-lg bg-indigo-600 text-white disabled:opacity-50">Next</button>
+        <button type="button" cdkStepperNext [disabled]="isStrataStepNextDisabled" class="px-4 py-2 rounded-lg bg-indigo-600 text-white disabled:opacity-50">Next</button>
       </div>
     </cdk-step>
 

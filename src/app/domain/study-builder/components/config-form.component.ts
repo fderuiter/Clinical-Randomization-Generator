@@ -256,6 +256,9 @@ export class ConfigFormComponent implements OnInit {
   get stratumCaps(): FormArray { return this.form.get('capsGroup.stratumCaps') as FormArray; }
   get blockOverrides(): FormArray { return this.form.get('allocationGroup.blockOverrides') as FormArray; }
   get totalRatio(): number { return this.arms.controls.reduce((s, c) => s + (c.get('ratio')?.value || 0), 0); }
+  get isStrataStepNextDisabled(): boolean {
+    return this.strataGroup.invalid || !!this.form.errors?.['minimizationProbabilitiesInvalid'];
+  }
 
   /** Current block selection type for the global strategy. */
   get blockSelectionType(): 'RANDOM_POOL' | 'FIXED_SEQUENCE' {
