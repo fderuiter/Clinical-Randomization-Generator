@@ -177,7 +177,7 @@ export class ConfigFormComponent implements OnInit {
       .subscribe(() => {
         if (this.matrixComputed()) {
           this.form.get('capsGroup.capStrategy')?.setValue('MANUAL_MATRIX', { emitEvent: false });
-          this.form.get('capsGroup.globalCap')?.disable();
+          this.form.get('capsGroup.globalCap')?.disable({ emitEvent: false });
           this.matrixComputed.set(false);
         }
       });

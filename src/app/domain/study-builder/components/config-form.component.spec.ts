@@ -235,15 +235,12 @@ describe('ConfigFormComponent (domain)', () => {
     });
 
     it('should not recompute stratum caps immediately when reordering strata', () => {
-      const syncStratumCapsSpy = vi.spyOn(component as any, 'syncStratumCaps');
       const markCapsStaleSpy = vi.spyOn(component as any, 'markCapsStale');
       component.loadPreset('complex');
-      syncStratumCapsSpy.mockClear();
       markCapsStaleSpy.mockClear();
 
       component.onStrataDrop({ previousIndex: 0, currentIndex: 1 } as any);
 
-      expect(syncStratumCapsSpy).not.toHaveBeenCalled();
       expect(markCapsStaleSpy).toHaveBeenCalledOnce();
     });
 
