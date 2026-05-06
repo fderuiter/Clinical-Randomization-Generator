@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { goBackToSetupStep, goToReviewStep, loadPreset, openGenerator } from './generator-helpers';
+import { goBackToFirstStep, goToReviewStep, loadPreset, openGenerator } from './generator-helpers';
 
 // ---------------------------------------------------------------------------
 // Helper: navigate to the generator page and ensure the form is ready
@@ -23,7 +23,7 @@ test.describe('Monte Carlo Statistical Validation', () => {
   });
 
   test('"Run Statistical QA" button should be disabled when form is invalid (Protocol ID cleared)', async ({ page }) => {
-    await goBackToSetupStep(page);
+    await goBackToFirstStep(page);
     await page.locator('#protocolId').clear();
     await expect(page.getByRole('button', { name: /^Next$/i })).toBeDisabled();
   });
@@ -248,7 +248,7 @@ test.describe('Monte Carlo Statistical Validation', () => {
     test.setTimeout(120000); // CI can be slower for complex simulation
 
     // Load complex preset
-    await goBackToSetupStep(page);
+    await goBackToFirstStep(page);
     await loadPreset(page, 'Complex');
     await goToReviewStep(page);
 
@@ -272,7 +272,7 @@ test.describe('Monte Carlo Statistical Validation', () => {
   });
 
   test('Monte Carlo should complete with the Simple (Unstratified) preset', async ({ page }) => {
-    await goBackToSetupStep(page);
+    await goBackToFirstStep(page);
     await loadPreset(page, 'Simple');
     await goToReviewStep(page);
 

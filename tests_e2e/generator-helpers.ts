@@ -13,6 +13,10 @@ export async function loadPreset(page: Page, preset: 'Simple' | 'Standard' | 'Co
   await page.getByRole('button', { name: new RegExp(`^${preset}$`, 'i') }).click();
 }
 
+/**
+ * Navigate forward to a wizard step using 1-based numbering.
+ * Valid values map to the 6-step generator wizard (1 = Setup, 6 = Review).
+ */
 export async function goToStep(page: Page, step: number): Promise<void> {
   for (let i = 0; i < Math.max(0, step - FIRST_WIZARD_STEP); i++) {
     await page.getByRole('button', { name: /^Next$/i }).click();
@@ -24,7 +28,7 @@ export async function goToReviewStep(page: Page): Promise<void> {
   await expect(page.getByRole('button', { name: /Run Statistical QA/i })).toBeVisible();
 }
 
-export async function goBackToSetupStep(page: Page): Promise<void> {
+export async function goBackToFirstStep(page: Page): Promise<void> {
   for (let i = 0; i < Math.max(0, REVIEW_WIZARD_STEP - FIRST_WIZARD_STEP); i++) {
     await page.getByRole('button', { name: /^Previous$/i }).click();
   }
