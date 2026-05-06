@@ -4,6 +4,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs/operators';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { CdkStepperModule, StepperSelectionEvent } from '@angular/cdk/stepper';
+import { NgTemplateOutlet } from '@angular/common';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { StudyBuilderStore, StratumFormValue } from '../store/study-builder.store';
 import { TagInputComponent } from './tag-input.component';
@@ -21,7 +22,7 @@ import { ToastService } from '../../../core/services/toast.service';
   selector: 'app-config-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, CdkDropList, CdkDrag, CdkDragHandle, CdkStepperModule, TagInputComponent, BlockPreviewComponent],
+  imports: [ReactiveFormsModule, NgTemplateOutlet, CdkDropList, CdkDrag, CdkDragHandle, CdkStepperModule, TagInputComponent, BlockPreviewComponent],
   templateUrl: './config-form.component.html'
 })
 export class ConfigFormComponent implements OnInit {
