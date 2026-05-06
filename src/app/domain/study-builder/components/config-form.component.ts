@@ -113,14 +113,14 @@ export class ConfigFormComponent implements OnInit {
         blockOverrides: this.fb.array([]),
         minimizationP: [{ value: 0.8, disabled: true }, [Validators.required, Validators.min(0.5), Validators.max(1.0)]],
         totalSampleSize: [{ value: 120, disabled: true }, [Validators.required, Validators.min(1)]]
-      }, { validators: this.blockSizesValidator.bind(this) }),
+      }),
       capsGroup: this.fb.group({
         capStrategy: ['MANUAL_MATRIX'],
         globalCap: [100, [Validators.required, Validators.min(1)]],
         stratumCaps: this.fb.array([])
       })
     },
-    { validators: [this.minimizationProbabilitiesValidator.bind(this)] }
+    { validators: [this.blockSizesValidator.bind(this), this.minimizationProbabilitiesValidator.bind(this)] }
   );
 
   constructor() {
@@ -170,9 +170,6 @@ export class ConfigFormComponent implements OnInit {
     this.form.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.facade.clearResults());
-    this.arms.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.allocationGroup.updateValueAndValidity({ emitEvent: false }));
 
     // When the user manually edits a computed cap, switch strategy back to Manual Matrix.
     // The `matrixComputed()` guard ensures this only fires AFTER the user has clicked
@@ -451,8 +448,9 @@ export class ConfigFormComponent implements OnInit {
     this.activeStepIndex.set(event.selectedIndex);
     this.capsResetWarning.set(false);
     if (event.selectedIndex === 4) {
-      const shouldWarn = this.hasVisitedCapsStep() && this.capsDirtyFromStrata();
-      if (this.capsDirtyFromStrata()) {
+      const capsWereDirty = this.capsDirtyFromStrata();
+      const shouldWarn = this.hasVisitedCapsStep() && capsWereDirty;
+      if (capsWereDirty) {
         this.syncStratumCaps();
         this.resetCapLevelInputs();
         this.matrixComputed.set(false);
@@ -505,7 +503,6 @@ export class ConfigFormComponent implements OnInit {
       { emitEvent: false }
     ));
     this.form.updateValueAndValidity();
-    this.allocationGroup.updateValueAndValidity({ emitEvent: false });
     this.store.setStrata(this.strata.value as StratumFormValue[]);
     this.syncStratumCaps();
     this.syncLevelDetails(this.strata.value as StratumFormValue[]);
@@ -686,10 +683,11 @@ export class ConfigFormComponent implements OnInit {
   }
 
   private blockSizesValidator(group: AbstractControl): ValidationErrors | null {
-    const method = this.form?.get('designGroup.randomizationMethod')?.value as string;
+    if (!(group instanceof FormGroup)) return null;
+    const method = group.get('designGroup.randomizationMethod')?.value as string;
     if (method === 'MINIMIZATION') return null;
-    const arms = this.form?.get('designGroup.arms') as FormArray;
-    const blockSizesStr = group.get('blockSizesStr')?.value as string;
+    const arms = group.get('designGroup.arms') as FormArray;
+    const blockSizesStr = group.get('allocationGroup.blockSizesStr')?.value as string;
     if (!arms || !blockSizesStr) return null;
     const total = arms.controls.reduce((s, c) => s + (c.get('ratio')?.value || 0), 0);
     const sizes = blockSizesStr.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
@@ -702,7 +700,8 @@ export class ConfigFormComponent implements OnInit {
    * Minimization is the active method. Each factor's levels must sum to 100%,
    * and every individual probability must be finite and within [0, 100].
    */
-  private minimizationProbabilitiesValidator(group: FormGroup): { minimizationProbabilitiesInvalid: true } | null {
+  private minimizationProbabilitiesValidator(group: AbstractControl): { minimizationProbabilitiesInvalid: true } | null {
+    if (!(group instanceof FormGroup)) return null;
     const method = group.get('designGroup.randomizationMethod')?.value as string;
     if (method !== 'MINIMIZATION') return null;
     const strata = (group.get('strataGroup.strata') as FormArray).value as StratumFormValue[];
