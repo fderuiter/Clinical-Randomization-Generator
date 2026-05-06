@@ -265,29 +265,29 @@ describe('ConfigFormComponent (domain)', () => {
 
   describe('validateBlockSizes()', () => {
     it('should have no form errors when all block sizes are multiples of the total ratio', () => {
-      expect(component.allocationGroup.errors?.['invalidBlockSize']).toBeFalsy();
+      expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
     });
 
     it('should set invalidBlockSize error when a block size is not a multiple of total ratio', () => {
       component.form.get('allocationGroup.blockSizesStr')?.setValue('3');
       component.form.updateValueAndValidity();
-      expect(component.allocationGroup.errors?.['invalidBlockSize']).toBe(true);
+      expect(component.form.errors?.['invalidBlockSize']).toBe(true);
     });
 
     it('should clear the error once a valid block size is restored', () => {
       component.form.get('allocationGroup.blockSizesStr')?.setValue('3');
       component.form.updateValueAndValidity();
-      expect(component.allocationGroup.errors?.['invalidBlockSize']).toBe(true);
+      expect(component.form.errors?.['invalidBlockSize']).toBe(true);
 
       component.form.get('allocationGroup.blockSizesStr')?.setValue('4');
       component.form.updateValueAndValidity();
-      expect(component.allocationGroup.errors?.['invalidBlockSize']).toBeFalsy();
+      expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
     });
 
     it('should re-run the validator after loadPreset() changes the total arm ratio', () => {
-      expect(component.allocationGroup.errors?.['invalidBlockSize']).toBeFalsy();
+      expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
       component.loadPreset('complex');
-      expect(component.allocationGroup.errors?.['invalidBlockSize']).toBeFalsy();
+      expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
       expect(component.form.valid).toBe(true);
     });
 
@@ -295,7 +295,7 @@ describe('ConfigFormComponent (domain)', () => {
       component.loadPreset('complex');
       component.form.get('allocationGroup.blockSizesStr')?.setValue('4');
       component.form.updateValueAndValidity();
-      expect(component.allocationGroup.errors?.['invalidBlockSize']).toBe(true);
+      expect(component.form.errors?.['invalidBlockSize']).toBe(true);
       expect(component.form.valid).toBe(false);
     });
   });
