@@ -1,16 +1,12 @@
 import { test, expect, Page } from '@playwright/test';
+import { goToReviewStep, loadPreset, openGenerator } from './generator-helpers';
 
 // ---------------------------------------------------------------------------
 // Helper: navigate to the generator page and ensure the form is ready
 // ---------------------------------------------------------------------------
 async function navigateToGenerator(page: Page) {
-  await page.goto('http://localhost:4200');
-  const getStartedBtn = page.getByRole('link', { name: /Get Started/i });
-  if (await getStartedBtn.isVisible()) {
-    await getStartedBtn.click();
-  }
-  // Wait for the config form to be visible
-  await expect(page.locator('form')).toBeVisible();
+  await openGenerator(page);
+  await goToReviewStep(page);
 }
 
 test.describe('Monte Carlo Statistical Validation', () => {
@@ -27,9 +23,13 @@ test.describe('Monte Carlo Statistical Validation', () => {
   });
 
   test('"Run Statistical QA" button should be disabled when form is invalid (Protocol ID cleared)', async ({ page }) => {
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
     await page.locator('#protocolId').clear();
-    const mcBtn = page.getByRole('button', { name: /Run Statistical QA/i });
-    await expect(mcBtn).toBeDisabled();
+    await expect(page.getByRole('button', { name: /^Next$/i })).toBeDisabled();
   });
 
   test('"Run Statistical QA" button should be enabled when form is valid (default state)', async ({ page }) => {
@@ -252,7 +252,13 @@ test.describe('Monte Carlo Statistical Validation', () => {
     test.setTimeout(120000); // CI can be slower for complex simulation
 
     // Load complex preset
-    await page.getByRole('button', { name: /Complex \(Multi-strata\)/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await loadPreset(page, 'Complex');
+    await goToReviewStep(page);
 
     const mcBtn = page.getByRole('button', { name: /Run Statistical QA/i });
     await mcBtn.click();
@@ -274,7 +280,13 @@ test.describe('Monte Carlo Statistical Validation', () => {
   });
 
   test('Monte Carlo should complete with the Simple (Unstratified) preset', async ({ page }) => {
-    await page.getByRole('button', { name: /Simple \(Unstratified\)/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await page.getByRole('button', { name: /^Previous$/i }).click();
+    await loadPreset(page, 'Simple');
+    await goToReviewStep(page);
 
     const mcBtn = page.getByRole('button', { name: /Run Statistical QA/i });
     await mcBtn.click();
