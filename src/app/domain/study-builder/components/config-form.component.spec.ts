@@ -271,6 +271,26 @@ describe('ConfigFormComponent (domain)', () => {
       expect(component.capsResetWarning()).toBe(true);
       expect(component.matrixComputed()).toBe(false);
     });
+
+    it('should disable strata-step next when minimization probabilities are invalid', () => {
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.setMinimizationProbability('age', '<65', 60);
+      component.setMinimizationProbability('age', '>=65', 30);
+      component.form.updateValueAndValidity();
+
+      expect(component.form.errors?.['minimizationProbabilitiesInvalid']).toBe(true);
+      expect(component.isStrataStepNextDisabled).toBe(true);
+    });
+
+    it('should allow strata-step next when minimization probabilities are valid', () => {
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.setMinimizationProbability('age', '<65', 50);
+      component.setMinimizationProbability('age', '>=65', 50);
+      component.form.updateValueAndValidity();
+
+      expect(component.form.errors?.['minimizationProbabilitiesInvalid']).toBeFalsy();
+      expect(component.isStrataStepNextDisabled).toBe(false);
+    });
   });
 
   describe('validateBlockSizes()', () => {
