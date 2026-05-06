@@ -7,7 +7,7 @@ test.describe('Code Generator Modal UI', () => {
     await openGenerator(page);
   });
 
-  test('should generate, display, and download code in available languages', async ({ page }) => {
+  test('should generate, display, and download code in R, Python, and SAS', async ({ page }) => {
     await page.locator('#protocolId').fill('TEST-PRT-123');
     await page.locator('#studyName').fill('End-to-end Test Study');
     await page.locator('#phase').selectOption({ label: 'Phase II' });
