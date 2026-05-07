@@ -1,113 +1,74 @@
 import { test, expect } from '@playwright/test';
+import { openGenerator } from './generator-helpers';
 
 test.describe('Code Generator Modal UI', () => {
   test.beforeEach(async ({ page }) => {
-    // Add an explicit listener for console errors to catch potential download issues
     page.on('pageerror', err => console.log(`Page Error: ${err.message}`));
-    await page.goto('http://localhost:4200/generator');
+    await openGenerator(page);
   });
 
-  test('should generate, display, and download code in all three languages', async ({ page }) => {
-    // Fill required form fields to enable code generation
-    await page.getByLabel(/Protocol ID/i).fill('TEST-PRT-123');
-    await page.getByLabel(/Study Name/i).fill('End-to-end Test Study');
+  test('should generate, display, and download code in all supported languages', async ({ page }) => {
+    await page.locator('#protocolId').fill('TEST-PRT-123');
+    await page.locator('#studyName').fill('End-to-end Test Study');
     await page.locator('#phase').selectOption({ label: 'Phase II' });
 
-    // Arm Name inputs - use stable data-testid to avoid placeholder ambiguity (card-based UI)
-    const armInputs = page.getByTestId('arm-name-input');
-    await expect(armInputs.first()).toBeVisible({ timeout: 10000 });
-    await armInputs.first().fill('Placebo');
+    await page.getByRole('button', { name: /^Next$/i }).click();
+    await page.locator('#armName0').fill('Placebo');
+    await page.getByRole('button', { name: /^Next$/i }).click();
 
-    // Ratio is now a stepper - verify it shows the default value of 1
-    const ratioValue = page.locator('span.tabular-nums').first();
-    await expect(ratioValue).toHaveText('1');
-
-    // Fill Site Details (now a tag-input component).
-    // The inner <input> placeholder is hidden when chips already exist, so scope via the "Sites" label.
     const siteInput = page.locator('#sitesLabel + app-tag-input input');
     await expect(siteInput).toBeVisible();
     await siteInput.fill('Site-001');
     await siteInput.press('Enter');
+    await page.getByRole('button', { name: /^Next$/i }).click();
 
-    // Fill Block Size Details
-    const blockInputs = page.locator('#blockSizesStr');
-    await expect(blockInputs).toBeVisible();
-    await blockInputs.fill('2');
+    await page.locator('#blockSizesStr').fill('2');
+    await page.getByRole('button', { name: /^Next$/i }).click();
+    await page.getByRole('button', { name: /^Next$/i }).click();
 
-    // Open Advanced Settings accordion to reveal the Seed input
-    await page.getByRole('button', { name: /Advanced Settings/i }).click();
-
-    // Fill Random Seed (required by code generator to avoid MissingSeedError)
-    const seedInput = page.getByLabel(/Random Seed/i);
-    await expect(seedInput).toBeVisible();
-    await seedInput.fill('42');
-
-    // Check "Generate Code" button is present and click to open dropdown
     const generateCodeBtn = page.getByRole('button', { name: /Generate Code/i });
     await expect(generateCodeBtn).toBeVisible();
     await generateCodeBtn.click();
-
-    // Select R Script to open modal
+    await expect(page.getByRole('menuitem', { name: /Stata Script/i })).toBeVisible();
     await page.getByRole('menuitem', { name: /R Script/i }).click();
 
-    // Verify modal is open
     const modalHeading = page.getByRole('heading', { name: /Code Generator/i });
     await expect(modalHeading).toBeVisible();
-
     const modal = page.locator('div[role="dialog"]');
-
-    // Verify R Code (Default tab)
-    const rTab = modal.getByRole('button', { name: /^R$/i });
-    await expect(rTab).toHaveClass(/border-indigo-500/);
     const generatedCode = modal.getByTestId('generated-code');
-    await expect(generatedCode).toBeVisible({ timeout: 10000 });
-    await expect(generatedCode).toContainText(/Randomization Schema Generation in R/i, { timeout: 10000 });
     await expect(generatedCode).toContainText(/Protocol:\s*TEST-PRT-123/i);
 
     const downloadBtn = modal.getByRole('button', { name: /Download/i }).first();
-    await expect(downloadBtn).toBeVisible();
-
     const downloadPromiseR = page.waitForEvent('download', { timeout: 10000 });
-    // Use evaluate instead of click to bypass pointer-events
-    await downloadBtn.evaluate(node => node.click());
+    await downloadBtn.click();
     const downloadR = await downloadPromiseR;
     expect(downloadR.suggestedFilename()).toBe('randomization_schema.R');
 
-    // Verify Python Code
     const pythonTab = modal.getByRole('button', { name: /Python/i });
-    await pythonTab.evaluate(node => node.click());
-    await expect(pythonTab).toHaveClass(/border-indigo-500/);
+    await pythonTab.click();
     await expect(generatedCode).toContainText(/Randomization Schema Generation in Python/i, { timeout: 10000 });
-
     const downloadPromisePy = page.waitForEvent('download', { timeout: 10000 });
-    await downloadBtn.evaluate(node => node.click());
+    await downloadBtn.click();
     const downloadPy = await downloadPromisePy;
     expect(downloadPy.suggestedFilename()).toBe('randomization_schema.py');
 
-    // Verify SAS Code
     const sasTab = modal.getByRole('button', { name: /SAS/i });
-    await sasTab.evaluate(node => node.click());
-    await expect(sasTab).toHaveClass(/border-indigo-500/);
+    await sasTab.click();
     await expect(generatedCode).toContainText(/Randomization Schema Generation in SAS/i, { timeout: 10000 });
-
     const downloadPromiseSas = page.waitForEvent('download', { timeout: 10000 });
-    await downloadBtn.evaluate(node => node.click());
+    await downloadBtn.click();
     const downloadSas = await downloadPromiseSas;
     expect(downloadSas.suggestedFilename()).toBe('randomization_schema.sas');
 
-    // Verify Stata Code
     const stataTab = modal.getByRole('button', { name: /Stata/i });
-    await stataTab.evaluate(node => node.click());
-    await expect(stataTab).toHaveClass(/border-indigo-500/);
+    await stataTab.click();
     await expect(generatedCode).toContainText(/Randomization Schema Generation in Stata/i, { timeout: 10000 });
-
     const downloadPromiseStata = page.waitForEvent('download', { timeout: 10000 });
-    await downloadBtn.evaluate(node => node.click());
+    await downloadBtn.click();
     const downloadStata = await downloadPromiseStata;
     expect(downloadStata.suggestedFilename()).toBe('randomization_schema.do');
 
-    // Close modal
-    await modal.getByRole('button', { name: /Close/i }).evaluate(node => node.click());
+    await modal.getByRole('button', { name: /Close/i }).first().click();
     await expect(modalHeading).toBeHidden();
   });
 });

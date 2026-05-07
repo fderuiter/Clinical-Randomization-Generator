@@ -1,3 +1,20 @@
+# [1.31.0](https://github.com/fderuiter/Equipose/compare/v1.30.1...v1.31.0) (2026-05-07)
+
+
+### Bug Fixes
+
+* apply config form review feedback on accessibility and caps flow ([d102666](https://github.com/fderuiter/Equipose/commit/d102666be2254100d9e476d4ac28681a17f9e9d2))
+* block step-3 navigation when minimization probabilities are invalid ([7ab708a](https://github.com/fderuiter/Equipose/commit/7ab708ad50169cd66def52ccd0b9f97dd01dc6aa))
+* finalize review feedback with deferred caps and accessibility updates ([31519b8](https://github.com/fderuiter/Equipose/commit/31519b84573d3907c134fd2973542f7b7950901e))
+* restore Stata option in Generate Code and e2e coverage ([5535f6b](https://github.com/fderuiter/Equipose/commit/5535f6b08549461dc00b8693c80959b37be0ede5))
+* stabilize validators and finalize CDK wizard flow ([ceeff92](https://github.com/fderuiter/Equipose/commit/ceeff924fc7016a4768b34702b87a7dae89ab13b))
+* tighten caps-step handling and finalize review-thread follow-ups ([e041fe6](https://github.com/fderuiter/Equipose/commit/e041fe68a2b7d3b10b3d810767df8dea5f8935bb))
+
+
+### Features
+
+* refactor config form into branching CDK multi-step wizard ([fa83b5b](https://github.com/fderuiter/Equipose/commit/fa83b5bd8b54a795f7c6262bf40e6ebc18920ca2))
+
 ## [1.30.1](https://github.com/fderuiter/Equipose/compare/v1.30.0...v1.30.1) (2026-04-29)
 
 

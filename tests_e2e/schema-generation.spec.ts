@@ -1,30 +1,14 @@
 import { test, expect } from '@playwright/test';
+import { generateSchemaFromPreset } from './generator-helpers';
 
 test.describe('Schema Generation Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Add an explicit listener for console errors
     page.on('pageerror', err => console.log(`Page Error: ${err.message}`));
-    await page.goto('http://localhost:4200');
   });
 
   test('should generate a schema and display results grid', async ({ page }) => {
-    // Navigate to generator page
-    const getStartedBtn = page.getByRole('link', { name: /Get Started/i });
-    if (await getStartedBtn.isVisible()) {
-      await getStartedBtn.click();
-    }
-
-    // Click the "Complex (Multi-strata)" preset button
-    const complexPresetBtn = page.getByRole('button', { name: /Complex \(Multi-strata\)/i });
-    await expect(complexPresetBtn).toBeVisible();
-    await complexPresetBtn.click();
-
-    // Click "Generate Schema" button
-    const generateSchemaBtn = page.getByRole('button', { name: /Generate Schema/i });
-    await expect(generateSchemaBtn).toBeVisible();
-    // Verify it is enabled
-    await expect(generateSchemaBtn).not.toBeDisabled();
-    await generateSchemaBtn.click();
+    await generateSchemaFromPreset(page, 'Complex');
 
     // Assert that the "Results Grid" section becomes visible
     const resultsSection = page.locator('#results-section');

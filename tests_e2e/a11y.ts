@@ -10,10 +10,15 @@ import { Page } from '@playwright/test';
  * @returns The axe accessibility scan results.
  * @throws If critical or serious WCAG 2.1 AA violations are detected.
  */
-export async function checkA11y(page: Page) {
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    .analyze();
+export async function checkA11y(page: Page, includeSelector?: string) {
+  const builder = new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
+
+  if (includeSelector) {
+    builder.include(includeSelector);
+  }
+
+  const results = await builder.analyze();
 
   const violations = results.violations.filter(
     v => v.impact === 'critical' || v.impact === 'serious'

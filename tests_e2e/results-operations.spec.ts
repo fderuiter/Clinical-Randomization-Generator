@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { generateSchemaFromPreset } from './generator-helpers';
 
 /**
  * Helper: navigate to the generator page and generate a schema using the
@@ -6,22 +7,7 @@ import { test, expect, Page } from '@playwright/test';
  * virtual-scroll verification.
  */
 async function generateComplexSchema(page: Page) {
-  await page.goto('http://localhost:4200');
-
-  const getStartedBtn = page.getByRole('link', { name: /Get Started/i });
-  if (await getStartedBtn.isVisible()) {
-    await getStartedBtn.click();
-  }
-
-  const complexPresetBtn = page.getByRole('button', { name: /Complex \(Multi-strata\)/i });
-  await expect(complexPresetBtn).toBeVisible();
-  await complexPresetBtn.click();
-
-  const generateSchemaBtn = page.getByRole('button', { name: /Generate Schema/i });
-  await expect(generateSchemaBtn).not.toBeDisabled();
-  await generateSchemaBtn.click();
-
-  await expect(page.locator('#results-section')).toBeVisible({ timeout: 10000 });
+  await generateSchemaFromPreset(page, 'Complex');
 }
 
 test.describe('Results Grid Operations', () => {

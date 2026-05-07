@@ -68,7 +68,7 @@ describe('ConfigFormComponent (domain)', () => {
   it('should load simple preset', () => {
     component.loadPreset('simple');
 
-    expect(component.form.get('protocolId')?.value).toBe('SIMP-001');
+    expect(component.form.get('metadataGroup.protocolId')?.value).toBe('SIMP-001');
     expect(component.arms.length).toBe(2);
     expect(component.strata.length).toBe(0);
     expect(component.stratumCaps.length).toBe(1); // Default cap (no strata)
@@ -77,7 +77,7 @@ describe('ConfigFormComponent (domain)', () => {
   it('should load complex preset', () => {
     component.loadPreset('complex');
 
-    expect(component.form.get('protocolId')?.value).toBe('CMPX-003');
+    expect(component.form.get('metadataGroup.protocolId')?.value).toBe('CMPX-003');
     expect(component.arms.length).toBe(3);
     expect(component.strata.length).toBe(3);
     expect(component.stratumCaps.length).toBe(8); // 2 * 2 * 2 = 8 combinations
@@ -106,14 +106,14 @@ describe('ConfigFormComponent (domain)', () => {
   });
 
   it('should call clearResults() when a form field value changes', () => {
-    component.form.get('protocolId')?.setValue('NEW-ID');
+    component.form.get('metadataGroup.protocolId')?.setValue('NEW-ID');
     expect((mockFacade as any).clearResults).toHaveBeenCalled();
   });
 
   it('should load the standard preset correctly', () => {
     component.loadPreset('standard');
 
-    expect(component.form.get('protocolId')?.value).toBe('STD-002');
+    expect(component.form.get('metadataGroup.protocolId')?.value).toBe('STD-002');
     expect(component.arms.length).toBe(2);
     expect(component.strata.length).toBe(1);
     expect(component.stratumCaps.length).toBe(2); // 2 age levels
@@ -124,11 +124,11 @@ describe('ConfigFormComponent (domain)', () => {
       component.onSubmit();
       expect((mockFacade as any).generateSchema).toHaveBeenCalledTimes(1);
       const arg = (mockFacade as any).generateSchema.mock.calls[0][0];
-      expect(arg.protocolId).toBe(component.form.get('protocolId')?.value);
+      expect(arg.protocolId).toBe(component.form.get('metadataGroup.protocolId')?.value);
     });
 
     it('should NOT call facade.generateSchema when the form is invalid', () => {
-      component.form.get('protocolId')?.setValue('');
+      component.form.get('metadataGroup.protocolId')?.setValue('');
       component.onSubmit();
       expect((mockFacade as any).generateSchema).not.toHaveBeenCalled();
     });
@@ -155,7 +155,7 @@ describe('ConfigFormComponent (domain)', () => {
     });
 
     it('should NOT call facade.openCodeGenerator when the form is invalid', () => {
-      component.form.get('protocolId')?.setValue('');
+      component.form.get('metadataGroup.protocolId')?.setValue('');
       component.onGenerateCode('Python');
       expect((mockFacade as any).openCodeGenerator).not.toHaveBeenCalled();
     });
@@ -234,11 +234,62 @@ describe('ConfigFormComponent (domain)', () => {
       expect((component.strata.at(1).value as { id: string }).id).toBe(firstId);
     });
 
+    it('should not recompute stratum caps immediately when reordering strata', () => {
+      const markCapsStaleSpy = vi.spyOn(component as any, 'markCapsStale');
+      component.loadPreset('complex');
+      markCapsStaleSpy.mockClear();
+
+      component.onStrataDrop({ previousIndex: 0, currentIndex: 1 } as any);
+
+      expect(markCapsStaleSpy).toHaveBeenCalledOnce();
+    });
+
     it('should not change strata when onStrataDrop() has equal indices', () => {
       component.loadPreset('standard');
       const snapshot = component.strata.value;
       component.onStrataDrop({ previousIndex: 0, currentIndex: 0 } as any);
       expect(component.strata.value).toEqual(snapshot);
+    });
+
+    it('should defer cap recomputation until the caps step is entered', () => {
+      const initialCapsLength = component.stratumCaps.length;
+      component.strata.at(0).get('levelsStr')?.setValue('<65, >=65, >=80');
+
+      expect(component.stratumCaps.length).toBe(initialCapsLength);
+
+      component.onStepSelectionChange({ selectedIndex: 4 } as any);
+      expect(component.stratumCaps.length).toBe(3);
+    });
+
+    it('should show reset warning when returning to caps after strata changes', () => {
+      component.onStepSelectionChange({ selectedIndex: 4 } as any);
+      expect(component.capsResetWarning()).toBe(false);
+
+      component.strata.at(0).get('levelsStr')?.setValue('<65, >=65, >=80');
+      component.onStepSelectionChange({ selectedIndex: 4 } as any);
+
+      expect(component.capsResetWarning()).toBe(true);
+      expect(component.matrixComputed()).toBe(false);
+    });
+
+    it('should disable strata-step next when minimization probabilities are invalid', () => {
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.setMinimizationProbability('age', '<65', 60);
+      component.setMinimizationProbability('age', '>=65', 30);
+      component.form.updateValueAndValidity();
+
+      expect(component.form.errors?.['minimizationProbabilitiesInvalid']).toBe(true);
+      expect(component.isStrataStepNextDisabled).toBe(true);
+    });
+
+    it('should allow strata-step next when minimization probabilities are valid', () => {
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.setMinimizationProbability('age', '<65', 50);
+      component.setMinimizationProbability('age', '>=65', 50);
+      component.form.updateValueAndValidity();
+
+      expect(component.form.errors?.['minimizationProbabilitiesInvalid']).toBeFalsy();
+      expect(component.isStrataStepNextDisabled).toBe(false);
     });
   });
 
@@ -248,17 +299,17 @@ describe('ConfigFormComponent (domain)', () => {
     });
 
     it('should set invalidBlockSize error when a block size is not a multiple of total ratio', () => {
-      component.form.get('blockSizesStr')?.setValue('3');
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('3');
       component.form.updateValueAndValidity();
       expect(component.form.errors?.['invalidBlockSize']).toBe(true);
     });
 
     it('should clear the error once a valid block size is restored', () => {
-      component.form.get('blockSizesStr')?.setValue('3');
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('3');
       component.form.updateValueAndValidity();
       expect(component.form.errors?.['invalidBlockSize']).toBe(true);
 
-      component.form.get('blockSizesStr')?.setValue('4');
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('4');
       component.form.updateValueAndValidity();
       expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
     });
@@ -272,47 +323,43 @@ describe('ConfigFormComponent (domain)', () => {
 
     it('should detect an invalid block size immediately after preset loading changes the ratio', () => {
       component.loadPreset('complex');
-      component.form.get('blockSizesStr')?.setValue('4');
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('4');
       component.form.updateValueAndValidity();
       expect(component.form.errors?.['invalidBlockSize']).toBe(true);
       expect(component.form.valid).toBe(false);
     });
   });
 
-  describe('Advanced Settings accordion', () => {
-    it('should initialize showAdvanced signal to false', () => {
-      expect(component.showAdvanced()).toBe(false);
+  describe('caps strategy state', () => {
+    it('should switch to MANUAL_MATRIX and disable global cap after editing a computed cap', () => {
+      component.form.get('capsGroup.capStrategy')?.setValue('PROPORTIONAL');
+      component.setPercentage('age', '<65', 50);
+      component.setPercentage('age', '>=65', 50);
+
+      component.computeMatrix();
+      expect(component.matrixComputed()).toBe(true);
+
+      component.stratumCaps.at(0).get('cap')?.setValue(15);
+
+      expect(component.form.get('capsGroup.capStrategy')?.value).toBe('MANUAL_MATRIX');
+      expect(component.form.get('capsGroup.globalCap')?.disabled).toBe(true);
+    });
+  });
+
+  describe('metadata fields', () => {
+    it('should preserve seed and subjectIdMask values after metadata edits', () => {
+      expect(component.form.get('metadataGroup.subjectIdMask')?.value).toBe('{SITE}-{STRATUM}-{SEQ:3}');
+      component.form.get('metadataGroup.seed')?.setValue('my-custom-seed');
+      component.form.get('metadataGroup.subjectIdMask')?.setValue('{SITE}-{SEQ:4}');
+
+      expect(component.form.get('metadataGroup.seed')?.value).toBe('my-custom-seed');
+      expect(component.form.get('metadataGroup.subjectIdMask')?.value).toBe('{SITE}-{SEQ:4}');
     });
 
-    it('should toggle showAdvanced from false to true when toggleAdvanced() is called', () => {
-      expect(component.showAdvanced()).toBe(false);
-      component.toggleAdvanced();
-      expect(component.showAdvanced()).toBe(true);
-    });
-
-    it('should toggle showAdvanced back to false on a second call', () => {
-      component.toggleAdvanced();
-      component.toggleAdvanced();
-      expect(component.showAdvanced()).toBe(false);
-    });
-
-    it('should preserve seed and subjectIdMask values regardless of showAdvanced state', () => {
-      expect(component.form.get('seed')?.value).toBeDefined();
-      expect(component.form.get('subjectIdMask')?.value).toBe('{SITE}-{STRATUM}-{SEQ:3}');
-
-      component.toggleAdvanced(); // open
-      component.form.get('seed')?.setValue('my-custom-seed');
-      component.toggleAdvanced(); // close
-      component.toggleAdvanced(); // re-open
-
-      expect(component.form.get('seed')?.value).toBe('my-custom-seed');
-    });
-
-    it('should keep the form valid regardless of whether the advanced section is open or closed', () => {
+    it('should keep the form valid after metadata field edits', () => {
       expect(component.form.valid).toBe(true);
-      component.toggleAdvanced();
-      expect(component.form.valid).toBe(true);
-      component.toggleAdvanced();
+      component.form.get('metadataGroup.seed')?.setValue('seed-42');
+      component.form.get('metadataGroup.subjectIdMask')?.setValue('{SITE}-{STRATUM}-{SEQ:3}');
       expect(component.form.valid).toBe(true);
     });
   });
