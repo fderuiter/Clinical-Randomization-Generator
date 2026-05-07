@@ -86,7 +86,7 @@ test.describe('Results Grid Operations', () => {
   });
 
   test('should reveal treatment arms after clicking the blinding toggle', async ({ page }) => {
-    const toggleLabel = page.locator('#results-section label').filter({ hasText: /Blinded|Unblinded/i });
+    const toggleLabel = page.locator('#results-section button[role="switch"]');
     await toggleLabel.click();
 
     const firstRow = page.locator('[data-testid="result-row"]').first();
@@ -96,7 +96,7 @@ test.describe('Results Grid Operations', () => {
   });
 
   test('should re-blind the schema when the toggle is clicked a second time', async ({ page }) => {
-    const toggleLabel = page.locator('#results-section label').filter({ hasText: /Blinded|Unblinded/i });
+    const toggleLabel = page.locator('#results-section button[role="switch"]');
     const firstRow = page.locator('[data-testid="result-row"]').first();
     const armCell = firstRow.locator('[data-testid="result-arm-cell"]');
 
