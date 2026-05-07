@@ -605,7 +605,7 @@ export class ConfigFormComponent implements OnInit {
     this.markCapsStale();
   }
 
-  onGenerateCode(language: 'R' | 'SAS' | 'Python'): void {
+  onGenerateCode(language: 'R' | 'SAS' | 'Python' | 'STATA'): void {
     if (this.form.valid) {
       try { this.facade.openCodeGenerator(this.store.buildConfig(this.buildFormValue()), language); this.dropdownOpen = false; }
       catch (e) { console.error('Error generating code config:', e); this.toastService.showError('Error generating code. Please check your configuration.'); }
