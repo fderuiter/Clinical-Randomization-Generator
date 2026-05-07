@@ -7,7 +7,7 @@ test.describe('Code Generator Modal UI', () => {
     await openGenerator(page);
   });
 
-  test('should generate, display, and download code in R, Python, and SAS', async ({ page }) => {
+  test('should generate, display, and download code in all supported languages', async ({ page }) => {
     await page.locator('#protocolId').fill('TEST-PRT-123');
     await page.locator('#studyName').fill('End-to-end Test Study');
     await page.locator('#phase').selectOption({ label: 'Phase II' });
@@ -29,7 +29,7 @@ test.describe('Code Generator Modal UI', () => {
     const generateCodeBtn = page.getByRole('button', { name: /Generate Code/i });
     await expect(generateCodeBtn).toBeVisible();
     await generateCodeBtn.click();
-    await expect(page.getByRole('menuitem', { name: /Stata Script/i })).toHaveCount(0);
+    await expect(page.getByRole('menuitem', { name: /Stata Script/i })).toBeVisible();
     await page.getByRole('menuitem', { name: /R Script/i }).click();
 
     const modalHeading = page.getByRole('heading', { name: /Code Generator/i });
@@ -59,6 +59,14 @@ test.describe('Code Generator Modal UI', () => {
     await downloadBtn.click();
     const downloadSas = await downloadPromiseSas;
     expect(downloadSas.suggestedFilename()).toBe('randomization_schema.sas');
+
+    const stataTab = modal.getByRole('button', { name: /Stata/i });
+    await stataTab.click();
+    await expect(generatedCode).toContainText(/Randomization Schema Generation in Stata/i, { timeout: 10000 });
+    const downloadPromiseStata = page.waitForEvent('download', { timeout: 10000 });
+    await downloadBtn.click();
+    const downloadStata = await downloadPromiseStata;
+    expect(downloadStata.suggestedFilename()).toBe('randomization_schema.do');
 
     await modal.getByRole('button', { name: /Close/i }).first().click();
     await expect(modalHeading).toBeHidden();
