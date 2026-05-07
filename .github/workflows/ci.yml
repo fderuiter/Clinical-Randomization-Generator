@@ -122,6 +122,73 @@ jobs:
         path: playwright-report/
         retention-days: 30
 
+  cross_env_equivalence:
+    runs-on: ubuntu-latest
+    needs: build_and_test
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Python dependencies
+      run: pip install numpy --quiet
+
+    - name: Python Cross-Environment Equivalence Check
+      run: |
+        echo "Running Python cross-environment equivalence fixture..."
+        python3 scripts/cross-env/verify_python_schema.py
+        echo "Python equivalence check completed."
+
+    - name: R Cross-Environment Equivalence Check
+      run: |
+        echo "Running R cross-environment equivalence fixture..."
+        Rscript scripts/cross-env/verify_r_schema.R
+        echo "R equivalence check completed."
+
+  sbom:
+    runs-on: ubuntu-latest
+    needs: build_and_test
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Generate Software Bill of Materials (SBOM)
+      run: |
+        echo "Generating CycloneDX SBOM for supply chain audit..."
+        npx --yes @cyclonedx/cyclonedx-npm \
+          --output-format json \
+          --output-file sbom.json \
+          --short-PURLs \
+          --omit dev
+        echo "SBOM generated successfully."
+        echo "Total components: $(cat sbom.json | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d.get(\"components\", [])))')"
+
+    - name: Upload SBOM artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: sbom
+        path: sbom.json
+        retention-days: 90
+
   security_scan:
     runs-on: ubuntu-latest
     permissions:
