@@ -146,11 +146,7 @@ describe('ICH E9 – Law of Large Numbers: allocation ratio convergence', () => 
 
     for (const [armId, count] of Object.entries(totals)) {
       const observed = count / grandTotal;
-      expect(Math.abs(observed - expectedFraction)).toBeLessThan(
-        TOLERANCE_PCT / 100,
-        // @ts-expect-error vitest message overload
-        `Arm ${armId}: observed ${(observed * 100).toFixed(2)}% deviates from 50% target by more than ${TOLERANCE_PCT}%`
-      );
+      expect(Math.abs(observed - expectedFraction)).toBeLessThan(TOLERANCE_PCT / 100);
     }
   });
 
@@ -172,11 +168,7 @@ describe('ICH E9 – Law of Large Numbers: allocation ratio convergence', () => 
 
     for (const [armId, count] of Object.entries(totals)) {
       const observed = count / grandTotal;
-      expect(Math.abs(observed - expectedFraction)).toBeLessThan(
-        TOLERANCE_PCT / 100,
-        // @ts-expect-error vitest message overload
-        `Arm ${armId}: observed ${(observed * 100).toFixed(2)}% deviates from 33.3% target`
-      );
+      expect(Math.abs(observed - expectedFraction)).toBeLessThan(TOLERANCE_PCT / 100);
     }
   });
 });
@@ -201,7 +193,7 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
         blocks.get(key)!.push(row.treatmentArmId);
       }
 
-      for (const [key, assignments] of blocks) {
+      for (const [_key, assignments] of blocks) {
         const blockSize = assignments.length;
         // Every complete block of size 4 must have exactly 2 of each arm.
         if (blockSize === 4) {
@@ -214,7 +206,6 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
         for (const arm of assignments) {
           expect(['A', 'B']).toContain(arm);
         }
-        void key; // suppress unused var warning
       }
     }
   });
@@ -233,14 +224,13 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
         blocks.get(key)!.push(row.treatmentArmId);
       }
 
-      for (const [key, assignments] of blocks) {
+      for (const [_key, assignments] of blocks) {
         if (assignments.length === 3) {
           const countD = assignments.filter(a => a === 'D').length;
           const countP = assignments.filter(a => a === 'P').length;
           expect(countD).toBe(2);
           expect(countP).toBe(1);
         }
-        void key;
       }
     }
   });
@@ -262,7 +252,7 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
         blocks.get(key)!.arms.push(row.treatmentArmId);
       }
 
-      for (const [, block] of blocks) {
+      for (const [_key, block] of blocks) {
         if (block.arms.length === block.size) {
           const countA = block.arms.filter(a => a === 'A').length;
           const countB = block.arms.filter(a => a === 'B').length;
@@ -294,9 +284,8 @@ describe('ICH E9 – Stratum Cap Enforcement: dynamic caps are never exceeded', 
         stratumCounts.set(key, (stratumCounts.get(key) ?? 0) + 1);
       }
 
-      for (const [key, count] of stratumCounts) {
+      for (const [_key, count] of stratumCounts) {
         expect(count).toBeLessThanOrEqual(20);
-        void key;
       }
     }
   });
@@ -340,9 +329,8 @@ describe('ICH E9 – Stratum Cap Enforcement: dynamic caps are never exceeded', 
         siteMap.set(row.site, (siteMap.get(row.site) ?? 0) + 1);
       }
 
-      for (const [site, count] of siteMap) {
+      for (const [_site, count] of siteMap) {
         expect(count).toBeLessThanOrEqual(10);
-        void site;
       }
     }
   });
@@ -466,11 +454,7 @@ describe('ICH E9 – Boundary Conditions: structural integrity under edge cases'
     for (const [armId, count] of Object.entries(totals)) {
       const observed = count / grandTotal;
       const deviation = Math.abs(observed - 0.5) * 100;
-      expect(deviation).toBeLessThan(
-        STRICT_TOLERANCE_PCT,
-        // @ts-expect-error vitest message overload
-        `Arm ${armId}: deviation ${deviation.toFixed(4)}% exceeds ${STRICT_TOLERANCE_PCT}% regulatory tolerance`
-      );
+      expect(deviation).toBeLessThan(STRICT_TOLERANCE_PCT);
     }
   });
 });
