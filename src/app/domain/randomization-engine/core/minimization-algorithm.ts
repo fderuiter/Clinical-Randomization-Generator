@@ -55,11 +55,15 @@ function sampleLevel(
 function computeImbalanceScore(
   candidateArmId: string,
   arms: TreatmentArm[],
+  strata: RandomizationConfig['strata'],
   subjectProfile: Record<string, string>,
   marginals: Map<string, Map<string, Map<string, number>>>
 ): number {
   let totalScore = 0;
-  for (const [factorId, levelValue] of Object.entries(subjectProfile)) {
+  for (const factor of strata) {
+    const factorId = factor.id;
+    const levelValue = subjectProfile[factorId];
+    if (!levelValue) continue;
     const factorMarginals = marginals.get(factorId);
     if (!factorMarginals) continue;
     const levelMarginals = factorMarginals.get(levelValue);
@@ -256,11 +260,13 @@ export function generateMinimization(
         const prefixKeys = Object.keys(currentCombinationPrefix);
         availableLevels = factor.levels.filter(level =>
           activePool.some(combo => {
+            // check level first to short-circuit earlier
+            if (combo[factor.id] !== level) return false;
             // check if combo matches current prefix
             for (const k of prefixKeys) {
               if (combo[k] !== currentCombinationPrefix[k]) return false;
             }
-            return combo[factor.id] === level;
+            return true;
           })
         );
       }
@@ -286,7 +292,7 @@ export function generateMinimization(
     let minScore = Infinity;
     const armScores: number[] = [];
     for (const arm of arms) {
-      const score = computeImbalanceScore(arm.id, arms, subjectProfile, marginals);
+      const score = computeImbalanceScore(arm.id, arms, strata, subjectProfile, marginals);
       armScores.push(score);
       if (score < minScore) minScore = score;
     }
