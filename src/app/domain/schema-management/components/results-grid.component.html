@@ -70,16 +70,15 @@
 
           <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-1"></div>
 
-          <label class="flex items-center cursor-pointer">
+          <button type="button" role="switch" [attr.aria-checked]="isUnblinded()" (click)="toggleBlinding()" class="flex items-center cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800 rounded px-1 -ml-1">
             <div class="relative">
-              <input type="checkbox" class="sr-only" [checked]="isUnblinded()" (change)="toggleBlinding()">
               <div class="block bg-gray-200 dark:bg-slate-600 w-10 h-6 rounded-full transition-colors" [class.bg-indigo-500]="isUnblinded()" [class.dark:bg-indigo-500]="isUnblinded()"></div>
               <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform" [class.translate-x-4]="isUnblinded()"></div>
             </div>
             <span class="ml-3 text-sm font-medium text-gray-700 dark:text-slate-300">
               {{ isUnblinded() ? 'Unblinded' : 'Blinded' }}
             </span>
-          </label>
+          </button>
           
           <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-1"></div>
           
