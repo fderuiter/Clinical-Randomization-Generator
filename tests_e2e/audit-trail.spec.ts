@@ -6,8 +6,8 @@
  * and reads their content to assert that every artifact contains:
  *
  *  - The application semantic version (from `src/environments/version.ts`)
- *  - A well-formed ISO 8601 timestamp
- *  - The randomization seed used for schema generation
+ *  - A well-formed ISO 8601 timestamp (milliseconds + Z suffix, as produced by `new Date().toISOString()`)
+ *  - The PRNG seed initialisation statement (the numeric seed embedded at generation time)
  *  - The trial protocol identifier
  *
  * These checks mirror 21 CFR Part 11 requirements for electronic records:
@@ -23,11 +23,23 @@ import { generateSchemaFromPreset, openGenerator } from './generator-helpers';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-/** ISO 8601 datetime pattern (e.g. 2024-01-15T12:34:56.789Z) */
-const ISO_TIMESTAMP_RE = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+/** ISO 8601 datetime pattern matching the exact format from `new Date().toISOString()`,
+ *  e.g. 2024-01-15T12:34:56.789Z (milliseconds + Z timezone suffix required). */
+const ISO_TIMESTAMP_RE = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z/;
 
 /** Semantic version pattern, e.g. v1.31.0 */
 const SEMVER_RE = /v\d+\.\d+\.\d+/;
+
+/**
+ * Each language embeds the numeric PRNG seed via a distinct statement.
+ * These patterns assert the seed initialisation call is present in the artifact.
+ */
+const SEED_PATTERNS: Record<string, RegExp> = {
+  'R Script':     /set\.seed\(\d+\)/,
+  'Python Script':/np\.random\.default_rng\(\d+\)/,
+  'SAS Script':   /(%let seed\s*=\s*\d+|call streaminit\(&seed\))/,
+  'Stata Script': /set seed \d+/i,
+};
 
 /**
  * Read the content of a Playwright download to a string.
@@ -47,7 +59,7 @@ async function downloadCodeFile(
   page: import('@playwright/test').Page,
   language: 'R Script' | 'Python Script' | 'SAS Script' | 'Stata Script',
   protocolId: string,
-): Promise<{ content: string; filename: string }> {
+): Promise<{ content: string; filename: string; language: typeof language }> {
   await openGenerator(page);
 
   // Step 1 – fill in a recognisable protocol ID
@@ -111,7 +123,7 @@ async function downloadCodeFile(
 
   await modal.getByRole('button', { name: /Close/i }).first().click();
 
-  return { content, filename };
+  return { content, filename, language };
 }
 
 // ── tests ────────────────────────────────────────────────────────────────────
@@ -139,6 +151,11 @@ test.describe('21 CFR Part 11 – Audit Trail: generated code artifact provenanc
     expect(filename).toMatch(/\.R$/i);
   });
 
+  test('R script contains the PRNG seed initialisation statement', async ({ page }) => {
+    const { content, language } = await downloadCodeFile(page, 'R Script', PROTOCOL_ID);
+    expect(content).toMatch(SEED_PATTERNS[language]);
+  });
+
   test('Python script contains application semantic version', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'Python Script', PROTOCOL_ID);
     expect(content).toMatch(SEMVER_RE);
@@ -157,6 +174,11 @@ test.describe('21 CFR Part 11 – Audit Trail: generated code artifact provenanc
   test('Python script filename has the correct .py extension', async ({ page }) => {
     const { filename } = await downloadCodeFile(page, 'Python Script', PROTOCOL_ID);
     expect(filename).toMatch(/\.py$/i);
+  });
+
+  test('Python script contains the PRNG seed initialisation statement', async ({ page }) => {
+    const { content, language } = await downloadCodeFile(page, 'Python Script', PROTOCOL_ID);
+    expect(content).toMatch(SEED_PATTERNS[language]);
   });
 
   test('SAS script contains application semantic version', async ({ page }) => {
@@ -179,6 +201,11 @@ test.describe('21 CFR Part 11 – Audit Trail: generated code artifact provenanc
     expect(filename).toMatch(/\.sas$/i);
   });
 
+  test('SAS script contains the PRNG seed initialisation statement', async ({ page }) => {
+    const { content, language } = await downloadCodeFile(page, 'SAS Script', PROTOCOL_ID);
+    expect(content).toMatch(SEED_PATTERNS[language]);
+  });
+
   test('Stata script contains application semantic version', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'Stata Script', PROTOCOL_ID);
     expect(content).toMatch(SEMVER_RE);
@@ -198,6 +225,11 @@ test.describe('21 CFR Part 11 – Audit Trail: generated code artifact provenanc
     const { filename } = await downloadCodeFile(page, 'Stata Script', PROTOCOL_ID);
     expect(filename).toMatch(/\.do$/i);
   });
+
+  test('Stata script contains the PRNG seed initialisation statement', async ({ page }) => {
+    const { content, language } = await downloadCodeFile(page, 'Stata Script', PROTOCOL_ID);
+    expect(content).toMatch(SEED_PATTERNS[language]);
+  });
 });
 
 test.describe('21 CFR Part 11 – Audit Trail: results grid metadata stamping', () => {
@@ -215,7 +247,7 @@ test.describe('21 CFR Part 11 – Audit Trail: results grid metadata stamping', 
     await expect(header.getByText(/Protocol:/i)).toBeVisible();
   });
 
-  test('CSV download filename contains a timestamp component for traceability', async ({ page }) => {
+  test('CSV download filename contains a date component for traceability', async ({ page }) => {
     await generateSchemaFromPreset(page, 'Standard');
 
     const downloadPromise = page.waitForEvent('download', { timeout: 10_000 });
@@ -223,9 +255,12 @@ test.describe('21 CFR Part 11 – Audit Trail: results grid metadata stamping', 
     await csvButton.evaluate((node: HTMLElement) => node.click());
     const download = await downloadPromise;
 
-    // Filename should contain a date or timestamp component so that saved
-    // files remain uniquely identifiable (21 CFR Part 11 traceability).
-    expect(download.suggestedFilename()).toMatch(/randomization_/);
-    expect(download.suggestedFilename()).toMatch(/\.(csv|xlsx)$/i);
+    const name = download.suggestedFilename();
+    // Filename must begin with the expected prefix and end with the correct extension.
+    expect(name).toMatch(/^randomization_/);
+    expect(name).toMatch(/\.(csv|xlsx)$/i);
+    // Must contain an eight-digit date component (YYYYMMDD) so that saved files
+    // are uniquely identifiable per-generation (21 CFR Part 11 traceability).
+    expect(name).toMatch(/\d{8}/);
   });
 });

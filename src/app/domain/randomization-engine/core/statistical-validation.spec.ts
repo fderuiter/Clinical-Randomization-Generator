@@ -63,8 +63,11 @@ const ONE_TO_ONE_CONFIG: RandomizationConfig = {
   ],
   sites: ['Site1', 'Site2'],
   strata: [],
+  // Block size 4, cap 101: 25 complete blocks (100 subjects) + 1-subject partial
+  // block ensures per-run arm counts are NOT always exactly 50/50, exercising
+  // PRNG variance and making the convergence assertion statistically meaningful.
   blockSizes: [4],
-  stratumCaps: [{ levels: [], cap: 100 }],
+  stratumCaps: [{ levels: [], cap: 101 }],
   seed: 'stat_val_seed',
   subjectIdMask: '[SiteID]-[001]',
 };
@@ -79,8 +82,10 @@ const TWO_TO_ONE_CONFIG: RandomizationConfig = {
   ],
   sites: ['Site1'],
   strata: [],
+  // Block size 3, cap 91: 30 complete blocks (90 subjects) + 1-subject partial
+  // block, so per-run ratio is not always exactly 2:1.
   blockSizes: [3],
-  stratumCaps: [{ levels: [], cap: 90 }],
+  stratumCaps: [{ levels: [], cap: 91 }],
   seed: 'stat_val_2to1',
   subjectIdMask: '[SiteID]-[001]',
 };
@@ -96,8 +101,9 @@ const THREE_ARM_CONFIG: RandomizationConfig = {
   ],
   sites: ['Site1'],
   strata: [],
+  // Block size 3, cap 91: 30 complete blocks + 1-subject partial block.
   blockSizes: [3],
-  stratumCaps: [{ levels: [], cap: 90 }],
+  stratumCaps: [{ levels: [], cap: 91 }],
   seed: 'stat_val_3arm',
   subjectIdMask: '[SiteID]-[001]',
 };
@@ -464,24 +470,29 @@ describe('ICH E9 – Boundary Conditions: structural integrity under edge cases'
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('ICH E9 – Determinism: exact reproducibility across environments', () => {
-  it('produces identical arm sequences on any platform given the same seed (cross-platform PRNG stability)', () => {
-    // Known-good golden vectors for the base config with seed "alg_seed".
-    // These must remain unchanged if the PRNG is intentionally modified.
+  /**
+   * Golden vector produced by running `generateRandomizationSchema` with the
+   * config below on the reference build.  If the PRNG or shuffle logic changes
+   * intentionally, update this vector; any unintended change must cause this
+   * test to fail, guarding against silent PRNG regressions.
+   *
+   * Regenerate with:
+   *   vitest run goldentest.spec.ts  (see generate-golden-vector note in README)
+   */
+  const GOLDEN_SEED   = 'cross_platform_seed_v1';
+  const GOLDEN_VECTOR = ['B', 'A', 'B', 'A', 'A', 'A', 'B', 'B'];
+
+  it('produces the known-good golden sequence for the reference seed (guards unintended PRNG changes)', () => {
     const config: RandomizationConfig = {
       ...ONE_TO_ONE_CONFIG,
       sites: ['Site1'],
       stratumCaps: [{ levels: [], cap: 8 }],
       blockSizes: [4],
-      seed: 'cross_platform_seed_v1',
+      seed: GOLDEN_SEED,
     };
 
-    const r1 = generateRandomizationSchema(config);
-    const r2 = generateRandomizationSchema(config);
-
-    expect(r1.schema.map(r => r.treatmentArmId)).toEqual(
-      r2.schema.map(r => r.treatmentArmId)
-    );
-    expect(r1.metadata.seed).toBe(r2.metadata.seed);
+    const result = generateRandomizationSchema(config);
+    expect(result.schema.map(r => r.treatmentArmId)).toEqual(GOLDEN_VECTOR);
   });
 
   it('two different seeds always produce different sequences', () => {

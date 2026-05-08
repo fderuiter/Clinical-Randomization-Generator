@@ -19,16 +19,29 @@
 import { test, expect, Request } from '@playwright/test';
 import { generateSchemaFromPreset, openGenerator } from './generator-helpers';
 
-const LOCAL_ORIGIN = 'http://localhost:4200';
+const LOCAL_PORT = '4200';
+/** Hostnames considered local (loopback). */
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 /** Returns true when a request targets a domain other than the local dev server. */
 function isExternalRequest(req: Request): boolean {
   const url = req.url();
-  // Allow all requests to the local origin (static assets, SW, etc.)
-  if (url.startsWith(LOCAL_ORIGIN)) return false;
   // Allow data: and blob: URIs (e.g. PDF blob, canvas data URL)
   if (url.startsWith('data:') || url.startsWith('blob:')) return false;
-  // Everything else is external
+
+  try {
+    const parsed = new URL(url);
+    // Allow any protocol (http, https, ws, wss) to a local hostname on the
+    // dev-server port or with no explicit port.
+    if (LOCAL_HOSTNAMES.has(parsed.hostname)) {
+      if (!parsed.port || parsed.port === LOCAL_PORT) return false;
+    }
+  } catch {
+    // Malformed URL – treat as local to avoid false positives.
+    return false;
+  }
+
+  // Everything else is an external request.
   return true;
 }
 
