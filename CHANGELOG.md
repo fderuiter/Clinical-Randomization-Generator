@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/fderuiter/Equipose/compare/v1.31.0...v1.32.0) (2026-05-08)
+
+
+### Features
+
+* Implement Regulatory Validation Framework (ICH E9 / 21 CFR Part 11) ([#233](https://github.com/fderuiter/Equipose/issues/233)) ([6b729ae](https://github.com/fderuiter/Equipose/commit/6b729ae11ffcbf989f219a5a48abd1c5c13bb992))
+
 # [1.31.0](https://github.com/fderuiter/Equipose/compare/v1.30.1...v1.31.0) (2026-05-07)
 
 
