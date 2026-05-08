@@ -476,8 +476,10 @@ describe('ICH E9 – Determinism: exact reproducibility across environments', ()
    * intentionally, update this vector; any unintended change must cause this
    * test to fail, guarding against silent PRNG regressions.
    *
-   * Regenerate with:
-   *   vitest run goldentest.spec.ts  (see generate-golden-vector note in README)
+   * To regenerate, add a temporary test that logs:
+   *   console.log(generateRandomizationSchema(config).schema.map(r => r.treatmentArmId))
+   * using the same config ({sites:['Site1'], stratumCaps:[{levels:[],cap:8}],
+   * blockSizes:[4], seed:'cross_platform_seed_v1'}) and capture the output.
    */
   const GOLDEN_SEED   = 'cross_platform_seed_v1';
   const GOLDEN_VECTOR = ['B', 'A', 'B', 'A', 'A', 'A', 'B', 'B'];
