@@ -333,6 +333,14 @@ export class ResultsGridComponent {
     return s.replace(/[^A-Za-z0-9._-]/g, '_').trim();
   }
 
+  /** Returns today's date as a compact `YYYYMMDD` string for use in export filenames. */
+  private formatDateStamp(date = new Date()): string {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}${mm}${dd}`;
+  }
+
   /** Copies the audit hash to the clipboard and briefly shows a ✓ icon. */
   copyAuditHash(): void {
     const hash = this.state.results()?.metadata.auditHash;
@@ -387,8 +395,9 @@ export class ResultsGridComponent {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     const safeProtocol = this.sanitizeFilename(data.metadata.protocolId);
+    const dateStamp = this.formatDateStamp();
     link.setAttribute('href', url);
-    link.setAttribute('download', `randomization_${safeProtocol}_${this.isUnblinded() ? 'unblinded' : 'blinded'}.csv`);
+    link.setAttribute('download', `randomization_${dateStamp}_${safeProtocol}_${this.isUnblinded() ? 'unblinded' : 'blinded'}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
