@@ -97,14 +97,21 @@ const allSpecFiles  = [...unitSpecFiles, ...e2eSpecFiles];
 
 /** Pattern that matches `// [REQ-ICH-E9-001]` (with optional whitespace).
  *
- * Two alternatives are required:
- *  - 4 segments: REQ-ICH-E9-001, REQ-ICH-E6-001, REQ-ZERO-TRUST-001 (hyphenated sub-prefix)
- *  - 3 segments: REQ-21CFR11-001, REQ-SBOM-001, REQ-EXPORT-001 (compact single-word category)
+ * Two alternatives are required because requirement IDs span two formats:
  *
- * The 4-segment alternative is listed first so the regex engine tries the longer
- * match before falling back to the shorter one.
+ *  FOUR-segment IDs (category uses a hyphenated sub-prefix):
+ *    REQ-ICH-E9-001, REQ-ICH-E6-001, REQ-ZERO-TRUST-001
+ *
+ *  THREE-segment IDs (category is a single compact token):
+ *    REQ-21CFR11-001, REQ-SBOM-001, REQ-EXPORT-001
+ *
+ * The 4-segment alternative is listed first so the regex engine tries the
+ * longer match before falling back to the shorter one, preventing partial
+ * matches on the 3-segment prefix of a 4-segment ID.
  */
-const TAG_RE = /\/\/\s*\[([A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+|[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+)\]/g;
+const FOUR_SEG = '[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+';
+const THREE_SEG = '[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+';
+const TAG_RE = new RegExp(`\\/\\/\\s*\\[(${FOUR_SEG}|${THREE_SEG})\\]`, 'g');
 /** Pattern to capture the immediately following test/it call's description. */
 const TEST_NAME_RE = /(?:test|it)\s*\(\s*['"`]([^'"`]+)['"`]/;
 /** Pattern to capture describe block name. */
@@ -135,6 +142,11 @@ function extractTags(filePath) {
     // Very simplistic brace tracking to pop suite stack on closing '});'
     // Best-effort: a line that is purely `});` or `})` is treated as the end
     // of the most-recently-opened describe block.
+    //
+    // Known limitation: this heuristic will also fire on closing braces from
+    // other `});` patterns (e.g., arrow-function arguments, object literals).
+    // For accurate suite attribution, use a proper AST parser. The current
+    // implementation provides reasonable accuracy for standard test files.
     if (/^\s*\}\s*\)\s*;?\s*$/.test(line) && suiteStack.length > 0) {
       suiteStack.pop();
     }

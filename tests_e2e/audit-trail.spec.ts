@@ -265,16 +265,14 @@ test.describe('21 CFR Part 11 – Audit Trail: generated code artifact provenanc
 // ── PDF Audit Trail ───────────────────────────────────────────────────────────
 
 /**
- * Downloads the PDF export and returns the parsed text content.
+ * Downloads the PDF export using the Standard preset and returns the parsed text.
  * Uses pdf-parse to extract text from the binary PDF buffer.
+ * Note: this helper does not set a custom protocol ID; use downloadPdfTextWithProtocol
+ * when a specific protocol ID is required.
  */
 async function downloadPdfText(page: import('@playwright/test').Page, protocolId: string): Promise<string> {
   await generateSchemaFromPreset(page, 'Standard');
 
-  // Override the default protocol ID with our test value by navigating directly
-  // to the generator and setting it before generating.
-  // Since generateSchemaFromPreset already generated the schema, we can trigger
-  // PDF download from the results section directly.
   const downloadPromise = page.waitForEvent('download', { timeout: 15_000 });
   const pdfButton = page.locator('#results-section').getByRole('button', { name: /PDF/i });
   await pdfButton.evaluate((node: HTMLElement) => node.click());
@@ -358,10 +356,10 @@ test.describe('21 CFR Part 11 – Audit Trail: PDF export provenance', () => {
   // [REQ-21CFR11-006]
   test('PDF export contains the PRNG seed value', async ({ page }) => {
     const { text } = await downloadPdfTextWithProtocol(page, PDF_PROTOCOL_ID);
-    // The metadata block has a "PRNG Seed" row whose value is the numeric seed.
-    // Both the label and a numeric value must be present in the extracted text.
+    // The metadata table has a "PRNG Seed" row with a numeric value.
+    // Match the label and an adjacent sequence of digits.
     expect(text).toContain('PRNG Seed');
-    expect(text).toMatch(/PRNG.*Seed[\s\S]*\d+/);
+    expect(text).toMatch(/PRNG\s+Seed[:\s]+\d+/);
   });
 
   // [REQ-EXPORT-002]

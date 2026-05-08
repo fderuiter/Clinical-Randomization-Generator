@@ -115,6 +115,7 @@ jobs:
     - name: Merge Playwright reports
       run: |
         npx playwright merge-reports --reporter html ./all-blob-reports
+        mkdir -p playwright-report
         npx playwright merge-reports --reporter json ./all-blob-reports > playwright-report/report.json
 
     - name: Upload merged HTML report
