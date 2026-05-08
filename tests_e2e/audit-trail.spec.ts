@@ -19,8 +19,19 @@
 
 import { test, expect } from '@playwright/test';
 import { readFile } from 'fs/promises';
-import pdfParse from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 import { generateSchemaFromPreset, openGenerator } from './generator-helpers';
+
+/**
+ * Extract all text from a PDF buffer using the pdf-parse v2 class API.
+ * Returns the concatenated text string across all pages.
+ */
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  // Buffer extends Uint8Array, so it satisfies the LoadParameters.data type directly.
+  const parser = new PDFParse({ data: buffer });
+  const result = await parser.getText();
+  return result.text;
+}
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -273,20 +284,43 @@ test.describe('21 CFR Part 11 – Audit Trail: generated code artifact provenanc
 async function downloadPdfText(page: import('@playwright/test').Page, protocolId: string): Promise<string> {
   await generateSchemaFromPreset(page, 'Standard');
 
-  const downloadPromise = page.waitForEvent('download', { timeout: 15_000 });
   const pdfButton = page.locator('#results-section').getByRole('button', { name: /PDF/i });
-  await pdfButton.evaluate((node: HTMLElement) => node.click());
+  await expect(pdfButton).toBeVisible({ timeout: 10_000 });
+
+  const downloadPromise = page.waitForEvent('download', { timeout: 15_000 });
+  await pdfButton.click();
   const download = await downloadPromise;
 
   const buffer = await readDownloadBuffer(download);
-  if (!buffer) return '';
+  const filename = download.suggestedFilename();
 
-  const parsed = await pdfParse(buffer);
-  return parsed.text;
+  if (!buffer || buffer.byteLength === 0) {
+    throw new Error(
+      `PDF download produced an empty buffer for filename "${filename}". ` +
+      `Check that the PDF export button triggers a real download and that ` +
+      `the PDF generation service is running correctly.`,
+    );
+  }
+
+  try {
+    return await extractPdfText(buffer);
+  } catch (err) {
+    throw new Error(
+      `pdf-parse failed to parse the downloaded PDF ("${filename}"): ${err}.\n` +
+      `Buffer size was ${buffer.byteLength} bytes. ` +
+      `Verify the PDF export produces a valid PDF/1.x file.`,
+    );
+  }
 }
 
 /**
  * Generates a schema with a specific protocol ID then downloads the PDF.
+ *
+ * Robustness notes:
+ *  - Explicitly waits for the PDF button to be visible before clicking,
+ *    to ensure the results section has fully rendered.
+ *  - Guards against empty buffers and surfaces pdf-parse failures with
+ *    actionable messages instead of opaque throws.
  */
 async function downloadPdfTextWithProtocol(
   page: import('@playwright/test').Page,
@@ -319,17 +353,37 @@ async function downloadPdfTextWithProtocol(
   const resultsSection = page.locator('#results-section');
   await expect(resultsSection).toBeVisible({ timeout: 15_000 });
 
-  const downloadPromise = page.waitForEvent('download', { timeout: 15_000 });
+  // Wait for the PDF button to be visible before attempting to click it,
+  // ensuring the results section has fully rendered all action buttons.
   const pdfButton = resultsSection.getByRole('button', { name: /PDF/i });
-  await pdfButton.evaluate((node: HTMLElement) => node.click());
+  await expect(pdfButton).toBeVisible({ timeout: 10_000 });
+
+  const downloadPromise = page.waitForEvent('download', { timeout: 15_000 });
+  await pdfButton.click();
   const download = await downloadPromise;
 
   const filename = download.suggestedFilename();
   const buffer = await readDownloadBuffer(download);
-  if (!buffer) return { text: '', filename };
 
-  const parsed = await pdfParse(buffer);
-  return { text: parsed.text, filename };
+  // Guard: surface actionable errors instead of a cryptic pdfParse throw.
+  if (!buffer || buffer.byteLength === 0) {
+    throw new Error(
+      `PDF download produced an empty buffer for filename "${filename}". ` +
+      `Check that the PDF export button triggers a real download and that ` +
+      `the PDF generation service is running correctly.`,
+    );
+  }
+
+  try {
+    const text = await extractPdfText(buffer);
+    return { text, filename };
+  } catch (err) {
+    throw new Error(
+      `pdf-parse failed to parse the downloaded PDF ("${filename}"): ${err}.\n` +
+      `Buffer size was ${buffer.byteLength} bytes. ` +
+      `Verify the PDF export produces a valid PDF/1.x file.`,
+    );
+  }
 }
 
 test.describe('21 CFR Part 11 – Audit Trail: PDF export provenance', () => {
