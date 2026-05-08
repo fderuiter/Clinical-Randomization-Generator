@@ -49,7 +49,13 @@ export class ExcelExportService {
     link.setAttribute('href', url);
     const blindLabel = isUnblinded ? 'unblinded' : 'blinded';
     const safeProtocol = result.metadata.protocolId.replace(/[^A-Za-z0-9._-]/g, '_');
-    link.setAttribute('download', `randomization_${safeProtocol}_${blindLabel}.xlsx`);
+    const now = new Date();
+    const dateStamp = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0'),
+    ].join('');
+    link.setAttribute('download', `randomization_${dateStamp}_${safeProtocol}_${blindLabel}.xlsx`);
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();

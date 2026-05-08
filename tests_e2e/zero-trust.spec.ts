@@ -20,6 +20,7 @@ import { test, expect, Request } from '@playwright/test';
 import { generateSchemaFromPreset, openGenerator } from './generator-helpers';
 
 const LOCAL_PORT = '4200';
+const LOCAL_ORIGIN = `http://localhost:${LOCAL_PORT}`;
 /** Hostnames considered local (loopback). */
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
 
