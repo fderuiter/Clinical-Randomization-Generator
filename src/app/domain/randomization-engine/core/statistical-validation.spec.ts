@@ -145,6 +145,7 @@ describe('ICH E9 – Law of Large Numbers: allocation ratio convergence', () => 
   const TOLERANCE_PCT = 1.5;
   const ITERATIONS = 200;
 
+  // [REQ-ICH-E9-001]
   it('1:1 ratio converges to 50 % per arm across 200 Monte Carlo trials', () => {
     const totals = runMonteCarlo(ONE_TO_ONE_CONFIG, ITERATIONS);
     const grandTotal = Object.values(totals).reduce((s, n) => s + n, 0);
@@ -184,6 +185,7 @@ describe('ICH E9 – Law of Large Numbers: allocation ratio convergence', () => 
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
+  // [REQ-ICH-E9-003]
   it('every block has exactly the correct count of each arm for a 1:1 ratio with block size 4', () => {
     for (let i = 0; i < 50; i++) {
       const result = generateRandomizationSchema({
@@ -276,6 +278,7 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('ICH E9 – Stratum Cap Enforcement: dynamic caps are never exceeded', () => {
+  // [REQ-ICH-E9-002]
   it('per-stratum caps are never exceeded across 100 random seeds', () => {
     for (let i = 0; i < 100; i++) {
       const result = generateRandomizationSchema({

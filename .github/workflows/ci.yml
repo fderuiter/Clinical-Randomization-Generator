@@ -113,7 +113,10 @@ jobs:
         merge-multiple: true
 
     - name: Merge Playwright reports
-      run: npx playwright merge-reports --reporter html ./all-blob-reports
+      run: |
+        npx playwright merge-reports --reporter html ./all-blob-reports
+        mkdir -p playwright-report
+        npx playwright merge-reports --reporter json ./all-blob-reports > playwright-report/report.json
 
     - name: Upload merged HTML report
       uses: actions/upload-artifact@v7
@@ -121,6 +124,63 @@ jobs:
         name: playwright-report
         path: playwright-report/
         retention-days: 30
+
+  traceability_matrix:
+    runs-on: ubuntu-latest
+    needs: [build_and_test, merge_reports]
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Run unit tests with JSON reporter
+      run: |
+        node generate-version.js
+        ./node_modules/.bin/vitest run \
+          --exclude 'tests_e2e/**' \
+          --reporter=json \
+          --outputFile=vitest-results.json || true
+
+    - name: Download Playwright JSON report
+      uses: actions/download-artifact@v8
+      with:
+        name: playwright-report
+        path: playwright-report/
+      continue-on-error: true
+
+    - name: Generate Validation Traceability Matrix
+      run: |
+        VITEST_ARG=""
+        PW_ARG=""
+        if [ -f vitest-results.json ]; then
+          VITEST_ARG="--vitest-results vitest-results.json"
+        fi
+        if [ -f playwright-report/report.json ]; then
+          PW_ARG="--playwright-results playwright-report/report.json"
+        fi
+        node scripts/generate-rtm.mjs $VITEST_ARG $PW_ARG \
+          --out Validation_Traceability_Matrix.md
+        echo "=== Traceability Matrix (first 50 lines) ==="
+        head -50 Validation_Traceability_Matrix.md
+
+    - name: Upload Validation Traceability Matrix
+      uses: actions/upload-artifact@v7
+      with:
+        name: validation-traceability-matrix
+        path: Validation_Traceability_Matrix.md
+        retention-days: 90
 
   cross_env_equivalence:
     runs-on: ubuntu-latest

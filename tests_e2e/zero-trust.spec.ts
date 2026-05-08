@@ -47,6 +47,7 @@ function isExternalRequest(req: Request): boolean {
 }
 
 test.describe('Zero-Trust Architecture: no outbound network requests', () => {
+  // [REQ-ZERO-TRUST-001]
   test('schema generation produces zero outbound XHR/Fetch requests to external servers', async ({ page }) => {
     const externalRequests: string[] = [];
 
@@ -63,6 +64,7 @@ test.describe('Zero-Trust Architecture: no outbound network requests', () => {
     expect(externalRequests).toHaveLength(0);
   });
 
+  // [REQ-ZERO-TRUST-001]
   test('CSV export produces zero outbound requests to external servers', async ({ page }) => {
     const externalRequests: string[] = [];
 
@@ -83,6 +85,7 @@ test.describe('Zero-Trust Architecture: no outbound network requests', () => {
     expect(externalRequests).toHaveLength(0);
   });
 
+  // [REQ-ZERO-TRUST-001]
   test('PDF export produces zero outbound requests to external servers', async ({ page }) => {
     const externalRequests: string[] = [];
 

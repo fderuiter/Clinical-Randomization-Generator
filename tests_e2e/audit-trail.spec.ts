@@ -19,7 +19,19 @@
 
 import { test, expect } from '@playwright/test';
 import { readFile } from 'fs/promises';
+import { PDFParse } from 'pdf-parse';
 import { generateSchemaFromPreset, openGenerator } from './generator-helpers';
+
+/**
+ * Extract all text from a PDF buffer using the pdf-parse v2 class API.
+ * Returns the concatenated text string across all pages.
+ */
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  // Buffer extends Uint8Array, so it satisfies the LoadParameters.data type directly.
+  const parser = new PDFParse({ data: buffer });
+  const result = await parser.getText();
+  return result.text;
+}
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -43,6 +55,16 @@ const SEED_PATTERNS: Record<string, RegExp> = {
   'SAS Script':   /%let seed\s*=\s*\d+/,
   'Stata Script': /set seed \d+/i,
 };
+
+/**
+ * Read the content of a Playwright download to a Buffer.
+ * Returns null when the path is unavailable.
+ */
+async function readDownloadBuffer(download: import('@playwright/test').Download): Promise<Buffer | null> {
+  const path = await download.path();
+  if (!path) return null;
+  return readFile(path);
+}
 
 /**
  * Read the content of a Playwright download to a string.
@@ -134,16 +156,19 @@ async function downloadCodeFile(
 test.describe('21 CFR Part 11 – Audit Trail: generated code artifact provenance', () => {
   const PROTOCOL_ID = 'AUDIT-TRAIL-PRT-001';
 
+  // [REQ-21CFR11-001]
   test('R script contains application semantic version', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'R Script', PROTOCOL_ID);
     expect(content).toMatch(SEMVER_RE);
   });
 
+  // [REQ-21CFR11-002]
   test('R script contains a valid ISO 8601 generated-at timestamp', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'R Script', PROTOCOL_ID);
     expect(content).toMatch(ISO_TIMESTAMP_RE);
   });
 
+  // [REQ-21CFR11-003]
   test('R script contains the trial protocol identifier', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'R Script', PROTOCOL_ID);
     expect(content).toContain(PROTOCOL_ID);
@@ -154,21 +179,25 @@ test.describe('21 CFR Part 11 – Audit Trail: generated code artifact provenanc
     expect(filename).toMatch(/\.R$/i);
   });
 
+  // [REQ-21CFR11-004]
   test('R script contains the PRNG seed initialisation statement', async ({ page }) => {
     const { content, language } = await downloadCodeFile(page, 'R Script', PROTOCOL_ID);
     expect(content).toMatch(SEED_PATTERNS[language]);
   });
 
+  // [REQ-21CFR11-001]
   test('Python script contains application semantic version', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'Python Script', PROTOCOL_ID);
     expect(content).toMatch(SEMVER_RE);
   });
 
+  // [REQ-21CFR11-002]
   test('Python script contains a valid ISO 8601 generated-at timestamp', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'Python Script', PROTOCOL_ID);
     expect(content).toMatch(ISO_TIMESTAMP_RE);
   });
 
+  // [REQ-21CFR11-003]
   test('Python script contains the trial protocol identifier', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'Python Script', PROTOCOL_ID);
     expect(content).toContain(PROTOCOL_ID);
@@ -179,21 +208,25 @@ test.describe('21 CFR Part 11 – Audit Trail: generated code artifact provenanc
     expect(filename).toMatch(/\.py$/i);
   });
 
+  // [REQ-21CFR11-004]
   test('Python script contains the PRNG seed initialisation statement', async ({ page }) => {
     const { content, language } = await downloadCodeFile(page, 'Python Script', PROTOCOL_ID);
     expect(content).toMatch(SEED_PATTERNS[language]);
   });
 
+  // [REQ-21CFR11-001]
   test('SAS script contains application semantic version', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'SAS Script', PROTOCOL_ID);
     expect(content).toMatch(SEMVER_RE);
   });
 
+  // [REQ-21CFR11-002]
   test('SAS script contains a valid ISO 8601 generated-at timestamp', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'SAS Script', PROTOCOL_ID);
     expect(content).toMatch(ISO_TIMESTAMP_RE);
   });
 
+  // [REQ-21CFR11-003]
   test('SAS script contains the trial protocol identifier', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'SAS Script', PROTOCOL_ID);
     expect(content).toContain(PROTOCOL_ID);
@@ -204,21 +237,25 @@ test.describe('21 CFR Part 11 – Audit Trail: generated code artifact provenanc
     expect(filename).toMatch(/\.sas$/i);
   });
 
+  // [REQ-21CFR11-004]
   test('SAS script contains the PRNG seed initialisation statement', async ({ page }) => {
     const { content, language } = await downloadCodeFile(page, 'SAS Script', PROTOCOL_ID);
     expect(content).toMatch(SEED_PATTERNS[language]);
   });
 
+  // [REQ-21CFR11-001]
   test('Stata script contains application semantic version', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'Stata Script', PROTOCOL_ID);
     expect(content).toMatch(SEMVER_RE);
   });
 
+  // [REQ-21CFR11-002]
   test('Stata script contains a valid ISO 8601 generated-at timestamp', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'Stata Script', PROTOCOL_ID);
     expect(content).toMatch(ISO_TIMESTAMP_RE);
   });
 
+  // [REQ-21CFR11-003]
   test('Stata script contains the trial protocol identifier', async ({ page }) => {
     const { content } = await downloadCodeFile(page, 'Stata Script', PROTOCOL_ID);
     expect(content).toContain(PROTOCOL_ID);
@@ -229,13 +266,165 @@ test.describe('21 CFR Part 11 – Audit Trail: generated code artifact provenanc
     expect(filename).toMatch(/\.do$/i);
   });
 
+  // [REQ-21CFR11-004]
   test('Stata script contains the PRNG seed initialisation statement', async ({ page }) => {
     const { content, language } = await downloadCodeFile(page, 'Stata Script', PROTOCOL_ID);
     expect(content).toMatch(SEED_PATTERNS[language]);
   });
 });
 
+// ── PDF Audit Trail ───────────────────────────────────────────────────────────
+
+/**
+ * Downloads the PDF export using the Standard preset and returns the parsed text.
+ * Uses pdf-parse to extract text from the binary PDF buffer.
+ * Note: this helper does not set a custom protocol ID; use downloadPdfTextWithProtocol
+ * when a specific protocol ID is required.
+ */
+async function downloadPdfText(page: import('@playwright/test').Page, protocolId: string): Promise<string> {
+  await generateSchemaFromPreset(page, 'Standard');
+
+  const pdfButton = page.locator('#results-section').getByRole('button', { name: /PDF/i });
+  await expect(pdfButton).toBeVisible({ timeout: 10_000 });
+
+  const downloadPromise = page.waitForEvent('download', { timeout: 15_000 });
+  await pdfButton.click();
+  const download = await downloadPromise;
+
+  const buffer = await readDownloadBuffer(download);
+  const filename = download.suggestedFilename();
+
+  if (!buffer || buffer.byteLength === 0) {
+    throw new Error(
+      `PDF download produced an empty buffer for filename "${filename}". ` +
+      `Check that the PDF export button triggers a real download and that ` +
+      `the PDF generation service is running correctly.`,
+    );
+  }
+
+  try {
+    return await extractPdfText(buffer);
+  } catch (err) {
+    throw new Error(
+      `pdf-parse failed to parse the downloaded PDF ("${filename}"): ${err}.\n` +
+      `Buffer size was ${buffer.byteLength} bytes. ` +
+      `Verify the PDF export produces a valid PDF/1.x file.`,
+    );
+  }
+}
+
+/**
+ * Generates a schema with a specific protocol ID then downloads the PDF.
+ *
+ * Robustness notes:
+ *  - Explicitly waits for the PDF button to be visible before clicking,
+ *    to ensure the results section has fully rendered.
+ *  - Guards against empty buffers and surfaces pdf-parse failures with
+ *    actionable messages instead of opaque throws.
+ */
+async function downloadPdfTextWithProtocol(
+  page: import('@playwright/test').Page,
+  protocolId: string,
+): Promise<{ text: string; filename: string }> {
+  await openGenerator(page);
+
+  await page.locator('#protocolId').fill(protocolId);
+  await page.locator('#studyName').fill('PDF Audit Test Study');
+  await page.locator('#phase').selectOption({ label: 'Phase III' });
+
+  const nextBtn = page.getByRole('button', { name: /^Next$/i });
+  await nextBtn.click(); // → Arms
+  await nextBtn.click(); // → Sites
+
+  const siteInput = page.locator('#sitesLabel + app-tag-input input');
+  await expect(siteInput).toBeVisible();
+  await siteInput.fill('PDF-SITE-01');
+  await siteInput.press('Enter');
+  await nextBtn.click(); // → Blocks
+
+  await page.locator('#blockSizesStr').fill('4');
+  await nextBtn.click(); // → Strata
+  await nextBtn.click(); // → Review
+
+  const generateBtn = page.getByRole('button', { name: /Generate Schema/i });
+  await expect(generateBtn).toBeVisible();
+  await generateBtn.click();
+
+  const resultsSection = page.locator('#results-section');
+  await expect(resultsSection).toBeVisible({ timeout: 15_000 });
+
+  // Wait for the PDF button to be visible before attempting to click it,
+  // ensuring the results section has fully rendered all action buttons.
+  const pdfButton = resultsSection.getByRole('button', { name: /PDF/i });
+  await expect(pdfButton).toBeVisible({ timeout: 10_000 });
+
+  const downloadPromise = page.waitForEvent('download', { timeout: 15_000 });
+  await pdfButton.click();
+  const download = await downloadPromise;
+
+  const filename = download.suggestedFilename();
+  const buffer = await readDownloadBuffer(download);
+
+  // Guard: surface actionable errors instead of a cryptic pdfParse throw.
+  if (!buffer || buffer.byteLength === 0) {
+    throw new Error(
+      `PDF download produced an empty buffer for filename "${filename}". ` +
+      `Check that the PDF export button triggers a real download and that ` +
+      `the PDF generation service is running correctly.`,
+    );
+  }
+
+  try {
+    const text = await extractPdfText(buffer);
+    return { text, filename };
+  } catch (err) {
+    throw new Error(
+      `pdf-parse failed to parse the downloaded PDF ("${filename}"): ${err}.\n` +
+      `Buffer size was ${buffer.byteLength} bytes. ` +
+      `Verify the PDF export produces a valid PDF/1.x file.`,
+    );
+  }
+}
+
+test.describe('21 CFR Part 11 – Audit Trail: PDF export provenance', () => {
+  const PDF_PROTOCOL_ID = 'PDF-AUDIT-PRT-001';
+
+  // [REQ-21CFR11-006]
+  test('PDF export contains the application semantic version', async ({ page }) => {
+    const { text } = await downloadPdfTextWithProtocol(page, PDF_PROTOCOL_ID);
+    expect(text).toMatch(SEMVER_RE);
+  });
+
+  // [REQ-21CFR11-006]
+  test('PDF export contains a valid ISO 8601 generated-at timestamp', async ({ page }) => {
+    const { text } = await downloadPdfTextWithProtocol(page, PDF_PROTOCOL_ID);
+    expect(text).toMatch(ISO_TIMESTAMP_RE);
+  });
+
+  // [REQ-21CFR11-006]
+  test('PDF export contains the trial protocol identifier', async ({ page }) => {
+    const { text } = await downloadPdfTextWithProtocol(page, PDF_PROTOCOL_ID);
+    expect(text).toContain(PDF_PROTOCOL_ID);
+  });
+
+  // [REQ-21CFR11-006]
+  test('PDF export contains the PRNG seed value', async ({ page }) => {
+    const { text } = await downloadPdfTextWithProtocol(page, PDF_PROTOCOL_ID);
+    // The metadata table has a "PRNG Seed" row with a numeric value.
+    // Match the label and an adjacent sequence of digits.
+    expect(text).toContain('PRNG Seed');
+    expect(text).toMatch(/PRNG\s+Seed[:\s]+\d+/);
+  });
+
+  // [REQ-EXPORT-002]
+  test('PDF export filename matches the expected pattern', async ({ page }) => {
+    const { filename } = await downloadPdfTextWithProtocol(page, PDF_PROTOCOL_ID);
+    expect(filename).toMatch(/^randomization_.*\.pdf$/i);
+  });
+});
+
 test.describe('21 CFR Part 11 – Audit Trail: results grid metadata stamping', () => {
+  // [REQ-21CFR11-004]
   test('results header displays the randomization seed used for the schema', async ({ page }) => {
     await generateSchemaFromPreset(page, 'Standard');
 
@@ -243,6 +432,7 @@ test.describe('21 CFR Part 11 – Audit Trail: results grid metadata stamping', 
     await expect(header.getByText(/Seed:/i)).toBeVisible();
   });
 
+  // [REQ-21CFR11-003]
   test('results header displays the protocol identifier', async ({ page }) => {
     await generateSchemaFromPreset(page, 'Standard');
 
@@ -250,6 +440,7 @@ test.describe('21 CFR Part 11 – Audit Trail: results grid metadata stamping', 
     await expect(header.getByText(/Protocol:/i)).toBeVisible();
   });
 
+  // [REQ-EXPORT-001]
   test('CSV download filename contains a date component for traceability', async ({ page }) => {
     await generateSchemaFromPreset(page, 'Standard');
 

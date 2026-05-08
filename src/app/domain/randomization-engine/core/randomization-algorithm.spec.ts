@@ -381,6 +381,7 @@ describe('generateRandomizationSchema – new token syntax', () => {
     expect(rndPart).toMatch(/^[A-Z0-9]{4}$/);
   });
 
+  // [REQ-ICH-E6-001]
   it('{RND:n} produces no duplicate subject IDs across the schema', () => {
     const config: RandomizationConfig = {
       ...BASE_CONFIG,
