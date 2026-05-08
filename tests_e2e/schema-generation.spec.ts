@@ -7,6 +7,7 @@ test.describe('Schema Generation Flow', () => {
     page.on('pageerror', err => console.log(`Page Error: ${err.message}`));
   });
 
+  // [REQ-ICH-E9-001]
   test('should generate a schema and display results grid', async ({ page }) => {
     await generateSchemaFromPreset(page, 'Complex');
 

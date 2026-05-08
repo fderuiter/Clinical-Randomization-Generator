@@ -198,6 +198,7 @@ describe('ExcelExportService', () => {
     expect(workbook.addWorksheet).toHaveBeenCalledTimes(2);
   });
 
+  // [REQ-EXPORT-003]
   it('should create the "Schema" sheet as the first worksheet', async () => {
     await service.exportXlsx(buildMockResult(), true);
     const workbook = mockState.workbooks[0];
@@ -226,6 +227,7 @@ describe('ExcelExportService', () => {
     }
   });
 
+  // [REQ-ICH-E6-002]
   it('should write the Subject ID as a plain string value', async () => {
     await service.exportXlsx(buildMockResult(), true);
     const schemaSheet = mockState.workbooks[0]._sheets[0];
@@ -332,6 +334,7 @@ describe('ExcelExportService', () => {
     expect(cell.value as string).toContain('DO NOT USE FOR ENROLLMENT');
   });
 
+  // [REQ-21CFR11-003]
   it('should write the protocol ID into the audit sheet metadata', async () => {
     await service.exportXlsx(buildMockResult(), true);
     const auditSheet = mockState.workbooks[0]._sheets[1];
@@ -340,6 +343,7 @@ describe('ExcelExportService', () => {
     expect(valueCell.value).toBe('PROTO-001');
   });
 
+  // [REQ-21CFR11-004]
   it('should write the PRNG seed into the audit sheet', async () => {
     await service.exportXlsx(buildMockResult(), true);
     const auditSheet = mockState.workbooks[0]._sheets[1];
@@ -348,6 +352,7 @@ describe('ExcelExportService', () => {
     expect(seedCell.value).toBe('seed-abc');
   });
 
+  // [REQ-21CFR11-005]
   it('should write the SHA-256 audit hash into the audit sheet', async () => {
     await service.exportXlsx(buildMockResult(), true);
     const auditSheet = mockState.workbooks[0]._sheets[1];

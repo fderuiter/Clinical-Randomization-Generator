@@ -116,6 +116,7 @@ test.describe('Results Grid Operations', () => {
   // ---------------------------------------------------------------------------
   // PDF export
   // ---------------------------------------------------------------------------
+  // [REQ-EXPORT-002]
   test('should trigger a PDF download when the PDF button is clicked', async ({ page }) => {
     const downloadPromise = page.waitForEvent('download', { timeout: 10000 });
     const pdfButton = page.locator('#results-section').getByRole('button', { name: /PDF/i });
