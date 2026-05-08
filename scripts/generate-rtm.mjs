@@ -95,7 +95,15 @@ const allSpecFiles  = [...unitSpecFiles, ...e2eSpecFiles];
  * @typedef {{ reqId: string; testName: string; file: string; line: number; suite: string }} TagEntry
  */
 
-/** Pattern that matches `// [REQ-ICH-E9-001]` (with optional whitespace). */
+/** Pattern that matches `// [REQ-ICH-E9-001]` (with optional whitespace).
+ *
+ * Two alternatives are required:
+ *  - 4 segments: REQ-ICH-E9-001, REQ-ICH-E6-001, REQ-ZERO-TRUST-001 (hyphenated sub-prefix)
+ *  - 3 segments: REQ-21CFR11-001, REQ-SBOM-001, REQ-EXPORT-001 (compact single-word category)
+ *
+ * The 4-segment alternative is listed first so the regex engine tries the longer
+ * match before falling back to the shorter one.
+ */
 const TAG_RE = /\/\/\s*\[([A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+|[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+)\]/g;
 /** Pattern to capture the immediately following test/it call's description. */
 const TEST_NAME_RE = /(?:test|it)\s*\(\s*['"`]([^'"`]+)['"`]/;
@@ -125,10 +133,10 @@ function extractTags(filePath) {
       suiteStack.push(describeMatch[1]);
     }
     // Very simplistic brace tracking to pop suite stack on closing '});'
+    // Best-effort: a line that is purely `});` or `})` is treated as the end
+    // of the most-recently-opened describe block.
     if (/^\s*\}\s*\)\s*;?\s*$/.test(line) && suiteStack.length > 0) {
-      // Only pop if we've accumulated multiple and it looks like the end
-      // of a describe block. (Best-effort; not 100% accurate.)
-      // We conservatively leave the last entry.
+      suiteStack.pop();
     }
 
     const currentSuite = suiteStack[suiteStack.length - 1] ?? '';
@@ -283,8 +291,9 @@ for (const reqId of sortedReqIds) {
   } else {
     for (const entry of entries) {
       const status = resolveStatus(entry);
-      const safeTest = entry.testName.replace(/\|/g, '\\|');
-      const safeSuite = entry.suite.replace(/\|/g, '\\|');
+      // Escape backslashes first, then pipe characters so Markdown table cells render correctly.
+      const safeTest  = entry.testName.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
+      const safeSuite = entry.suite.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
       lines.push(`| \`${reqId}\` | ${desc} | \`${entry.file}\` | ${entry.line} | ${safeTest} | ${safeSuite} | ${status} |`);
     }
   }
