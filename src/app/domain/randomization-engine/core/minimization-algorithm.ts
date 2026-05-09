@@ -208,6 +208,8 @@ export function generateMinimization(
     siteMarginals.set(site, marginals);
   }
 
+  let poolNeedsFilter = false;
+
   // Generate subjects one by one up to totalSampleSize
   for (let s = 0; s < totalSampleSize; s++) {
     // Determine active pool dynamically. If MARGINAL_ONLY, filter based on marginal counts.
@@ -223,12 +225,15 @@ export function generateMinimization(
         break;
       }
     } else {
-      activePool = activePool.filter(combo => {
-        const key = combo._key || "";
-        const cap = capsDict[key];
-        const count = intersectionCounts[key] ?? 0;
-        return cap === undefined || count < cap;
-      });
+      if (poolNeedsFilter || s === 0) { // Always filter on the first iteration to clear any 0 caps, though validPool handles this. We only filter if needed.
+        activePool = activePool.filter(combo => {
+          const key = combo._key || "";
+          const cap = capsDict[key];
+          const count = intersectionCounts[key] ?? 0;
+          return cap === undefined || count < cap;
+        });
+        poolNeedsFilter = false;
+      }
 
       if (activePool.length === 0) {
         // No more valid combinations exist; exhaustion reached.
@@ -264,11 +269,13 @@ export function generateMinimization(
         const prefixKeys = Object.keys(currentCombinationPrefix);
         availableLevels = factor.levels.filter(level =>
           activePool.some(combo => {
+            // check factor match first before checking the entire prefix
+            if (combo[factor.id] !== level) return false;
             // check if combo matches current prefix
             for (const k of prefixKeys) {
               if (combo[k] !== currentCombinationPrefix[k]) return false;
             }
-            return combo[factor.id] === level;
+            return true;
           })
         );
       }
@@ -365,7 +372,14 @@ export function generateMinimization(
         if (j > 0) key += "|";
         key += subjectProfile[strata[j].id] || "";
       }
-      intersectionCounts[key] = (intersectionCounts[key] ?? 0) + 1;
+
+      const newCount = (intersectionCounts[key] ?? 0) + 1;
+      intersectionCounts[key] = newCount;
+
+      const cap = capsDict[key];
+      if (cap !== undefined && newCount >= cap) {
+        poolNeedsFilter = true;
+      }
     }
 
     siteSubjectCounts.set(site, siteSubjectCounts.get(site)! + 1);
