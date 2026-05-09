@@ -151,7 +151,7 @@ describe('ICH E9 – Law of Large Numbers: allocation ratio convergence', () => 
     const grandTotal = Object.values(totals).reduce((s, n) => s + n, 0);
     const expectedFraction = 0.5;
 
-    for (const [armId, count] of Object.entries(totals)) {
+    for (const count of Object.values(totals)) {
       const observed = count / grandTotal;
       expect(Math.abs(observed - expectedFraction)).toBeLessThan(TOLERANCE_PCT / 100);
     }
@@ -173,7 +173,7 @@ describe('ICH E9 – Law of Large Numbers: allocation ratio convergence', () => 
     const grandTotal = Object.values(totals).reduce((s, n) => s + n, 0);
     const expectedFraction = 1 / 3;
 
-    for (const [armId, count] of Object.entries(totals)) {
+    for (const count of Object.values(totals)) {
       const observed = count / grandTotal;
       expect(Math.abs(observed - expectedFraction)).toBeLessThan(TOLERANCE_PCT / 100);
     }
@@ -201,7 +201,7 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
         blocks.get(key)!.push(row.treatmentArmId);
       }
 
-      for (const [_key, assignments] of blocks) {
+      for (const assignments of blocks.values()) {
         const blockSize = assignments.length;
         // Every complete block of size 4 must have exactly 2 of each arm.
         if (blockSize === 4) {
@@ -232,7 +232,7 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
         blocks.get(key)!.push(row.treatmentArmId);
       }
 
-      for (const [_key, assignments] of blocks) {
+      for (const assignments of blocks.values()) {
         if (assignments.length === 3) {
           const countD = assignments.filter(a => a === 'D').length;
           const countP = assignments.filter(a => a === 'P').length;
@@ -260,7 +260,7 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
         blocks.get(key)!.arms.push(row.treatmentArmId);
       }
 
-      for (const [_key, block] of blocks) {
+      for (const block of blocks.values()) {
         if (block.arms.length === block.size) {
           const countA = block.arms.filter(a => a === 'A').length;
           const countB = block.arms.filter(a => a === 'B').length;
@@ -293,7 +293,7 @@ describe('ICH E9 – Stratum Cap Enforcement: dynamic caps are never exceeded', 
         stratumCounts.set(key, (stratumCounts.get(key) ?? 0) + 1);
       }
 
-      for (const [_key, count] of stratumCounts) {
+      for (const count of stratumCounts.values()) {
         expect(count).toBeLessThanOrEqual(20);
       }
     }
@@ -338,7 +338,7 @@ describe('ICH E9 – Stratum Cap Enforcement: dynamic caps are never exceeded', 
         siteMap.set(row.site, (siteMap.get(row.site) ?? 0) + 1);
       }
 
-      for (const [_site, count] of siteMap) {
+      for (const count of siteMap.values()) {
         expect(count).toBeLessThanOrEqual(10);
       }
     }
@@ -460,7 +460,7 @@ describe('ICH E9 – Boundary Conditions: structural integrity under edge cases'
     const totals = runMonteCarlo(ONE_TO_ONE_CONFIG, ITERATIONS);
     const grandTotal = Object.values(totals).reduce((s, n) => s + n, 0);
 
-    for (const [armId, count] of Object.entries(totals)) {
+    for (const count of Object.values(totals)) {
       const observed = count / grandTotal;
       const deviation = Math.abs(observed - 0.5) * 100;
       expect(deviation).toBeLessThan(STRICT_TOLERANCE_PCT);
