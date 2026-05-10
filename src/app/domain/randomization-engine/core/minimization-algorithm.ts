@@ -208,32 +208,38 @@ export function generateMinimization(
     siteMarginals.set(site, marginals);
   }
 
+  let poolNeedsFilter = true;
+  let isExhausted = false;
+
   // Generate subjects one by one up to totalSampleSize
   for (let s = 0; s < totalSampleSize; s++) {
     // Determine active pool dynamically. If MARGINAL_ONLY, filter based on marginal counts.
-    if (isMarginal) {
-      const isExhausted = strata.some(factor => {
-        return factor.levels.every(level => {
-          const cap = marginalCapMap.get(factor.id)?.get(level);
-          const count = marginalCounts.get(factor.id)?.get(level) ?? 0;
-          return cap !== undefined && count >= cap;
+    if (poolNeedsFilter) {
+      poolNeedsFilter = false;
+      if (isMarginal) {
+        isExhausted = strata.some(factor => {
+          return factor.levels.every(level => {
+            const cap = marginalCapMap.get(factor.id)?.get(level);
+            const count = marginalCounts.get(factor.id)?.get(level) ?? 0;
+            return cap !== undefined && count >= cap;
+          });
         });
-      });
-      if (isExhausted) {
-        break;
-      }
-    } else {
-      activePool = activePool.filter(combo => {
-        const key = combo._key || "";
-        const cap = capsDict[key];
-        const count = intersectionCounts[key] ?? 0;
-        return cap === undefined || count < cap;
-      });
+      } else {
+        activePool = activePool.filter(combo => {
+          const key = combo._key || "";
+          const cap = capsDict[key];
+          const count = intersectionCounts[key] ?? 0;
+          return cap === undefined || count < cap;
+        });
 
-      if (activePool.length === 0) {
-        // No more valid combinations exist; exhaustion reached.
-        break;
+        if (activePool.length === 0) {
+          isExhausted = true;
+        }
       }
+    }
+
+    if (isExhausted) {
+      break;
     }
 
     // Determine available sites (all sites are uniformly available for now, since no site caps exist)
@@ -244,12 +250,11 @@ export function generateMinimization(
     const subjectProfile: Record<string, string> = {};
     const stratum: Record<string, string> = {};
 
-    const currentCombinationPrefix: Record<string, string> = {};
-
     let validSubject = true;
 
     // Sample each factor sequentially, dynamically adjusting probabilities based on active pool
-    for (const factor of strata) {
+    for (let fIdx = 0; fIdx < strata.length; fIdx++) {
+      const factor = strata[fIdx];
       let availableLevels: string[];
 
       if (isMarginal) {
@@ -261,12 +266,12 @@ export function generateMinimization(
       } else {
         // Find levels that are still present in at least one combination in the activePool
         // that matches the already sampled prefix.
-        const prefixKeys = Object.keys(currentCombinationPrefix);
         availableLevels = factor.levels.filter(level =>
           activePool.some(combo => {
             // check if combo matches current prefix
-            for (const k of prefixKeys) {
-              if (combo[k] !== currentCombinationPrefix[k]) return false;
+            for (let k = 0; k < fIdx; k++) {
+              const prevFactorId = strata[k].id;
+              if (combo[prevFactorId] !== subjectProfile[prevFactorId]) return false;
             }
             return combo[factor.id] === level;
           })
@@ -283,7 +288,6 @@ export function generateMinimization(
       const level = sampleLevel(availableLevels, expectedProbs, rng);
       subjectProfile[factor.id] = level;
       stratum[factor.id] = level;
-      currentCombinationPrefix[factor.id] = level;
     }
 
     if (!validSubject) break;
@@ -356,7 +360,13 @@ export function generateMinimization(
         const lvl = subjectProfile[factor.id];
         if (lvl) {
           const map = marginalCounts.get(factor.id)!;
-          map.set(lvl, (map.get(lvl) ?? 0) + 1);
+          const currentCount = (map.get(lvl) ?? 0) + 1;
+          map.set(lvl, currentCount);
+
+          const cap = marginalCapMap.get(factor.id)?.get(lvl);
+          if (cap !== undefined && currentCount >= cap) {
+            poolNeedsFilter = true;
+          }
         }
       }
     } else {
@@ -365,7 +375,13 @@ export function generateMinimization(
         if (j > 0) key += "|";
         key += subjectProfile[strata[j].id] || "";
       }
-      intersectionCounts[key] = (intersectionCounts[key] ?? 0) + 1;
+      const newCount = (intersectionCounts[key] ?? 0) + 1;
+      intersectionCounts[key] = newCount;
+
+      const cap = capsDict[key];
+      if (cap !== undefined && newCount >= cap) {
+        poolNeedsFilter = true;
+      }
     }
 
     siteSubjectCounts.set(site, siteSubjectCounts.get(site)! + 1);
