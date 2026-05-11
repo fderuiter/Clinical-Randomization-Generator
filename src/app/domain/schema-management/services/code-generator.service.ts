@@ -380,29 +380,32 @@ compute_imbalance_score <- function(candidate_arm_id, profile, marginals) {
 }
 
 active_pool <- strata_grid
+pool_needs_filter <- TRUE
 
 for (s_idx in 1:total_sample_size) {
-  # Update active pool
+  if (pool_needs_filter) {
 ${isMarginal ? `
-  keep_flags <- sapply(1:nrow(active_pool), function(i) {
-    combo_row <- active_pool[i, , drop = FALSE]
-    all(sapply(names(marginal_caps), function(factor_id) {
-      level_val <- as.character(combo_row[[factor_id]])
-      cap_val <- marginal_caps[[factor_id]][[level_val]]
-      count <- marginal_counts[[factor_id]][[level_val]]
-      is.infinite(cap_val) || count < cap_val
-    }))
-  })
+    keep_flags <- sapply(seq_len(nrow(active_pool)), function(i) {
+      combo_row <- active_pool[i, , drop = FALSE]
+      all(sapply(names(marginal_caps), function(factor_id) {
+        level_val <- as.character(combo_row[[factor_id]])
+        cap_val <- marginal_caps[[factor_id]][[level_val]]
+        count <- marginal_counts[[factor_id]][[level_val]]
+        is.infinite(cap_val) || count < cap_val
+      }))
+    })
 ` : `
-  keep_flags <- sapply(1:nrow(active_pool), function(i) {
-    combo_row <- active_pool[i, , drop = FALSE]
-    key <- paste(unlist(combo_row), collapse="_")
-    cap <- if (key %in% names(stratum_caps)) stratum_caps[[key]] else Inf
-    count <- if (is.null(intersection_counts[[key]])) 0 else intersection_counts[[key]]
-    is.infinite(cap) || count < cap
-  })
+    keep_flags <- sapply(seq_len(nrow(active_pool)), function(i) {
+      combo_row <- active_pool[i, , drop = FALSE]
+      key <- paste(unlist(combo_row), collapse="_")
+      cap <- if (key %in% names(stratum_caps)) stratum_caps[[key]] else Inf
+      count <- if (is.null(intersection_counts[[key]])) 0 else intersection_counts[[key]]
+      is.infinite(cap) || count < cap
+    })
 `}
-  active_pool <- active_pool[keep_flags, , drop = FALSE]
+    active_pool <- active_pool[keep_flags, , drop = FALSE]
+    pool_needs_filter <- FALSE
+  }
 
   if (nrow(active_pool) == 0) {
     break # Exhaustion
@@ -421,11 +424,12 @@ ${isMarginal ? `
     for (lvl in levels) {
       match_idx <- sapply(1:nrow(active_pool), function(i) {
         combo <- active_pool[i, , drop = FALSE]
+        if (combo[[factor_id]] != lvl) return(FALSE)
         match_prefix <- TRUE
         for (k in names(current_prefix)) {
            if (combo[[k]] != current_prefix[[k]]) match_prefix <- FALSE
         }
-        return(match_prefix && combo[[factor_id]] == lvl)
+        return(match_prefix)
       })
       if (any(match_idx)) {
          available_levels <- c(available_levels, lvl)
@@ -477,15 +481,23 @@ ${isMarginal ? `
     marginal_imbalance[[factor_id]][[lvl]][assigned_arm_id] <- marginal_imbalance[[factor_id]][[lvl]][assigned_arm_id] + 1
 ${isMarginal ? `
     marginal_counts[[factor_id]][[lvl]] <- marginal_counts[[factor_id]][[lvl]] + 1
+    cap_val <- marginal_caps[[factor_id]][[lvl]]
+    if (!is.infinite(cap_val) && marginal_counts[[factor_id]][[lvl]] >= cap_val) {
+      pool_needs_filter <- TRUE
+    }
 ` : ''}
   }
 
 ${!isMarginal ? `
   key <- paste(unlist(subject_profile), collapse="_")
+  cap <- if (key %in% names(stratum_caps)) stratum_caps[[key]] else Inf
   if (is.null(intersection_counts[[key]])) {
     intersection_counts[[key]] <- 1
   } else {
     intersection_counts[[key]] <- intersection_counts[[key]] + 1
+  }
+  if (!is.infinite(cap) && intersection_counts[[key]] >= cap) {
+    pool_needs_filter <- TRUE
   }
 ` : ''}
 
@@ -721,8 +733,24 @@ for (site in sites) {
 
   # Active pool of strata combinations (those not yet exhausted)
   active_pool <- strata_grid
+  pool_needs_filter <- TRUE
 
   while (nrow(active_pool) > 0) {
+    if (pool_needs_filter) {
+      # Prune pool: remove combinations that breach any marginal cap
+      keep_flags <- sapply(seq_len(nrow(active_pool)), function(i) {
+        combo_row <- active_pool[i, , drop = FALSE]
+        all(sapply(names(marginal_caps), function(factor_id) {
+          level_val <- as.character(combo_row[[factor_id]])
+          cap_val   <- marginal_caps[[factor_id]][[level_val]]
+          is.null(cap_val) || marginal_counts[[factor_id]][[level_val]] < cap_val
+        }))
+      })
+      active_pool <- active_pool[keep_flags, , drop = FALSE]
+      pool_needs_filter <- FALSE
+    }
+    if (nrow(active_pool) == 0) break
+
     # Randomly select a combination from the active pool
     pool_idx <- sample(nrow(active_pool), 1)
     stratum  <- active_pool[pool_idx, , drop = FALSE]
@@ -762,23 +790,16 @@ for (site in sites) {
       # Update marginal counts
       for (factor_id in names(marginal_caps)) {
         level_val <- as.character(stratum[[factor_id]])
-        if (!is.null(marginal_caps[[factor_id]][[level_val]])) {
+        cap_val <- marginal_caps[[factor_id]][[level_val]]
+        if (!is.null(cap_val)) {
           marginal_counts[[factor_id]][[level_val]] <-
             marginal_counts[[factor_id]][[level_val]] + 1L
+          if (marginal_counts[[factor_id]][[level_val]] >= cap_val) {
+            pool_needs_filter <- TRUE
+          }
         }
       }
     }
-
-    # Prune pool: remove combinations that breach any marginal cap
-    keep_flags <- sapply(seq_len(nrow(active_pool)), function(i) {
-      combo_row <- active_pool[i, , drop = FALSE]
-      all(sapply(names(marginal_caps), function(factor_id) {
-        level_val <- as.character(combo_row[[factor_id]])
-        cap_val   <- marginal_caps[[factor_id]][[level_val]]
-        is.null(cap_val) || marginal_counts[[factor_id]][[level_val]] < cap_val
-      }))
-    })
-    active_pool <- active_pool[keep_flags, , drop = FALSE]
   }
 }
 
@@ -870,6 +891,7 @@ ${strataLevelsList}
 strata_names = list(strata_levels.keys())
 strata_combinations = list(itertools.product(*(strata_levels[k] for k in strata_names))) if strata_names else [()]
 active_pool = [dict(zip(strata_names, c)) for c in strata_combinations]
+pool_needs_filter = True
 
 # Expected Probabilities
 ${baseProbsCode}
@@ -974,30 +996,31 @@ def compute_imbalance_score(candidate_arm_id, profile, marginals):
     return total_score
 
 for s_idx in range(total_sample_size):
-    # Update active pool
+    if pool_needs_filter:
 ${isMarginal ? `
-    new_active_pool = []
-    for combo in active_pool:
-        keep = True
-        for factor_id, level_val in combo.items():
-            cap_val = marginal_caps.get(factor_id, {}).get(level_val, float('inf'))
-            count = marginal_counts.get(factor_id, {}).get(level_val, 0)
-            if count >= cap_val:
-                keep = False
-                break
-        if keep:
-            new_active_pool.append(combo)
-    active_pool = new_active_pool
+        new_active_pool = []
+        for combo in active_pool:
+            keep = True
+            for factor_id, level_val in combo.items():
+                cap_val = marginal_caps.get(factor_id, {}).get(level_val, float('inf'))
+                count = marginal_counts.get(factor_id, {}).get(level_val, 0)
+                if count >= cap_val:
+                    keep = False
+                    break
+            if keep:
+                new_active_pool.append(combo)
+        active_pool = new_active_pool
 ` : `
-    new_active_pool = []
-    for combo in active_pool:
-        key = tuple(combo.get(k, "") for k in strata_names)
-        cap = stratum_caps.get(key, float('inf'))
-        count = intersection_counts.get(key, 0)
-        if count < cap:
-            new_active_pool.append(combo)
-    active_pool = new_active_pool
+        new_active_pool = []
+        for combo in active_pool:
+            key = tuple(combo.get(k, "") for k in strata_names)
+            cap = stratum_caps.get(key, float('inf'))
+            count = intersection_counts.get(key, 0)
+            if count < cap:
+                new_active_pool.append(combo)
+        active_pool = new_active_pool
 `}
+        pool_needs_filter = False
 
     if not active_pool:
         break # Exhaustion
@@ -1014,12 +1037,14 @@ ${isMarginal ? `
         for lvl in levels:
             # Check if this level exists in active pool matching current prefix
             for combo in active_pool:
+                if combo.get(factor_id) != lvl:
+                    continue
                 match_prefix = True
                 for k, v in current_prefix.items():
                     if combo.get(k) != v:
                         match_prefix = False
                         break
-                if match_prefix and combo.get(factor_id) == lvl:
+                if match_prefix:
                     available_levels.append(lvl)
                     break
 
@@ -1068,11 +1093,17 @@ ${isMarginal ? `
         marginal_imbalance[factor_id][lvl][assigned_arm["id"]] += 1
 ${isMarginal ? `
         marginal_counts[factor_id][lvl] += 1
+        cap_val = marginal_caps.get(factor_id, {}).get(lvl)
+        if cap_val is not None and marginal_counts[factor_id][lvl] >= cap_val:
+            pool_needs_filter = True
 ` : ''}
 
 ${!isMarginal ? `
     key = tuple(subject_profile.get(k, "") for k in strata_names)
     intersection_counts[key] = intersection_counts.get(key, 0) + 1
+    cap = stratum_caps.get(key, float('inf'))
+    if intersection_counts[key] >= cap:
+        pool_needs_filter = True
 ` : ''}
 
     site_subject_counts[site] += 1
@@ -1198,9 +1229,25 @@ for site in sites:
 
     # Active pool of strata combinations
     active_pool = list(strata_combinations)
+    pool_needs_filter = True
     block_number = 0
 
     while active_pool:
+        if pool_needs_filter:
+            # Prune pool: remove combinations that breach any marginal cap
+            active_pool = [
+                c for c in active_pool
+                if all(
+                    marginal_caps.get(strata_names[i], {}).get(c[i]) is None or
+                    marginal_counts.get(strata_names[i], {}).get(c[i], 0) <
+                    marginal_caps.get(strata_names[i], {}).get(c[i], 0)
+                    for i in range(len(strata_names))
+                )
+            ]
+            pool_needs_filter = False
+        if not active_pool:
+            break
+
         # Randomly select a combination from the active pool
         pick_idx = int(rng.integers(len(active_pool)))
         combo = active_pool[pick_idx]
@@ -1243,17 +1290,9 @@ for site in sites:
                 if factor_id in marginal_counts:
                     marginal_counts[factor_id][level_val] = \
                         marginal_counts[factor_id].get(level_val, 0) + 1
-
-        # Prune pool: remove combinations that breach any marginal cap
-        active_pool = [
-            c for c in active_pool
-            if all(
-                marginal_caps.get(strata_names[i], {}).get(c[i]) is None or
-                marginal_counts.get(strata_names[i], {}).get(c[i], 0) <
-                marginal_caps.get(strata_names[i], {}).get(c[i], 0)
-                for i in range(len(strata_names))
-            )
-        ]
+                    cap = marginal_caps.get(factor_id, {}).get(level_val)
+                    if cap is not None and marginal_counts[factor_id][level_val] >= cap:
+                        pool_needs_filter = True
 
 df = pd.DataFrame(schema)
 print("\\n--- Generated Randomization Schema (First 5 Rows) ---")
@@ -1485,6 +1524,7 @@ ${isMarginal ? `
     do _i = 1 to &n_combos.; _counts[_i] = 0; end;
 `}
     do _i = 1 to ${totalLevels * nArms}; _imbalance[_i] = 0; end;
+    _pool_needs_prune = 1;
   end;
 
   /* Setup site counts map (using parallel array since SAS lacks hash dict in standard variables easily across iterations) */
@@ -1494,25 +1534,28 @@ ${isMarginal ? `
   /* Main Minimization Loop over Total Sample Size */
   do _s = 1 to &total_sample_size.;
 
-    /* 1. Prune Active Pool */
-    _n_active = 0;
-    do _i = 1 to &n_combos.;
-      if _active[_i] = 1 then do;
-        _keep = 1;
+    /* 1. Prune Active Pool only when counts hit a cap */
+    if _pool_needs_prune then do;
+      _n_active = 0;
+      do _i = 1 to &n_combos.;
+        if _active[_i] = 1 then do;
+          _keep = 1;
 ${isMarginal ? `
-        do _f = 1 to &n_factors.;
-          _lidx = _combo_fidx[(_i - 1) * &n_factors. + _f];
-          if _caps[_lidx] >= 0 and _counts[_lidx] >= _caps[_lidx] then do;
-            _keep = 0;
-            _f = &n_factors. + 1; /* exit loop */
+          do _f = 1 to &n_factors.;
+            _lidx = _combo_fidx[(_i - 1) * &n_factors. + _f];
+            if _caps[_lidx] >= 0 and _counts[_lidx] >= _caps[_lidx] then do;
+              _keep = 0;
+              _f = &n_factors. + 1; /* exit loop */
+            end;
           end;
-        end;
 ` : `
-        if _caps[_i] >= 0 and _counts[_i] >= _caps[_i] then _keep = 0;
+          if _caps[_i] >= 0 and _counts[_i] >= _caps[_i] then _keep = 0;
 `}
-        if _keep = 0 then _active[_i] = 0;
-        else _n_active = _n_active + 1;
+          if _keep = 0 then _active[_i] = 0;
+          else _n_active = _n_active + 1;
+        end;
       end;
+      _pool_needs_prune = 0;
     end;
 
     if _n_active = 0 then leave; /* Exhaustion */
@@ -1715,6 +1758,7 @@ ${isMarginal ? `
       _imbalance[_imb_idx] = _imbalance[_imb_idx] + 1;
 ${isMarginal ? `
       _counts[_lidx] = _counts[_lidx] + 1;
+      if _caps[_lidx] >= 0 and _counts[_lidx] >= _caps[_lidx] then _pool_needs_prune = 1;
 ` : ''}
     end;
 
@@ -1734,7 +1778,10 @@ ${!isMarginal ? `
          _i = &n_combos. + 1;
       end;
     end;
-    if _matched_combo > 0 then _counts[_matched_combo] = _counts[_matched_combo] + 1;
+    if _matched_combo > 0 then do;
+      _counts[_matched_combo] = _counts[_matched_combo] + 1;
+      if _caps[_matched_combo] >= 0 and _counts[_matched_combo] >= _caps[_matched_combo] then _pool_needs_prune = 1;
+    end;
 ` : ''}
 
     /* 8. Output Subject */
@@ -1961,8 +2008,30 @@ ${charArrayDecls || '  /* No strata factors */'}
     do _i = 1 to &n_combos.; _active[_i] = 1; end;
     do _i = 1 to ${totalLevels}; _counts[_i] = 0; end;
     _n_active = &n_combos.;
+    _pool_needs_prune = 1;
 
     do while (_n_active > 0);
+      if _pool_needs_prune then do;
+        /* Prune active pool: deactivate combinations that breach any marginal cap */
+        _n_active = 0;
+        do _i = 1 to &n_combos.;
+          if _active[_i] then do;
+            _exhausted = 0;
+${nFactors > 0 ? `          do _f = 1 to &n_factors.;
+            _lidx = _combo_fidx[(_i - 1) * &n_factors. + _f];
+            if _caps[_lidx] >= 0 and _counts[_lidx] >= _caps[_lidx] then do;
+              _exhausted = 1;
+              _f = &n_factors. + 1; /* exit loop */
+            end;
+          end;` : '          /* No factors: pool never exhausts (add a global cap to terminate) */'}
+            if _exhausted then _active[_i] = 0;
+            else _n_active + 1;
+          end;
+        end;
+        _pool_needs_prune = 0;
+      end;
+      if _n_active = 0 then leave;
+
       /* Randomly select an active strata combination */
       _rand_pick = floor(rand('Uniform') * _n_active) + 1;
       _seen = 0;
@@ -2027,26 +2096,12 @@ ${nFactors > 0 ? `        do _f = 1 to &n_factors.;
         /* Update marginal enrollment counts */
 ${nFactors > 0 ? `        do _f = 1 to &n_factors.;
           _lidx = _combo_fidx[(_chosen - 1) * &n_factors. + _f];
-          if _caps[_lidx] >= 0 then _counts[_lidx] + 1;
+          if _caps[_lidx] >= 0 then do;
+            _counts[_lidx] + 1;
+            if _counts[_lidx] >= _caps[_lidx] then _pool_needs_prune = 1;
+          end;
         end;` : '        /* No strata factors: no counts to update */'}
       end; /* block loop */
-
-      /* Prune active pool: deactivate combinations that breach any marginal cap */
-      _n_active = 0;
-      do _i = 1 to &n_combos.;
-        if _active[_i] then do;
-          _exhausted = 0;
-${nFactors > 0 ? `          do _f = 1 to &n_factors.;
-            _lidx = _combo_fidx[(_i - 1) * &n_factors. + _f];
-            if _caps[_lidx] >= 0 and _counts[_lidx] >= _caps[_lidx] then do;
-              _exhausted = 1;
-              _f = &n_factors. + 1; /* exit loop */
-            end;
-          end;` : '          /* No factors: pool never exhausts (add a global cap to terminate) */'}
-          if _exhausted then _active[_i] = 0;
-          else _n_active + 1;
-        end;
-      end;
     end; /* while loop */
   end; /* sites loop */
 
@@ -2870,6 +2925,7 @@ forvalues i = 1/\`total_levels' {
 forvalues i = 1/\`n_sites' {
     local site_count_\`i' = 0
 }
+local pool_needs_prune = 1
 
 * ─── Schema Generation ──────────────────────────────────────────────────────
 tempfile _schema_data
@@ -2880,27 +2936,30 @@ postfile \`_schema_fh' str50 SubjectID str50 Site int BlockNumber int BlockSize 
 
 forvalues s_idx = 1/\`total_sample_size' {
 
-    * 1. Prune Active Pool
-    local n_active = 0
-    forvalues i = 1/\`n_combos' {
-        if \`active_\`i'' == 1 {
-            local keep = 1
+    * 1. Prune Active Pool only when counts hit a cap
+    if \`pool_needs_prune' {
+        local n_active = 0
+        forvalues i = 1/\`n_combos' {
+            if \`active_\`i'' == 1 {
+                local keep = 1
 ${isMarginal ? `
-            forvalues f = 1/\`n_factors' {
-                local lidx = \`combo_\`i'_f\`f''
-                if \`cap_\`lidx'' < ${UNCAPPED} & \`count_\`lidx'' >= \`cap_\`lidx'' {
-                    local keep = 0
-                    continue, break
+                forvalues f = 1/\`n_factors' {
+                    local lidx = \`combo_\`i'_f\`f''
+                    if \`cap_\`lidx'' < ${UNCAPPED} & \`count_\`lidx'' >= \`cap_\`lidx'' {
+                        local keep = 0
+                        continue, break
+                    }
                 }
-            }
 ` : `
-            if \`cap_\`i'' < ${UNCAPPED} & \`count_\`i'' >= \`cap_\`i'' {
-                local keep = 0
-            }
+                if \`cap_\`i'' < ${UNCAPPED} & \`count_\`i'' >= \`cap_\`i'' {
+                    local keep = 0
+                }
 `}
-            if \`keep' == 0 local active_\`i' = 0
-            else local n_active = \`n_active' + 1
+                if \`keep' == 0 local active_\`i' = 0
+                else local n_active = \`n_active' + 1
+            }
         }
+        local pool_needs_prune = 0
     }
 
     if \`n_active' == 0 continue, break // Exhaustion
@@ -3102,7 +3161,8 @@ ${isMarginal ? `
     forvalues f = 1/\`n_factors' {
         local lidx = \`subj_prof_\`f''
         local imb_\`lidx'_\`assigned_arm_idx' = \`imb_\`lidx'_\`assigned_arm_idx'' + 1
-${isMarginal ? `        local count_\`lidx' = \`count_\`lidx'' + 1` : ''}
+${isMarginal ? `        local count_\`lidx' = \`count_\`lidx'' + 1
+        if \`count_\`lidx'' >= \`cap_\`lidx'' local pool_needs_prune = 1` : ''}
     }
 
 ${!isMarginal ? `
@@ -3120,7 +3180,10 @@ ${!isMarginal ? `
             continue, break
         }
     }
-    if \`matched_combo' > 0 local count_\`matched_combo' = \`count_\`matched_combo'' + 1
+    if \`matched_combo' > 0 {
+        local count_\`matched_combo' = \`count_\`matched_combo'' + 1
+        if \`count_\`matched_combo'' >= \`cap_\`matched_combo'' local pool_needs_prune = 1
+    }
 ` : ''}
 
     * 8. Output Subject
@@ -3277,7 +3340,7 @@ list in 1/20, clean noobs
       const safeVarName = varNames[si];
       return s.levels.map((_, j) => {
         const idx = j + 1;
-        return `                if chosen_${safeVarName} == ${idx} local cnt_${safeVarName}_${idx} = \`cnt_${safeVarName}_${idx}' + 1`;
+        return `                if chosen_${safeVarName} == ${idx} {\n                    local cnt_${safeVarName}_${idx} = \`cnt_${safeVarName}_${idx}' + 1\n                    if \`cnt_${safeVarName}_${idx}' >= \`cap_${safeVarName}_${idx}' local pool_needs_prune = 1\n                }`;
       }).join('\n');
     }).join('\n');
 
@@ -3396,6 +3459,7 @@ forvalues s = 1/\`n_sites' {
     local site \`site_\`s''
     local site_count = 0
     local block_num = 0
+    local pool_needs_prune = 1
 
     * Reset active pool and marginal counts for this site
     quietly use \`_pool_file', clear
@@ -3407,6 +3471,33 @@ ${countResetLines.join('\n')}
     local total_rows = _N
 
     while \`n_active' > 0 {
+        if \`pool_needs_prune' {
+            * Prune pool: deactivate combinations that breach any marginal cap
+            forvalues _i = 1/\`total_rows' {
+                if active[\`_i'] == 0 continue
+                local _exhausted = 0
+`;
+
+      if (strata.length > 0) {
+        const pruneLines = strata.map((s, si) => {
+          const safeVarName = varNames[si];
+          return s.levels.map((_, j) => {
+            const idx = j + 1;
+            return `                if ${safeVarName}[\`_i'] == ${idx} & \`cnt_${safeVarName}_${idx}' >= \`cap_${safeVarName}_${idx}' local _exhausted = 1`;
+          }).join('\n');
+        }).join('\n');
+        code += pruneLines + '\n';
+      }
+
+      code += `                if \`_exhausted' == 1 quietly replace active = 0 in \`_i'
+            }
+
+            quietly count if active == 1
+            local n_active = r(N)
+            local pool_needs_prune = 0
+        }
+        if \`n_active' == 0 continue, break
+
         * Randomly select an active combination
         local rand_pick = ceil(runiform() * \`n_active')
         local seen = 0
@@ -3484,29 +3575,6 @@ ${blockSizePick}
       }
 
       code += `        }
-
-        * Prune pool: deactivate combinations that breach any marginal cap
-        forvalues _i = 1/\`total_rows' {
-            if active[\`_i'] == 0 continue
-            local _exhausted = 0
-`;
-
-      if (strata.length > 0) {
-        const pruneLines = strata.map((s, si) => {
-          const safeVarName = varNames[si];
-          return s.levels.map((_, j) => {
-            const idx = j + 1;
-            return `            if ${safeVarName}[\`_i'] == ${idx} & \`cnt_${safeVarName}_${idx}' >= \`cap_${safeVarName}_${idx}' local _exhausted = 1`;
-          }).join('\n');
-        }).join('\n');
-        code += pruneLines + '\n';
-      }
-
-      code += `            if \`_exhausted' == 1 quietly replace active = 0 in \`_i'
-        }
-
-        quietly count if active == 1
-        local n_active = r(N)
     }
 }
 } // end if \`n_sites' > 0
