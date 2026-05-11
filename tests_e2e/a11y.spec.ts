@@ -30,3 +30,47 @@ test.describe('Accessibility (WCAG 2.1 AA)', () => {
     await checkA11y(page, '#results-section');
   });
 });
+
+
+test.describe('Accessibility (WCAG 2.1 AA) - Dark Mode', () => {
+  test.use({ colorScheme: 'dark' });
+
+  test.beforeEach(async ({ page }) => {
+    page.on('pageerror', err => console.log(`Page Error: ${err.message}`));
+
+    // Evaluate to force dark mode in local storage to ensure the app picks it up
+    await page.addInitScript(() => {
+      localStorage.setItem('theme-preference', 'Dark');
+    });
+  });
+
+  test('Landing page should have no critical/serious accessibility violations in dark mode', async ({ page }) => {
+    await page.goto('http://localhost:4200');
+    await expect(page.getByRole('heading', { name: /Equipose/i })).toBeVisible();
+
+    // Explicitly add the dark class since playwright colorScheme doesn't always trigger Angular/Tailwind correctly immediately
+    await page.evaluate(() => document.documentElement.classList.add('dark'));
+
+    await checkA11y(page);
+  });
+
+  test('About page should have no critical/serious accessibility violations in dark mode', async ({ page }) => {
+    await page.goto('http://localhost:4200/about');
+    await expect(page.getByRole('heading', { name: /About Equipose/i })).toBeVisible();
+    await page.evaluate(() => document.documentElement.classList.add('dark'));
+    await checkA11y(page);
+  });
+
+  test('Generator page (configuration wizard) should have no critical/serious accessibility violations in dark mode', async ({ page }) => {
+    await openGenerator(page);
+    await page.evaluate(() => document.documentElement.classList.add('dark'));
+    await page.getByRole('button', { name: /^Complex$/i }).waitFor({ state: 'visible' });
+    await checkA11y(page);
+  });
+
+  test('Results grid should have no critical/serious accessibility violations after schema generation in dark mode', async ({ page }) => {
+    await generateSchemaFromPreset(page, 'Complex');
+    await page.evaluate(() => document.documentElement.classList.add('dark'));
+    await checkA11y(page, '#results-section');
+  });
+});
