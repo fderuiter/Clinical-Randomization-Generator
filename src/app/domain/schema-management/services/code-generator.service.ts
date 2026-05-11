@@ -2025,7 +2025,7 @@ ${nFactors > 0 ? `          do _f = 1 to &n_factors.;
             end;
           end;` : '          /* No factors: pool never exhausts (add a global cap to terminate) */'}
             if _exhausted then _active[_i] = 0;
-            else _n_active + 1;
+            else _n_active = _n_active + 1;
           end;
         end;
         _pool_needs_prune = 0;
@@ -2097,7 +2097,7 @@ ${nFactors > 0 ? `        do _f = 1 to &n_factors.;
 ${nFactors > 0 ? `        do _f = 1 to &n_factors.;
           _lidx = _combo_fidx[(_chosen - 1) * &n_factors. + _f];
           if _caps[_lidx] >= 0 then do;
-            _counts[_lidx] + 1;
+            _counts[_lidx] = _counts[_lidx] + 1;
             if _counts[_lidx] >= _caps[_lidx] then _pool_needs_prune = 1;
           end;
         end;` : '        /* No strata factors: no counts to update */'}
