@@ -470,6 +470,26 @@ describe('generateRandomizationSchema – MARGINAL_ONLY strategy', () => {
       expect(['Male', 'Female']).toContain(row.stratum['gender']);
     });
   });
+
+  it('prunes zero-cap strata before sampling so generation terminates cleanly', () => {
+    const result = generateRandomizationSchema({
+      ...marginalConfig,
+      strata: [
+        {
+          id: 'gender',
+          name: 'Gender',
+          levels: ['Male', 'Female'],
+          levelDetails: [
+            { name: 'Male', marginalCap: 0 },
+            { name: 'Female', marginalCap: 4 }
+          ]
+        }
+      ]
+    });
+
+    expect(result.schema).toHaveLength(4);
+    expect(result.schema.every(row => row.stratum['gender'] === 'Female')).toBe(true);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -650,4 +670,3 @@ describe('generateRandomizationSchema – hierarchical block strategy', () => {
     });
   });
 });
-
