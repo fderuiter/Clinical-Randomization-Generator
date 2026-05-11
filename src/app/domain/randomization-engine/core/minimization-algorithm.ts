@@ -182,6 +182,8 @@ export function generateMinimization(
     activePool = validPool;
   }
 
+  let poolNeedsFilter = true;
+
   const siteSubjectCounts = new Map<string, number>();
   for (const site of sites) {
     siteSubjectCounts.set(site, 0);
@@ -223,12 +225,15 @@ export function generateMinimization(
         break;
       }
     } else {
-      activePool = activePool.filter(combo => {
-        const key = combo._key || "";
-        const cap = capsDict[key];
-        const count = intersectionCounts[key] ?? 0;
-        return cap === undefined || count < cap;
-      });
+      if (poolNeedsFilter) {
+        activePool = activePool.filter(combo => {
+          const key = combo._key || "";
+          const cap = capsDict[key];
+          const count = intersectionCounts[key] ?? 0;
+          return cap === undefined || count < cap;
+        });
+        poolNeedsFilter = false;
+      }
 
       if (activePool.length === 0) {
         // No more valid combinations exist; exhaustion reached.
@@ -365,7 +370,12 @@ export function generateMinimization(
         if (j > 0) key += "|";
         key += subjectProfile[strata[j].id] || "";
       }
-      intersectionCounts[key] = (intersectionCounts[key] ?? 0) + 1;
+      const newCount = (intersectionCounts[key] ?? 0) + 1;
+      intersectionCounts[key] = newCount;
+      const cap = capsDict[key];
+      if (cap !== undefined && newCount >= cap) {
+        poolNeedsFilter = true;
+      }
     }
 
     siteSubjectCounts.set(site, siteSubjectCounts.get(site)! + 1);
