@@ -1,3 +1,0 @@
-## 2024-05-18 - Avoid Object.entries in Hot Loops
-**Learning:** In the minimization algorithm, calculating the imbalance score is a hot loop executed for every arm evaluated for every subject. Using `Object.entries(subjectProfile)` inside this loop created significant overhead due to intermediate array allocations (`[key, value]`).
-**Action:** Instead of dynamically generating key-value pairs per iteration, pre-calculate the invariant keys (e.g. mapping the `strata` array which contains the ordered keys) and iterate over those keys to fetch values directly from the object map. This reduced execution time by approximately 50%.
