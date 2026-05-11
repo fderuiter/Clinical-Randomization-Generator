@@ -201,7 +201,7 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
         blocks.get(key)!.push(row.treatmentArmId);
       }
 
-      for (const [, assignments] of blocks) {
+      for (const assignments of blocks.values()) {
         const blockSize = assignments.length;
         // Every complete block of size 4 must have exactly 2 of each arm.
         if (blockSize === 4) {
@@ -232,7 +232,7 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
         blocks.get(key)!.push(row.treatmentArmId);
       }
 
-      for (const [, assignments] of blocks) {
+      for (const assignments of blocks.values()) {
         if (assignments.length === 3) {
           const countD = assignments.filter(a => a === 'D').length;
           const countP = assignments.filter(a => a === 'P').length;
@@ -260,7 +260,11 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
         blocks.get(key)!.arms.push(row.treatmentArmId);
       }
 
+<<<<<<< HEAD
       for (const [, block] of blocks) {
+=======
+      for (const block of blocks.values()) {
+>>>>>>> origin/main
         if (block.arms.length === block.size) {
           const countA = block.arms.filter(a => a === 'A').length;
           const countB = block.arms.filter(a => a === 'B').length;
@@ -293,7 +297,11 @@ describe('ICH E9 – Stratum Cap Enforcement: dynamic caps are never exceeded', 
         stratumCounts.set(key, (stratumCounts.get(key) ?? 0) + 1);
       }
 
+<<<<<<< HEAD
       for (const [, count] of stratumCounts) {
+=======
+      for (const count of stratumCounts.values()) {
+>>>>>>> origin/main
         expect(count).toBeLessThanOrEqual(20);
       }
     }
@@ -338,7 +346,11 @@ describe('ICH E9 – Stratum Cap Enforcement: dynamic caps are never exceeded', 
         siteMap.set(row.site, (siteMap.get(row.site) ?? 0) + 1);
       }
 
+<<<<<<< HEAD
       for (const [, count] of siteMap) {
+=======
+      for (const count of siteMap.values()) {
+>>>>>>> origin/main
         expect(count).toBeLessThanOrEqual(10);
       }
     }
