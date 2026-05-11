@@ -109,9 +109,9 @@
                 </div>
                 <input [id]="'armName' + $index" formControlName="name" type="text" class="w-full rounded-lg border px-3 py-2">
                 <div class="flex items-center gap-2">
-                  <button type="button" (click)="decrementRatio($index)" [disabled]="arm.get('ratio')?.value <= 1" class="w-10 h-10 rounded-full border" [attr.aria-label]="'Decrease ratio for ' + (arm.get('name')?.value || 'arm')" [attr.title]="'Decrease ratio for ' + (arm.get('name')?.value || 'arm')">-</button>
+                  <button type="button" (click)="decrementRatio($index)" [disabled]="arm.get('ratio')?.value <= 1" class="w-10 h-10 rounded-full border">-</button>
                   <span class="font-bold w-6 text-center">{{ arm.get('ratio')?.value }}</span>
-                  <button type="button" (click)="incrementRatio($index)" class="w-10 h-10 rounded-full border" [attr.aria-label]="'Increase ratio for ' + (arm.get('name')?.value || 'arm')" [attr.title]="'Increase ratio for ' + (arm.get('name')?.value || 'arm')">+</button>
+                  <button type="button" (click)="incrementRatio($index)" class="w-10 h-10 rounded-full border">+</button>
                   <span class="text-xs text-gray-500">of {{ totalRatio }}</span>
                 </div>
               </div>

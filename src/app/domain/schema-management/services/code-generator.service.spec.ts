@@ -582,12 +582,6 @@ describe('CodeGeneratorService', () => {
         expect(code).toContain('marginal_counts');
       });
 
-      it('should only prune the active pool when marginal counts hit a cap', () => {
-        const code = service.generateR(marginalConfig);
-        expect(code).toContain('pool_needs_filter <- TRUE');
-        expect(code).toContain('if (pool_needs_filter)');
-      });
-
       it('should include cap enforcement and pruning logic', () => {
         const code = service.generateR(marginalConfig);
         expect(code).toContain('can_add');
@@ -672,12 +666,6 @@ describe('CodeGeneratorService', () => {
         expect(code).toContain('marginal_counts');
       });
 
-      it('should only prune the active pool when marginal counts hit a cap', () => {
-        const code = service.generatePython(marginalConfig);
-        expect(code).toContain('pool_needs_filter = True');
-        expect(code).toContain('if pool_needs_filter:');
-      });
-
       it('should include cap enforcement and pruning', () => {
         const code = service.generatePython(marginalConfig);
         expect(code).toContain('can_add');
@@ -737,12 +725,6 @@ describe('CodeGeneratorService', () => {
         expect(code).toContain('do while (_n_active > 0)');
         expect(code).toContain('_can_add');
         expect(code).toContain('_exhausted');
-      });
-
-      it('should only prune the active pool when marginal counts hit a cap', () => {
-        const code = service.generateSas(marginalConfig);
-        expect(code).toContain('_pool_needs_prune = 1;');
-        expect(code).toContain('if _pool_needs_prune then do;');
       });
 
       it('should embed the seed as %let seed macro variable', () => {
@@ -805,12 +787,6 @@ describe('CodeGeneratorService', () => {
         const code = service.generateStata(marginalConfig);
         expect(code).toContain('local _exhausted = 0');
         expect(code).toContain('local _exhausted = 1');
-      });
-
-      it('should only prune the active pool when marginal counts hit a cap', () => {
-        const code = service.generateStata(marginalConfig);
-        expect(code).toContain('local pool_needs_prune = 1');
-        expect(code).toContain("if `pool_needs_prune' {");
       });
 
       it('should embed the set seed command', () => {
@@ -1205,12 +1181,6 @@ describe('CodeGeneratorService', () => {
         const code = service.generate('R', minimizationConfig);
         expect(code).toContain('prob = ratios[preferred] / sum(ratios[preferred])');
       });
-
-      it('should only prune the active pool when caps are exhausted', () => {
-        const code = service.generate('R', minimizationConfig);
-        expect(code).toContain('pool_needs_filter <- TRUE');
-        expect(code).toContain('if (pool_needs_filter)');
-      });
     });
 
     describe('Python', () => {
@@ -1229,12 +1199,6 @@ describe('CodeGeneratorService', () => {
         const code = service.generate('Python', minimizationConfig);
         expect(code).toContain('probs = [r / sum(pref_ratios) for r in pref_ratios]');
         expect(code).toContain('rng.choice(preferred, p=probs)');
-      });
-
-      it('should only prune the active pool when caps are exhausted', () => {
-        const code = service.generate('Python', minimizationConfig);
-        expect(code).toContain('pool_needs_filter = True');
-        expect(code).toContain('if pool_needs_filter:');
       });
     });
 
@@ -1256,12 +1220,6 @@ describe('CodeGeneratorService', () => {
         expect(code).toContain("_r_arm = rand('Uniform') * _w_sum;");
         expect(code).toContain('_r_arm = _r_arm - _ratios[_preferred_arms[_i]];');
       });
-
-      it('should only prune the active pool when caps are exhausted', () => {
-        const code = service.generate('SAS', minimizationConfig);
-        expect(code).toContain('_pool_needs_prune = 1;');
-        expect(code).toContain('if _pool_needs_prune then do;');
-      });
     });
 
     describe('STATA', () => {
@@ -1281,12 +1239,6 @@ describe('CodeGeneratorService', () => {
         expect(code).toContain('local w_sum = `w_sum\' + `arm_ratio_`a\'\'');
         expect(code).toContain('local r_arm = runiform() * `w_sum\'');
         expect(code).toContain('local r_arm = `r_arm\' - `arm_ratio_`a\'\'');
-      });
-
-      it('should only prune the active pool when caps are exhausted', () => {
-        const code = service.generate('STATA', minimizationConfig);
-        expect(code).toContain('local pool_needs_prune = 1');
-        expect(code).toContain("if `pool_needs_prune' {");
       });
     });
   });

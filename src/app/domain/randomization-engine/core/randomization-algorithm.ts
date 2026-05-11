@@ -267,7 +267,7 @@ function generateMarginalOnly(
 
     // Active pool of valid stratum combinations (those that haven't hit any marginal cap).
     let activePool = [...strataCombinations];
-    let poolNeedsFilter = true;
+    let poolNeedsFilter = false;
 
     while (activePool.length > 0) {
       // Randomly select a combination from the active pool.
@@ -296,7 +296,6 @@ function generateMarginalOnly(
           const currentCount = marginalCounts.get(factor.id)?.get(levelValue) ?? 0;
           if (cap !== undefined && currentCount >= cap) {
             canAdd = false;
-            poolNeedsFilter = true;
             break;
           }
         }
