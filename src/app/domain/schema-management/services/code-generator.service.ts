@@ -1036,6 +1036,7 @@ ${isMarginal ? `
         available_levels = []
         for lvl in levels:
             # Check if this level exists in active pool matching current prefix
+            has_level_match = False
             for combo in active_pool:
                 if combo.get(factor_id) != lvl:
                     continue
@@ -1045,8 +1046,10 @@ ${isMarginal ? `
                         match_prefix = False
                         break
                 if match_prefix:
-                    available_levels.append(lvl)
+                    has_level_match = True
                     break
+            if has_level_match:
+                available_levels.append(lvl)
 
         if not available_levels:
             valid_subject = False
@@ -3340,7 +3343,12 @@ list in 1/20, clean noobs
       const safeVarName = varNames[si];
       return s.levels.map((_, j) => {
         const idx = j + 1;
-        return `                if chosen_${safeVarName} == ${idx} {\n                    local cnt_${safeVarName}_${idx} = \`cnt_${safeVarName}_${idx}' + 1\n                    if \`cnt_${safeVarName}_${idx}' >= \`cap_${safeVarName}_${idx}' local pool_needs_prune = 1\n                }`;
+        return [
+          `                if chosen_${safeVarName} == ${idx} {`,
+          `                    local cnt_${safeVarName}_${idx} = \`cnt_${safeVarName}_${idx}' + 1`,
+          `                    if \`cnt_${safeVarName}_${idx}' >= \`cap_${safeVarName}_${idx}' local pool_needs_prune = 1`,
+          '                }'
+        ].join('\n');
       }).join('\n');
     }).join('\n');
 
