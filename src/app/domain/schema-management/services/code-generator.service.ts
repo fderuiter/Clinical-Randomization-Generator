@@ -429,7 +429,7 @@ ${isMarginal ? `
         for (k in names(current_prefix)) {
            if (combo[[k]] != current_prefix[[k]]) match_prefix <- FALSE
         }
-        return(match_prefix)
+        match_prefix
       })
       if (any(match_idx)) {
          available_levels <- c(available_levels, lvl)
