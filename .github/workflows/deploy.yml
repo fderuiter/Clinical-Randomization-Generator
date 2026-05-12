@@ -1,0 +1,120 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+# ── Job 1: Release Candidate ─────────────────────────────────────────────────
+# Runs automatically on every push to main.
+# Performs semantic-release versioning, builds the app, generates compliance
+# artifacts (Traceability Matrix + SBOM), and uploads them as CI artifacts.
+# Does NOT deploy to production — that requires explicit human approval (Job 2).
+jobs:
+  release_candidate:
+    name: "Release Candidate – Build & Compliance Artifacts"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Semantic Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
+      - name: Build Angular Project
+        run: npm run build -- --base-href /
+
+      - name: Fix Angular Routing (Create 404.html)
+        run: cp dist/app/browser/index.html dist/app/browser/404.html
+
+      - name: Inject CNAME File
+        run: echo "equipose.org" > dist/app/browser/CNAME
+
+      # ── Compliance artifact: Traceability Matrix ────────────────────────
+      - name: Generate Validation Traceability Matrix
+        run: |
+          node scripts/generate-rtm.mjs \
+            --out Validation_Traceability_Matrix.md
+          echo "=== RTM Summary ==="
+          head -20 Validation_Traceability_Matrix.md
+
+      - name: Upload Traceability Matrix artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: validation-traceability-matrix-rc
+          path: Validation_Traceability_Matrix.md
+          retention-days: 90
+
+      # ── Compliance artifact: SBOM ───────────────────────────────────────
+      - name: Generate Software Bill of Materials (SBOM)
+        run: |
+          echo "Generating CycloneDX SBOM for supply chain audit..."
+          npx --yes @cyclonedx/cyclonedx-npm \
+            --output-format json \
+            --output-file sbom.json \
+            --short-PURLs \
+            --omit dev
+          echo "SBOM generated successfully."
+          echo "Total components: $(cat sbom.json | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d.get("components", [])))')"
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-rc
+          path: sbom.json
+          retention-days: 90
+
+      # ── Store the built browser assets for the promotion job ─────────────
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: './dist/app/browser'
+
+# ── Job 2: Production Promotion ──────────────────────────────────────────────
+# Requires a human reviewer to approve deployment via the "production" GitHub
+# Environment before the built artifact is promoted to GitHub Pages.
+#
+# To enable the approval gate:
+#   Repository → Settings → Environments → New environment → Name: "production"
+#   → Add required reviewers (QA lead or release manager).
+  deploy_production:
+    name: "Production Promotion – Deploy to GitHub Pages"
+    needs: release_candidate
+    runs-on: ubuntu-latest
+    # This environment reference triggers the manual-approval gate.
+    # Configure required reviewers in: Settings → Environments → production.
+    environment:
+      name: production
+      url: https://equipose.org
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

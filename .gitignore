@@ -63,8 +63,3 @@ Thumbs.db
 
 # Miscellaneous
 sample_output/
-
-# wrangler files
-.wrangler
-.dev.vars*
-!.dev.vars.example
