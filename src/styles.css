@@ -36,8 +36,7 @@
   }
 
   :where(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
-    @apply border border-gray-300 bg-white text-gray-900 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35 focus-visible:border-indigo-500;
+    @apply border border-gray-300 bg-white text-gray-900 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35 focus-visible:border-indigo-500;
   }
 
   :where(button, [type='button'], [type='submit'], [type='reset']) {
