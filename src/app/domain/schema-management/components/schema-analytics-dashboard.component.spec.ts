@@ -74,14 +74,16 @@ describe('SchemaAnalyticsDashboardComponent', () => {
 
   it('should not render the dashboard when results are null', () => {
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.bg-white')).toBeFalsy();
+    expect(fixture.nativeElement.querySelector('[data-testid="schema-analytics-dashboard"]')).toBeFalsy();
   });
 
-  it('should render the dashboard when results are available', () => {
+  it('should render the dashboard when results are available', async () => {
     mockFacade.results.set(buildMockResult(12));
     viewState.syncResults(mockFacade.results());
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.bg-white')).toBeTruthy();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="schema-analytics-dashboard"]')).toBeTruthy();
   });
 
   it('should display "Schema Analytics" heading when results are present', () => {

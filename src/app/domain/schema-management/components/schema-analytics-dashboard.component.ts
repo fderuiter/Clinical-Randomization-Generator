@@ -29,7 +29,7 @@ echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendCompone
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (state.results()) {
-      <div class="bg-surface rounded-xl shadow-sm border border-border-subtle p-6 space-y-4">
+      <div data-testid="schema-analytics-dashboard" class="bg-surface rounded-xl shadow-sm border border-border-subtle p-6 space-y-4">
 
         <!-- Header -->
         <div class="flex items-center justify-between">
