@@ -7,7 +7,7 @@ import {SeoService} from '../../core/services/seo.service';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="bg-white dark:bg-slate-900 py-16 sm:py-20">
+    <div class="bg-base py-16 sm:py-20">
       <div class="mx-auto max-w-7xl px-6 lg:px-8">
 
         <!-- Header -->
@@ -22,8 +22,8 @@ import {SeoService} from '../../core/services/seo.service';
               Changelog →
             </a>
           </div>
-          <h2 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-100 sm:text-4xl">About Equipose</h2>
-          <p class="mt-6 text-lg leading-8 text-gray-600 dark:text-slate-400">
+          <h2 class="text-3xl font-bold tracking-tight text-main sm:text-4xl">About Equipose</h2>
+          <p class="mt-6 text-lg leading-8 text-muted">
             Equipose is a free, open-source tool designed to help biostatisticians, clinical trial managers, and contract
             research organisations (CROs) rapidly design, simulate, and export stratified block randomization schemas for
             clinical trials. It runs entirely in your browser - no server, no sign-up, no data ever transmitted externally.
@@ -51,7 +51,7 @@ import {SeoService} from '../../core/services/seo.service';
           <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-12 lg:max-w-none lg:grid-cols-3">
             @for (f of features; track f.title) {
               <div class="flex flex-col" [attr.data-testid]="f.testId">
-                <dt class="text-base font-semibold leading-7 text-gray-900 dark:text-slate-100">
+                <dt class="text-base font-semibold leading-7 text-main">
                   <div class="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 dark:bg-indigo-500 shadow-sm">
                     <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                       <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="f.icon" />
@@ -59,7 +59,7 @@ import {SeoService} from '../../core/services/seo.service';
                   </div>
                   {{ f.title }}
                 </dt>
-                <dd class="mt-1 flex flex-auto flex-col text-base leading-7 text-gray-600 dark:text-slate-400">
+                <dd class="mt-1 flex flex-auto flex-col text-base leading-7 text-muted">
                   <p class="flex-auto">{{ f.desc }}</p>
                 </dd>
               </div>
@@ -69,8 +69,8 @@ import {SeoService} from '../../core/services/seo.service';
 
         <!-- What is stratified block randomization -->
         <div class="mx-auto mt-20 max-w-2xl lg:mx-0">
-          <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-slate-100">What is Stratified Block Randomization?</h3>
-          <p class="mt-4 text-base leading-7 text-gray-600 dark:text-slate-400">
+          <h3 class="text-2xl font-bold tracking-tight text-main">What is Stratified Block Randomization?</h3>
+          <p class="mt-4 text-base leading-7 text-muted">
             Stratified block randomization is a statistical method used in clinical trial design to ensure that treatment
             groups are balanced across key prognostic factors - such as clinical site, age group, disease severity, or
             region. By first stratifying subjects into homogeneous subgroups (strata) and then applying block randomization
@@ -78,7 +78,7 @@ import {SeoService} from '../../core/services/seo.service';
             with similar baseline characteristics. This improves the statistical power of the trial and reduces the risk
             of confounding.
           </p>
-          <p class="mt-4 text-base leading-7 text-gray-600 dark:text-slate-400">
+          <p class="mt-4 text-base leading-7 text-muted">
             Variable block sizes are recommended to prevent investigators from predicting upcoming allocations, thereby
             protecting allocation concealment and maintaining the integrity of the blind.
           </p>
@@ -86,8 +86,8 @@ import {SeoService} from '../../core/services/seo.service';
 
         <!-- Who it is for -->
         <div class="mx-auto mt-16 max-w-2xl lg:mx-0">
-          <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Who Is Equipose For?</h3>
-          <ul class="mt-4 space-y-3 text-base leading-7 text-gray-600 dark:text-slate-400 list-disc list-inside">
+          <h3 class="text-2xl font-bold tracking-tight text-main">Who Is Equipose For?</h3>
+          <ul class="mt-4 space-y-3 text-base leading-7 text-muted list-disc list-inside">
             <li><strong class="text-gray-800 dark:text-slate-300">Biostatisticians</strong> designing randomization schemas and drafting Statistical Analysis Plans (SAPs).</li>
             <li><strong class="text-gray-800 dark:text-slate-300">Clinical Trial Managers</strong> who need a quick, reproducible simulation of allocation sequences.</li>
             <li><strong class="text-gray-800 dark:text-slate-300">Contract Research Organisations (CROs)</strong> validating randomization logic before implementation in IRT/IVRS systems.</li>
@@ -97,8 +97,8 @@ import {SeoService} from '../../core/services/seo.service';
 
         <!-- Zero trust privacy -->
         <div class="mx-auto mt-16 max-w-2xl lg:mx-0">
-          <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Zero-Trust Privacy</h3>
-          <p class="mt-4 text-base leading-7 text-gray-600 dark:text-slate-400">
+          <h3 class="text-2xl font-bold tracking-tight text-main">Zero-Trust Privacy</h3>
+          <p class="mt-4 text-base leading-7 text-muted">
             Equipose is built on a zero-trust architecture. Every computation - from randomization to code generation -
             runs entirely inside your browser using WebAssembly-class JavaScript. No protocol identifiers, study names,
             treatment arm labels, or randomization outputs are ever sent to any server. There are no cookies, no analytics
@@ -108,15 +108,15 @@ import {SeoService} from '../../core/services/seo.service';
 
         <!-- Technology Stack -->
         <div class="mx-auto mt-16 max-w-2xl lg:mx-0">
-          <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Technology Stack</h3>
-          <p class="mt-4 text-base leading-7 text-gray-600 dark:text-slate-400">
+          <h3 class="text-2xl font-bold tracking-tight text-main">Technology Stack</h3>
+          <p class="mt-4 text-base leading-7 text-muted">
             Equipose is built entirely with open-source, industry-standard tooling:
           </p>
           <dl class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
             @for (tech of techStack; track tech.name) {
               <div class="rounded-lg bg-gray-50 dark:bg-slate-800 px-4 py-3">
-                <dt class="font-medium text-gray-900 dark:text-slate-100 text-sm">{{ tech.name }}</dt>
-                <dd class="mt-0.5 text-gray-600 dark:text-slate-400 text-sm">{{ tech.role }}</dd>
+                <dt class="font-medium text-main text-sm">{{ tech.name }}</dt>
+                <dd class="mt-0.5 text-muted text-sm">{{ tech.role }}</dd>
               </div>
             }
           </dl>
@@ -124,15 +124,15 @@ import {SeoService} from '../../core/services/seo.service';
 
         <!-- Cite Equipose -->
         <div class="mx-auto mt-16 max-w-2xl lg:mx-0">
-          <h3 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Cite Equipose</h3>
-          <p class="mt-4 text-base leading-7 text-gray-600 dark:text-slate-400">
+          <h3 class="text-2xl font-bold tracking-tight text-main">Cite Equipose</h3>
+          <p class="mt-4 text-base leading-7 text-muted">
             If you use Equipose in your research or clinical trial documentation, please cite it as follows:
           </p>
 
           <!-- APA -->
           <div class="mt-6">
             <p class="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">APA</p>
-            <div class="rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 px-4 py-3">
+            <div class="rounded-lg bg-gray-50 dark:bg-slate-800 border border-border-base px-4 py-3">
               <p class="text-sm text-gray-700 dark:text-slate-300 font-mono leading-relaxed">
                 de Ruiter, F. ({{ citationYear }}). <em>Equipose: Free stratified block randomization tool for clinical trials</em> ({{ appVersion }}) [Software]. https://equipose.org
               </p>

@@ -7,8 +7,8 @@ import { ChangeDetectionStrategy, Component, output } from '@angular/core';
   template: `
     <div
       class="flex flex-col items-center justify-center py-16 px-6
-             border-2 border-dashed border-gray-200 dark:border-slate-600
-             rounded-xl bg-white dark:bg-slate-800 text-center space-y-6"
+             border-2 border-dashed border-border-base
+             rounded-xl bg-surface text-center space-y-6"
       data-testid="zero-state"
     >
       <!-- Illustrative SVG -->
@@ -46,7 +46,7 @@ import { ChangeDetectionStrategy, Component, output } from '@angular/core';
         <h3 class="text-lg font-semibold text-gray-700 dark:text-slate-200">
           No schema generated yet
         </h3>
-        <p class="text-sm text-gray-600 dark:text-slate-400 leading-relaxed">
+        <p class="text-sm text-muted leading-relaxed">
           Configure your trial parameters in the form above, then click
           <span class="font-medium text-gray-700 dark:text-slate-200">Generate Schema</span>
           to produce a statistically balanced randomization schema.

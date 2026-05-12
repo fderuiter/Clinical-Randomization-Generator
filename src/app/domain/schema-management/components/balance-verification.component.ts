@@ -41,7 +41,7 @@ export interface MarginalBalanceRow {
       <div class="space-y-6">
 
         <!-- ── Legend ─────────────────────────────────────────────────── -->
-        <div class="flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-slate-400">
+        <div class="flex flex-wrap items-center gap-4 text-xs text-muted">
           <span class="font-semibold text-gray-700 dark:text-slate-300">Legend:</span>
           <span class="inline-flex items-center gap-1.5">
             <span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>
@@ -55,22 +55,22 @@ export interface MarginalBalanceRow {
             <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
             Critical error - investigate
           </span>
-          <span class="ml-auto text-gray-600 dark:text-slate-400 italic">
+          <span class="ml-auto text-muted italic">
             Cells show: Actual&nbsp;/&nbsp;Target
           </span>
         </div>
 
         <!-- ── Global Balance ─────────────────────────────────────────── -->
-        <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-slate-100">Global Balance</h3>
-            <p class="text-xs text-gray-600 dark:text-slate-400 mt-0.5">
+        <section class="bg-surface rounded-xl shadow-sm border border-border-subtle overflow-hidden">
+          <div class="px-6 py-4 border-b border-border-subtle">
+            <h3 class="text-sm font-semibold text-main">Global Balance</h3>
+            <p class="text-xs text-muted mt-0.5">
               Aggregate distribution across the entire trial (N&nbsp;=&nbsp;{{ globalRow().total }})
             </p>
           </div>
           <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
-              <thead class="bg-gray-50 dark:bg-slate-900/50 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">
+              <thead class="bg-subtle/50 text-xs font-semibold text-muted uppercase tracking-wider">
                 <tr>
                   <th class="px-6 py-3 text-left">Scope</th>
                   <th class="px-6 py-3 text-right">N</th>
@@ -81,7 +81,7 @@ export interface MarginalBalanceRow {
               </thead>
               <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
                 <tr>
-                  <td class="px-6 py-3 font-medium text-gray-900 dark:text-slate-100">All Sites</td>
+                  <td class="px-6 py-3 font-medium text-main">All Sites</td>
                   <td class="px-6 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{{ globalRow().total }}</td>
                   @for (ab of globalRow().arms; track ab.arm.id) {
                     <td class="px-6 py-3 text-right tabular-nums"
@@ -101,16 +101,16 @@ export interface MarginalBalanceRow {
 
         <!-- ── Per-Site Balance ───────────────────────────────────────── -->
         @if (siteRows().length > 0) {
-          <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700">
-              <h3 class="text-sm font-semibold text-gray-900 dark:text-slate-100">Balance by Site</h3>
-              <p class="text-xs text-gray-600 dark:text-slate-400 mt-0.5">
+          <section class="bg-surface rounded-xl shadow-sm border border-border-subtle overflow-hidden">
+            <div class="px-6 py-4 border-b border-border-subtle">
+              <h3 class="text-sm font-semibold text-main">Balance by Site</h3>
+              <p class="text-xs text-muted mt-0.5">
                 Marginal distribution per clinical site
               </p>
             </div>
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-slate-900/50 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">
+                <thead class="bg-subtle/50 text-xs font-semibold text-muted uppercase tracking-wider">
                   <tr>
                     <th class="px-6 py-3 text-left">Site</th>
                     <th class="px-6 py-3 text-right">N</th>
@@ -121,8 +121,8 @@ export interface MarginalBalanceRow {
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
                   @for (row of siteRows(); track row.label) {
-                    <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/30">
-                      <td class="px-6 py-3 font-medium text-gray-900 dark:text-slate-100">{{ row.label }}</td>
+                    <tr class="hover:bg-hover/30">
+                      <td class="px-6 py-3 font-medium text-main">{{ row.label }}</td>
                       <td class="px-6 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{{ row.total }}</td>
                       @for (ab of row.arms; track ab.arm.id) {
                         <td class="px-6 py-3 text-right tabular-nums"
@@ -144,16 +144,16 @@ export interface MarginalBalanceRow {
 
         <!-- ── Minimization: Marginal Balance by Factor/Level ─────────── -->
         @if (isMinimization() && marginalBalanceRows().length > 0) {
-          <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-purple-100 dark:border-purple-800 overflow-hidden">
+          <section class="bg-surface rounded-xl shadow-sm border border-purple-100 dark:border-purple-800 overflow-hidden">
             <div class="px-6 py-4 border-b border-purple-100 dark:border-purple-800">
-              <h3 class="text-sm font-semibold text-gray-900 dark:text-slate-100">Marginal Balance by Factor Level</h3>
-              <p class="text-xs text-gray-600 dark:text-slate-400 mt-0.5">
+              <h3 class="text-sm font-semibold text-main">Marginal Balance by Factor Level</h3>
+              <p class="text-xs text-muted mt-0.5">
                 Arm distribution per stratification factor level (Pocock-Simon minimization target: equal marginal totals)
               </p>
             </div>
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm">
-                <thead class="bg-purple-50 dark:bg-purple-900/30 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">
+                <thead class="bg-purple-50 dark:bg-purple-900/30 text-xs font-semibold text-muted uppercase tracking-wider">
                   <tr>
                     <th class="px-6 py-3 text-left">Factor</th>
                     <th class="px-6 py-3 text-left">Level</th>
@@ -167,8 +167,8 @@ export interface MarginalBalanceRow {
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
                   @for (row of marginalBalanceRows(); track row.factor + row.level) {
-                    <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/30">
-                      <td class="px-6 py-3 font-medium text-gray-900 dark:text-slate-100 text-xs">{{ row.factor }}</td>
+                    <tr class="hover:bg-hover/30">
+                      <td class="px-6 py-3 font-medium text-main text-xs">{{ row.factor }}</td>
                       <td class="px-6 py-3 text-gray-700 dark:text-slate-300">{{ row.level }}</td>
                       <td class="px-6 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{{ row.total }}</td>
                       @for (ac of row.armCounts; track ac.name) {
@@ -186,16 +186,16 @@ export interface MarginalBalanceRow {
 
         <!-- ── Per-Stratum Balance ────────────────────────────────────── -->
         @if (!isMinimization() && stratumRows().length > 0) {
-          <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700">
-              <h3 class="text-sm font-semibold text-gray-900 dark:text-slate-100">Balance by Stratum</h3>
-              <p class="text-xs text-gray-600 dark:text-slate-400 mt-0.5">
+          <section class="bg-surface rounded-xl shadow-sm border border-border-subtle overflow-hidden">
+            <div class="px-6 py-4 border-b border-border-subtle">
+              <h3 class="text-sm font-semibold text-main">Balance by Stratum</h3>
+              <p class="text-xs text-muted mt-0.5">
                 Marginal distribution per unique stratification-factor combination
               </p>
             </div>
             <div class="overflow-x-auto">
               <table class="min-w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-slate-900/50 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">
+                <thead class="bg-subtle/50 text-xs font-semibold text-muted uppercase tracking-wider">
                   <tr>
                     <th class="px-6 py-3 text-left">Stratum</th>
                     <th class="px-6 py-3 text-right">N</th>
@@ -206,8 +206,8 @@ export interface MarginalBalanceRow {
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
                   @for (row of stratumRows(); track row.label) {
-                    <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/30">
-                      <td class="px-6 py-3 font-medium text-gray-900 dark:text-slate-100 max-w-xs truncate" [title]="row.label">{{ row.label }}</td>
+                    <tr class="hover:bg-hover/30">
+                      <td class="px-6 py-3 font-medium text-main max-w-xs truncate" [title]="row.label">{{ row.label }}</td>
                       <td class="px-6 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{{ row.total }}</td>
                       @for (ab of row.arms; track ab.arm.id) {
                         <td class="px-6 py-3 text-right tabular-nums"
@@ -228,7 +228,7 @@ export interface MarginalBalanceRow {
         }
 
         <!-- Footnote -->
-        <p class="text-xs text-gray-600 dark:text-slate-400 pb-2">
+        <p class="text-xs text-muted pb-2">
           @if (isMinimization()) {
             ⚠&nbsp;Minimization (Pocock-Simon) achieves marginal balance across factor levels rather than perfect block-level balance.
             Small deviations from exact equal allocation are expected due to stochastic assignment and covariate sampling.
@@ -240,7 +240,7 @@ export interface MarginalBalanceRow {
 
       </div>
     } @else {
-      <div class="text-center py-12 text-gray-600 dark:text-slate-400 text-sm">
+      <div class="text-center py-12 text-muted text-sm">
         Generate a schema first to view the balance verification report.
       </div>
     }

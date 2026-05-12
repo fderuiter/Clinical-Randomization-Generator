@@ -8,7 +8,7 @@ import {SeoService} from '../../core/services/seo.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   template: `
-    <div class="bg-white dark:bg-slate-900">
+    <div class="bg-base">
 
       <!-- ── Hero Section ──────────────────────────────────────────────── -->
       <div class="relative isolate overflow-hidden px-6 pt-14 lg:px-8">
@@ -30,9 +30,9 @@ import {SeoService} from '../../core/services/seo.service';
 
         <div class="mx-auto max-w-2xl py-28 sm:py-40 lg:py-52">
           <div class="text-center">
-            <h1 class="text-5xl font-bold tracking-tight text-gray-900 dark:text-slate-100 sm:text-7xl">Equipose</h1>
+            <h1 class="text-5xl font-bold tracking-tight text-main sm:text-7xl">Equipose</h1>
             <p class="mt-4 text-xl font-medium text-indigo-600 dark:text-indigo-400">Free Stratified Block Randomization for Clinical Trials</p>
-            <p class="mt-6 text-lg leading-8 text-gray-600 dark:text-slate-400">
+            <p class="mt-6 text-lg leading-8 text-muted">
               Design, simulate, and export statistically sound, reproducible treatment allocation schemas for your clinical trial.
               Equipose uses a seeded Fisher-Yates shuffle for stratified block randomization across multiple sites and
               stratification factors — and exports the exact logic to validated <strong class="text-gray-700 dark:text-slate-300">R</strong>,
@@ -80,8 +80,8 @@ import {SeoService} from '../../core/services/seo.service';
                   {{ step.n }}
                 </div>
                 <div>
-                  <p class="font-semibold text-gray-900 dark:text-slate-100">{{ step.title }}</p>
-                  <p class="mt-1 text-sm text-gray-600 dark:text-slate-400 leading-relaxed">{{ step.desc }}</p>
+                  <p class="font-semibold text-main">{{ step.title }}</p>
+                  <p class="mt-1 text-sm text-muted leading-relaxed">{{ step.desc }}</p>
                 </div>
                 @if (!$last) {
                   <div class="hidden sm:block absolute translate-x-full" aria-hidden="true"></div>
@@ -95,13 +95,13 @@ import {SeoService} from '../../core/services/seo.service';
       <!-- ── Feature Grid ───────────────────────────────────────────────── -->
       <div class="mx-auto max-w-7xl px-6 py-20 lg:px-8">
         <div class="mx-auto max-w-2xl text-center mb-12">
-          <h2 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-100">Everything you need for compliant randomization</h2>
-          <p class="mt-4 text-base text-gray-600 dark:text-slate-400">A complete toolkit for biostatisticians, CROs, and clinical trial teams — built entirely in the browser.</p>
+          <h2 class="text-3xl font-bold tracking-tight text-main">Everything you need for compliant randomization</h2>
+          <p class="mt-4 text-base text-muted">A complete toolkit for biostatisticians, CROs, and clinical trial teams — built entirely in the browser.</p>
         </div>
         <dl class="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
           @for (feature of features; track feature.title) {
             <div class="flex flex-col">
-              <dt class="text-base font-semibold leading-7 text-gray-900 dark:text-slate-100">
+              <dt class="text-base font-semibold leading-7 text-main">
                 <div class="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 dark:bg-indigo-500 shadow-sm">
                   <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="feature.icon" />
@@ -109,7 +109,7 @@ import {SeoService} from '../../core/services/seo.service';
                 </div>
                 {{ feature.title }}
               </dt>
-              <dd class="mt-1 flex flex-auto flex-col text-base leading-7 text-gray-600 dark:text-slate-400">
+              <dd class="mt-1 flex flex-auto flex-col text-base leading-7 text-muted">
                 <p class="flex-auto">{{ feature.desc }}</p>
               </dd>
             </div>

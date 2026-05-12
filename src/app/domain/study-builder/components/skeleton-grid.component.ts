@@ -16,7 +16,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
     <div class="animate-pulse space-y-4" data-testid="skeleton-grid" aria-busy="true" aria-label="Generating schema…">
 
       <!-- ── Analytics placeholders ──────────────────────────────────── -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+      <div class="bg-surface rounded-xl shadow-sm border border-border-subtle p-6">
         <!-- Header bar -->
         <div class="h-4 w-40 rounded-md bg-gray-200 dark:bg-slate-700 mb-6"></div>
 
@@ -29,7 +29,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
               <div class="w-28 h-28 rounded-full bg-gray-200 dark:bg-slate-700"></div>
               <!-- Inner hole (white/bg circle to create donut shape) -->
               <div class="absolute inset-0 flex items-center justify-center">
-                <div class="w-16 h-16 rounded-full bg-white dark:bg-slate-800"></div>
+                <div class="w-16 h-16 rounded-full bg-surface"></div>
               </div>
             </div>
             <!-- Legend stubs -->
@@ -62,10 +62,10 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
       </div>
 
       <!-- ── Table skeleton ───────────────────────────────────────────── -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+      <div class="bg-surface rounded-xl shadow-sm border border-border-subtle overflow-hidden">
 
         <!-- Toolbar / action bar stub -->
-        <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+        <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between">
           <div class="h-4 w-48 rounded-md bg-gray-200 dark:bg-slate-700"></div>
           <div class="flex gap-2">
             <div class="h-8 w-20 rounded-md bg-gray-200 dark:bg-slate-700"></div>
@@ -76,7 +76,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
         <table class="w-full">
           <!-- Table header -->
           <thead>
-            <tr class="border-b border-gray-100 dark:border-slate-700">
+            <tr class="border-b border-border-subtle">
               @for (col of headerCols; track col) {
                 <th class="px-4 py-3">
                   <div class="h-3 rounded-md bg-gray-200 dark:bg-slate-700" [style.width]="col"></div>
@@ -100,7 +100,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
         </table>
 
         <!-- Pagination stub -->
-        <div class="px-6 py-4 border-t border-gray-100 dark:border-slate-700 flex items-center justify-between">
+        <div class="px-6 py-4 border-t border-border-subtle flex items-center justify-between">
           <div class="h-3 w-32 rounded-md bg-gray-200 dark:bg-slate-700"></div>
           <div class="flex gap-1">
             <div class="h-7 w-7 rounded-md bg-gray-200 dark:bg-slate-700"></div>

@@ -8,17 +8,33 @@
   :root {
     --bg-base: #f8fafc;
     --bg-surface: #ffffff;
+    --bg-subtle: #f9fafb;
+    --bg-hover: #f3f4f6;
+    --bg-overlay: rgba(255, 255, 255, 0.95);
     --text-main: #0f172a;
-    --text-muted: #64748b;
+    --text-muted: #475569;
+    --text-disabled: #9ca3af;
     --border-subtle: #e2e8f0;
+    --border-base: #e5e7eb;
+    --border-strong: #d1d5db;
+    --invalid-stripe: #fee2e2;
+    --invalid-bg: #ffffff;
   }
 
   .dark {
     --bg-base: #020617;
     --bg-surface: #0f172a;
+    --bg-subtle: #0f172a;
+    --bg-hover: #334155;
+    --bg-overlay: rgba(30, 41, 59, 0.95);
     --text-main: #f8fafc;
-    --text-muted: #94a3b8;
+    --text-muted: #cbd5e1;
+    --text-disabled: #64748b;
     --border-subtle: #1e293b;
+    --border-base: #475569;
+    --border-strong: #64748b;
+    --invalid-stripe: #7f1d1d;
+    --invalid-bg: #1e293b;
   }
 
   html,
@@ -30,7 +46,7 @@
   }
 
   :where(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
-    @apply border border-border-subtle bg-surface text-main placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35 focus-visible:border-indigo-500;
+    @apply border border-border-strong bg-surface text-main placeholder:text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35 focus-visible:border-indigo-500;
   }
 
   :where(button, [type='button'], [type='submit'], [type='reset']) {
@@ -55,9 +71,15 @@
 
   --color-base: var(--bg-base);
   --color-surface: var(--bg-surface);
+  --color-subtle: var(--bg-subtle);
+  --color-hover: var(--bg-hover);
+  --color-overlay: var(--bg-overlay);
   --color-main: var(--text-main);
   --color-muted: var(--text-muted);
+  --color-disabled: var(--text-disabled);
   --color-border-subtle: var(--border-subtle);
+  --color-border-base: var(--border-base);
+  --color-border-strong: var(--border-strong);
 
   --text-xs: 0.6076rem;
   --text-sm: 0.7292rem;

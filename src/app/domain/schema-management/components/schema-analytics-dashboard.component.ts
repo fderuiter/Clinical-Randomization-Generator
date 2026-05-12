@@ -23,24 +23,22 @@ import { SchemaViewStateService } from '../services/schema-view-state.service';
 // Register only the ECharts modules we need (tree-shakeable).
 echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer]);
 
-const BLINDED_COLOUR = '#94a3b8'; // slate-400
-
 @Component({
   selector: 'app-schema-analytics-dashboard',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (state.results()) {
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 space-y-4">
+      <div class="bg-surface rounded-xl shadow-sm border border-border-subtle p-6 space-y-4">
 
         <!-- Header -->
         <div class="flex items-center justify-between">
-          <h3 class="text-base font-semibold text-gray-900 dark:text-slate-100">Schema Analytics</h3>
+          <h3 class="text-base font-semibold text-main">Schema Analytics</h3>
 
           <!-- Active filter HUD -->
           @if (viewState.activeFilter()) {
             <div class="flex items-center gap-2 text-sm">
-              <span class="text-gray-500 dark:text-slate-400">Active filter:</span>
+              <span class="text-muted">Active filter:</span>
               <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 font-medium text-xs">
                 {{ viewState.activeFilter()!.type === 'site' ? 'Site' : 'Treatment' }}:
                 {{ viewState.activeFilter()!.value }}
@@ -63,7 +61,7 @@ const BLINDED_COLOUR = '#94a3b8'; // slate-400
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Donut chart: Treatment Balance -->
           <div>
-            <p class="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+            <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">
               Treatment Balance
               @if (!viewState.isUnblinded()) {
                 <span class="ml-1 text-amber-700 dark:text-amber-400">(blinded)</span>
@@ -74,14 +72,14 @@ const BLINDED_COLOUR = '#94a3b8'; // slate-400
 
           <!-- Bar chart: Site Distribution -->
           <div>
-            <p class="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+            <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">
               Distribution by Site
             </p>
             <div #barContainer class="h-56 w-full"></div>
           </div>
         </div>
 
-        <p class="text-xs text-gray-600 dark:text-slate-400">
+        <p class="text-xs text-muted">
           Click a chart segment or bar to cross-filter the results grid below.
         </p>
       </div>
@@ -97,6 +95,12 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
 
   private donutChart: echarts.ECharts | null = null;
   private barChart: echarts.ECharts | null = null;
+
+  private getCssColor(token: string, fallback: string): string {
+    if (typeof window === 'undefined') return fallback;
+    const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    return value || fallback;
+  }
 
   // -------------------------------------------------------------------------
   // Derived data for charts
@@ -126,6 +130,7 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
   private readonly donutOption = computed(() => {
     const isUnblinded = this.viewState.isUnblinded();
     const counts = this.treatmentCounts();
+    const blindedColour = this.getCssColor('--text-muted', '#94a3b8');
 
     if (!isUnblinded) {
       // Blinded: solid monochromatic ring, no treatment info leaked
@@ -135,9 +140,9 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
         series: [{
           type: 'pie',
           radius: ['45%', '70%'],
-          label: { show: true, formatter: 'Blinded', position: 'center', fontSize: 13, color: BLINDED_COLOUR, fontWeight: 'bold' },
+          label: { show: true, formatter: 'Blinded', position: 'center', fontSize: 13, color: blindedColour, fontWeight: 'bold' },
           emphasis: { disabled: true },
-          data: [{ value: 1, name: 'Blinded', itemStyle: { color: BLINDED_COLOUR } }],
+          data: [{ value: 1, name: 'Blinded', itemStyle: { color: blindedColour } }],
         }],
       };
     }
@@ -166,6 +171,7 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
   private readonly barOption = computed(() => {
     const schema = this.viewState.filteredSchema();
     const isUnblinded = this.viewState.isUnblinded();
+    const blindedColour = this.getCssColor('--text-muted', '#94a3b8');
 
     // Collect unique sites and treatment arms
     const sites = [...new Set(schema.map(r => r.site))].sort();
@@ -186,7 +192,7 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
         name: arm,
         type: 'bar' as const,
         data,
-        itemStyle: { color: isUnblinded ? palette[i % palette.length] : BLINDED_COLOUR },
+        itemStyle: { color: isUnblinded ? palette[i % palette.length] : blindedColour },
       };
     });
 
