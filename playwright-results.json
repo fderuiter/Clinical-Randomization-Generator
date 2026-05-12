@@ -1,0 +1,285 @@
+{
+  "config": {
+    "configFile": "/home/runner/work/Equipose/Equipose/playwright.config.ts",
+    "rootDir": "/home/runner/work/Equipose/Equipose/tests_e2e",
+    "forbidOnly": true,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/fderuiter/Equipose/commit/6cb16d48bad864b1b0bdc97afc644e5762cf11ad",
+        "commitHash": "6cb16d48bad864b1b0bdc97afc644e5762cf11ad",
+        "buildHref": "https://github.com/fderuiter/Equipose/actions/runs/25749802190"
+      },
+      "gitCommit": {
+        "shortHash": "6cb16d4",
+        "hash": "6cb16d48bad864b1b0bdc97afc644e5762cf11ad",
+        "subject": "fix dark mode dropdown contrast and add readability tests",
+        "body": "fix dark mode dropdown contrast and add readability tests\n\nAgent-Logs-Url: https://github.com/fderuiter/Equipose/sessions/10e81674-1f72-4358-8d96-03bf42686b87\n\nCo-authored-by: fderuiter <127706008+fderuiter@users.noreply.github.com>\n",
+        "author": {
+          "name": "copilot-swe-agent[bot]",
+          "email": "198982749+Copilot@users.noreply.github.com",
+          "time": 1778605243000
+        },
+        "committer": {
+          "name": "GitHub",
+          "email": "noreply@github.com",
+          "time": 1778605243000
+        },
+        "branch": "copilot/fix-tag-input-pasting-issue"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/Equipose/Equipose/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/fderuiter/Equipose/commit/6cb16d48bad864b1b0bdc97afc644e5762cf11ad",
+            "commitHash": "6cb16d48bad864b1b0bdc97afc644e5762cf11ad",
+            "buildHref": "https://github.com/fderuiter/Equipose/actions/runs/25749802190"
+          },
+          "gitCommit": {
+            "shortHash": "6cb16d4",
+            "hash": "6cb16d48bad864b1b0bdc97afc644e5762cf11ad",
+            "subject": "fix dark mode dropdown contrast and add readability tests",
+            "body": "fix dark mode dropdown contrast and add readability tests\n\nAgent-Logs-Url: https://github.com/fderuiter/Equipose/sessions/10e81674-1f72-4358-8d96-03bf42686b87\n\nCo-authored-by: fderuiter <127706008+fderuiter@users.noreply.github.com>\n",
+            "author": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1778605243000
+            },
+            "committer": {
+              "name": "GitHub",
+              "email": "noreply@github.com",
+              "time": 1778605243000
+            },
+            "branch": "copilot/fix-tag-input-pasting-issue"
+          },
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/runner/work/Equipose/Equipose/tests_e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "blob",
+        null
+      ],
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 1,
+    "webServer": {
+      "command": "npm run start",
+      "url": "http://localhost:4200",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "a11y.spec.ts",
+      "file": "a11y.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Accessibility and visual regression - light mode",
+          "file": "a11y.spec.ts",
+          "line": 135,
+          "column": 6,
+          "specs": [
+            {
+              "title": "pages should pass accessibility, visibility, and screenshot baselines",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7316,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-12T17:08:30.431Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa3ad05f8c0e05077efb-cfe102708b9f5cf2acec",
+              "file": "a11y.spec.ts",
+              "line": 140,
+              "column": 7
+            },
+            {
+              "title": "transient states should remain visible and accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3653,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-12T17:08:37.900Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa3ad05f8c0e05077efb-bdaaa1d68479a59f2783",
+              "file": "a11y.spec.ts",
+              "line": 144,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Accessibility and visual regression - dark mode",
+          "file": "a11y.spec.ts",
+          "line": 149,
+          "column": 6,
+          "specs": [
+            {
+              "title": "pages should pass accessibility, visibility, and screenshot baselines",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5408,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-12T17:08:41.567Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa3ad05f8c0e05077efb-f07e302535f2a2c2576f",
+              "file": "a11y.spec.ts",
+              "line": 159,
+              "column": 7
+            },
+            {
+              "title": "transient states should remain visible and accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3569,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-12T17:08:46.986Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa3ad05f8c0e05077efb-395787dbd7ddd69745d5",
+              "file": "a11y.spec.ts",
+              "line": 163,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-05-12T17:08:14.873Z",
+    "duration": 35828.67,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
