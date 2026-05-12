@@ -181,6 +181,22 @@ describe('ResultsGridComponent (domain)', () => {
       expect(component.processedData().length).toBe(6);
     });
 
+    it('should clear all filters at once', () => {
+      const mockResult = generateMockData(12);
+      (mockFacade as any).results.set(mockResult);
+      fixture.detectChanges();
+
+      component.openColumnFilter('site');
+      component.updateColumnFilter('Site 1');
+      component.openColumnFilter('treatmentArm');
+      component.updateColumnFilter('Active');
+      expect(Object.keys(component.filterState()).length).toBeGreaterThan(0);
+
+      component.clearAllFilters();
+
+      expect(component.filterState()).toEqual({});
+    });
+
     it('hasActiveFilter should return true only when filter is non-empty', () => {
       expect(component.hasActiveFilter('site')).toBe(false);
 
@@ -644,6 +660,16 @@ describe('ResultsGridComponent (domain)', () => {
         const summaryRow = rows[rows.length - 1];
         expect(summaryRow.nativeElement.textContent).toContain('Incomplete Block');
       });
+    });
+  });
+
+  describe('Audit hash presentation', () => {
+    it('should use middle truncation in the audit hash banner', () => {
+      const mockResult = generateMockData(2);
+      (mockFacade as any).results.set(mockResult);
+      fixture.detectChanges();
+
+      expect(component.truncatedAuditHash).toBe('aabbccdd0011...ccdd00112233');
     });
   });
 });

@@ -94,6 +94,20 @@ describe('TagInputComponent', () => {
       expect(component.tags).toContain('101');
     });
 
+    it('should split comma-separated pasted values into individual tags', () => {
+      component.inputValue = 'Site A, Site B, Site C';
+      component.commitInput();
+      expect(component.tags).toEqual(['Site A', 'Site B', 'Site C']);
+      expect(component.control.value).toBe('Site A, Site B, Site C');
+    });
+
+    it('should skip pasted duplicate values when splitting comma-separated input', () => {
+      component.tags = ['Site A'];
+      component.inputValue = 'Site A, Site B';
+      component.commitInput();
+      expect(component.tags).toEqual(['Site A', 'Site B']);
+    });
+
     it('should not add an empty tag', () => {
       component.inputValue = '   ';
       component.commitInput();
