@@ -4,18 +4,42 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@layer base {
+  :root {
+    --bg-base: #f8fafc;
+    --bg-surface: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border-subtle: #e2e8f0;
+  }
+
+  .dark {
+    --bg-base: #020617;
+    --bg-surface: #0f172a;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-subtle: #1e293b;
+  }
+
+  html,
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    font-feature-settings: "tnum";
+  }
+
+  :where(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
+    @apply border border-border-subtle bg-surface text-main placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35 focus-visible:border-indigo-500;
+  }
+
+  :where(button, [type='button'], [type='submit'], [type='reset']) {
+    @apply rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35;
+  }
+}
+
 @theme {
   --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-
-  /* Modular type scale: base 14px (0.875rem), ratio 1.2 */
-  --text-xs: 0.6076rem;
-  --text-sm: 0.7292rem;
-  --text-base: 0.875rem;
-  --text-lg: 1.05rem;
-  --text-xl: 1.26rem;
-  --text-2xl: 1.512rem;
-  --text-3xl: 1.8144rem;
-  --text-4xl: 2.1773rem;
 
   --color-brand-50: oklch(0.97 0.014 264);
   --color-brand-100: oklch(0.94 0.028 264);
@@ -28,20 +52,21 @@
   --color-brand-800: oklch(0.37 0.16 264);
   --color-brand-900: oklch(0.31 0.13 264);
   --color-brand-950: oklch(0.22 0.10 264);
-}
 
-@layer base {
-  html {
-    font-feature-settings: "tnum";
-  }
+  --color-base: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-main: var(--text-main);
+  --color-muted: var(--text-muted);
+  --color-border-subtle: var(--border-subtle);
 
-  :where(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
-    @apply border border-gray-300 bg-white text-gray-900 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35 focus-visible:border-indigo-500;
-  }
-
-  :where(button, [type='button'], [type='submit'], [type='reset']) {
-    @apply rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35;
-  }
+  --text-xs: 0.6076rem;
+  --text-sm: 0.7292rem;
+  --text-base: 0.875rem;
+  --text-lg: 1.05rem;
+  --text-xl: 1.26rem;
+  --text-2xl: 1.512rem;
+  --text-3xl: 1.8144rem;
+  --text-4xl: 2.1773rem;
 }
 
 /* Advanced Settings accordion entrance animation */
@@ -54,10 +79,10 @@
   animation: slideDown 0.2s ease-out;
 }
 
-/* Angular Material CDK tooltip – dark high-contrast style */
 .app-tooltip.mdc-tooltip .mdc-tooltip__surface {
-  background-color: #1e293b;
-  color: #f1f5f9;
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
   padding: 8px 12px;
   border-radius: 6px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
