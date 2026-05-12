@@ -34,12 +34,14 @@ async function assertSelectReadableStyling(select: Locator): Promise<void> {
       color: style.color,
       backgroundColor: style.backgroundColor,
       borderColor: style.borderColor,
+      borderStyle: style.borderStyle,
     };
   });
 
   expect(styleState.classes).toContain('app-select-scheme');
   expect(styleState.color).not.toBe(styleState.backgroundColor);
   expect(styleState.borderColor).not.toBe('rgba(0, 0, 0, 0)');
+  expect(styleState.borderStyle).not.toBe('none');
 }
 
 async function assertInputAndButtonReadable(input: Locator, button: Locator): Promise<void> {
@@ -52,10 +54,12 @@ async function assertInputAndButtonReadable(input: Locator, button: Locator): Pr
       color: style.color,
       backgroundColor: style.backgroundColor,
       borderColor: style.borderColor,
+      borderStyle: style.borderStyle,
     };
   });
   expect(inputStyle.color).not.toBe(inputStyle.backgroundColor);
   expect(inputStyle.borderColor).not.toBe('rgba(0, 0, 0, 0)');
+  expect(inputStyle.borderStyle).not.toBe('none');
 
   const buttonStyle = await button.evaluate((element) => {
     const style = window.getComputedStyle(element as HTMLElement);
