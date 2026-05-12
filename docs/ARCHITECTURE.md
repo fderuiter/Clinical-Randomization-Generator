@@ -39,18 +39,18 @@
 ## 1. What the Application Does
 
 The Clinical Randomization Generator is a browser-only Angular SPA that produces
-**statistically sound, reproducible, stratified-block randomization schemas** for
+**statistically sound, reproducible, stratified-block and minimization (Pocock-Simon) randomization schemas** for
 clinical trials. A researcher fills in a configuration form (treatment arms, strata,
 sites, block sizes, subject-ID mask, enrollment cap strategy, optional seed) and the tool:
 
-1. Runs a seeded **Fisher-Yates shuffle** algorithm inside a **Web Worker** to keep
+1. Runs a seeded **Fisher-Yates shuffle** or **Minimization algorithm** inside a **Web Worker** to keep
    the UI fully responsive.
 2. Applies one of three **Cap Strategy** modes (Manual Matrix, Proportional/LRM, or
    Marginal-Only) to enforce per-stratum or per-level enrollment limits.
 3. Displays the resulting schema in a virtual-scroll results grid with blinding,
    sorting, and filtering controls.
 4. Exports the schema to **CSV** or **PDF**.
-5. Generates equivalent **R / SAS / Python** scripts that reproduce the same
+5. Generates equivalent **R / SAS / Python / STATA** scripts that reproduce the same
    statistical design - including cap strategy enforcement - so the trial statistician
    can run the official schema inside a validated, 21 CFR Part 11-capable system.
 6. Provides a **Monte Carlo simulation** mode to verify balance properties across
@@ -85,10 +85,13 @@ clinical-randomization-generator/
 │       │
 │       ├── core/                Cross-cutting infrastructure
 │       │   ├── components/
-│       │   │   └── toast.component.ts         CDK Overlay toast display
+│       │   │   ├── toast.component.ts         CDK Overlay toast display
+│       │   │   └── update-banner.component.ts Update banner
 │       │   └── services/
+│       │       ├── seo.service.ts             SEO service
 │       │       ├── theme.service.ts           Dark-mode toggle (class on <html>)
 │       │       ├── toast.service.ts           CDK Overlay toast queue
+│       │       ├── update-notification.service.ts Update notification
 │       │       └── viewport.service.ts        CDK BreakpointObserver → viewportSize signal
 │       │
 │       ├── features/            Thin, non-domain page components
@@ -106,18 +109,22 @@ clinical-randomization-generator/
 │           ├── randomization-engine/        Bounded context 1
 │           │   ├── core/
 │           │   │   ├── randomization-algorithm.ts          Pure function: standard + MARGINAL_ONLY paths
-│           │   │   ├── randomization-algorithm.spec.ts     Unit tests (43 tests)
-│           │   │   ├── randomization-algorithm-parity.spec.ts  Golden-master parity tests (8 tests)
+│           │   │   ├── randomization-algorithm.spec.ts     Unit tests
+│           │   │   ├── randomization-algorithm-parity.spec.ts  Golden-master parity tests
+│           │   │   ├── minimization-algorithm.ts           Pocock-Simon algorithm
+│           │   │   ├── minimization-algorithm.spec.ts      Unit tests
 │           │   │   ├── cap-strategy.ts                     LRM (proportional caps) + validation
-│           │   │   ├── cap-strategy.spec.ts                Unit tests (15 tests)
+│           │   │   ├── cap-strategy.spec.ts                Unit tests
 │           │   │   ├── subject-id-engine.ts                Token-based subject ID generator
-│           │   │   ├── subject-id-engine.spec.ts           Unit tests (42 tests)
+│           │   │   ├── subject-id-engine.spec.ts           Unit tests
 │           │   │   ├── crypto-hash.ts                      SHA-256 audit hash
-│           │   │   └── crypto-hash.spec.ts                 Unit tests (11 tests)
+│           │   │   ├── crypto-hash.spec.ts                 Unit tests
+│           │   │   └── statistical-validation.spec.ts      Statistical validation tests
 │           │   ├── components/
 │           │   │   └── monte-carlo-modal.component.ts      Progress + results for MC simulation
 │           │   ├── worker/
 │           │   │   ├── randomization-engine.worker.ts      Web Worker entry point
+│           │   │   ├── attrition-prng.ts                   PRNG for monte-carlo attrition
 │           │   │   └── worker-protocol.ts                  Typed message interfaces
 │           │   ├── randomization.service.ts                SSR/fallback Observable wrapper
 │           │   ├── randomization.service.spec.ts
@@ -146,8 +153,10 @@ clinical-randomization-generator/
 │               ├── errors/
 │               │   └── code-generation-errors.ts           Typed error hierarchy (6 classes)
 │               ├── services/
-│               │   ├── code-generator.service.ts           R / SAS / Python emitters (3 cap modes)
+│               │   ├── code-generator.service.ts           R / SAS / Python / STATA emitters (3 cap modes)
 │               │   ├── code-generator.service.spec.ts
+│               │   ├── excel-export.service.ts             Excel export logic
+│               │   ├── methodology-specification.service.ts Randomization Plan narrative
 │               │   ├── schema-view-state.service.ts        Shared unblinding + filter state
 │               │   └── schema-view-state.service.spec.ts
 │               └── components/
@@ -164,11 +173,15 @@ clinical-randomization-generator/
 │                   └── code-generator-modal.component.spec.ts
 
 ├── tests_e2e/                   Playwright end-to-end tests
-│   ├── navigation.spec.ts
+│   ├── a11y.spec.ts
+│   ├── audit-trail.spec.ts
+│   ├── code-generator.spec.ts
 │   ├── form-validation.spec.ts
-│   ├── schema-generation.spec.ts
+│   ├── monte-carlo.spec.ts
+│   ├── navigation.spec.ts
 │   ├── results-operations.spec.ts
-│   └── code-generator.spec.ts
+│   ├── schema-generation.spec.ts
+│   └── zero-trust.spec.ts
 │
 ├── generate-version.js          Pre-build script: writes src/environments/version.ts
 ├── angular.json                 Angular CLI workspace config
@@ -193,8 +206,8 @@ graph TD
     end
 
     subgraph "Bounded Context 1 - Randomization Engine"
-        ALGO["core/\nrandomization-algorithm.ts\ncap-strategy.ts\nsubject-id-engine.ts\ncrypto-hash.ts\n(pure TS, zero Angular)"]
-        WORKER["worker/\nrandomization-engine.worker.ts\nworker-protocol.ts"]
+        ALGO["core/\nrandomization-algorithm.ts\nminimization-algorithm.ts\ncap-strategy.ts\nsubject-id-engine.ts\ncrypto-hash.ts\n(pure TS, zero Angular)"]
+        WORKER["worker/\nrandomization-engine.worker.ts\nworker-protocol.ts\nattrition-prng.ts"]
         SVC["randomization.service.ts\n(Observable wrapper / SSR)"]
         FACADE["randomization-engine.facade.ts\n★ sole public API ★"]
         ALGO --> WORKER
@@ -212,7 +225,7 @@ graph TD
     subgraph "Bounded Context 3 - Schema Management"
         ERRORS["errors/\ncode-generation-errors.ts\nCodeGenerationError hierarchy"]
         VSSTATE["services/\nschema-view-state.service.ts\n(filteredSchema · isUnblinded · activeFilter)"]
-        CODEGEN["services/\ncode-generator.service.ts\n(3 cap strategies × 3 languages)"]
+        CODEGEN["services/\ncode-generator.service.ts\n(3 cap strategies × 4 languages)\nexcel-export.service.ts\nmethodology-specification.service.ts"]
         GRID["components/\nresults-grid.component\nbalance-verification.component\nschema-analytics-dashboard.component\nschema-verification.component\ncode-generator-modal.component"]
         ERRORS --> CODEGEN
         CODEGEN --> GRID
@@ -276,7 +289,7 @@ graph TD
     GEN --> FORM["ConfigFormComponent\nStep 1: Study details\nStep 2: Arms + Block Preview\nStep 3: Strata (drag-reorder)\nStep 4: Cap Strategy + Caps\nStep 5: Advanced Settings"]
     GEN --> RGRID["ResultsGridComponent\nCDK Virtual Scroll (flat view)\nGrouped view (block headers)\nBlinding · Sort · Filter\nCSV + PDF export"]
     GEN --> BAL["BalanceVerificationComponent\nPer-site / per-stratum tallies\nStatus: perfect | incomplete | critical"]
-    GEN --> MODAL["CodeGeneratorModalComponent\nR / SAS / Python tabs\nCopy · Download"]
+    GEN --> MODAL["CodeGeneratorModalComponent\nR / SAS / Python / STATA tabs\nCopy · Download"]
     GEN --> MCMODAL["MonteCarloModalComponent\nProgress bar + arm summary table"]
 
     FORM -- "child" --> BPREV["BlockPreviewComponent\nLive block allocation chips"]
@@ -344,8 +357,10 @@ The single exported function `generateRandomizationSchema(config)`:
    stratum levels (e.g. `{sex: M, age: <65}`, `{sex: M, age: ≥65}`, …).
 3. **Validates block sizes** - throws if any block size is not an exact multiple of
    the total arm ratio sum.
-4. **Dispatches by cap strategy** - `MARGINAL_ONLY` routes to `generateMarginalOnly()`;
-   both `MANUAL_MATRIX` (default) and `PROPORTIONAL` route to `generateStandard()`.
+4. **Dispatches by algorithm/strategy**:
+   - If `MINIMIZATION`, delegates to `generateMinimization()` (Pocock-Simon algorithm).
+   - If `BLOCK` and `MARGINAL_ONLY`, delegates to `generateMarginalOnly()`.
+   - If `BLOCK` and (`MANUAL_MATRIX` or `PROPORTIONAL`), delegates to `generateStandard()`.
 5. **`generateStandard()`** - for each _(site × stratum combo)_ pair, while
    `stratumSubjectCount < intersectionCap`, picks a random block size, fills the block
    with arms weighted by ratio, then applies a **Fisher-Yates shuffle** driven by the
@@ -354,9 +369,12 @@ The single exported function `generateRandomizationSchema(config)`:
    On each iteration, picks a random active combo, generates a block using Fisher-Yates,
    and increments per-level counts. Any combo whose level counts would breach a marginal
    cap is pruned from the active pool. Generation terminates when the pool is empty.
-7. **Formats subject IDs** - calls `generateSubjectId()` from `subject-id-engine.ts`
+7. **`generateMinimization()`** - Uses the **Pocock-Simon algorithm** to probabilistically
+   assign subjects to the arm that minimises overall imbalance across all marginal
+   factor counts, evaluating state sequentially subject-by-subject.
+8. **Formats subject IDs** - calls `generateSubjectId()` from `subject-id-engine.ts`
    to expand the mask tokens into the final subject ID string.
-8. Returns a `RandomizationResult` with `schema[]` rows and `metadata`.
+9. Returns a `RandomizationResult` with `schema[]` rows and `metadata`.
 
 ### Termination guarantee for MARGINAL_ONLY
 
@@ -401,12 +419,15 @@ schema row changes, providing a tamper-evident fingerprint.
 
 ### Monte Carlo Simulation
 
-The Facade exposes `runMonteCarlo(config)` which sends a `'START_MONTE_CARLO'` command
+The Facade exposes `runMonteCarlo(config, attritionRate)` which sends a `'START_MONTE_CARLO'` command
 to the worker. The worker runs `N` iterations of `generateRandomizationSchema`, streams
 `MONTE_CARLO_PROGRESS` updates back to the main thread at regular intervals, and
 finally sends a `MONTE_CARLO_SUCCESS` payload with:
-- `totalIterations`, `totalSubjectsSimulated`
-- per-arm: `expectedCount`, `actualCount`, `ratio`
+- `totalIterations`, `totalSubjectsSimulated`, `totalRetainedSubjects`, `attritionRate`
+- per-arm: `expectedCount`, `actualCount`, `expectedRetainedCount`, `retainedCount`, `ratio`
+
+A deterministic PRNG (from `attrition-prng.ts`, seeded by the iteration index) simulates dropout
+according to the requested attrition rate so that results are perfectly reproducible.
 
 Results are displayed in `MonteCarloModalComponent` with a live progress bar and a
 summary table.
@@ -646,8 +667,8 @@ flowchart TD
     GRID -- "exportPdf()" --> PDF["jsPDF download\nrandomization_&lt;id&gt;_blinded|unblinded.pdf"]
 
     FORM3 -- "onGenerateCode(lang)" --> CODEMODALOPEN["facade.openCodeGenerator(config, lang)"]
-    CODEMODALOPEN --> MODAL3["CodeGeneratorModalComponent\nCodeGeneratorService.generate(lang, config)\n→ R / SAS / Python template\n(3 cap strategies each)"]
-    MODAL3 -- "downloadCode()" --> SCRIPT["Text file download\nrandomization_code.R|.sas|.py"]
+    CODEMODALOPEN --> MODAL3["CodeGeneratorModalComponent\nCodeGeneratorService.generate(lang, config)\n→ R / SAS / Python / STATA template\n(3 cap strategies each)"]
+    MODAL3 -- "downloadCode()" --> SCRIPT["Text file download\nrandomization_code.R|.sas|.py|.do"]
 ```
 
 ---
@@ -673,6 +694,11 @@ classDiagram
         +string subjectIdMask
         +CapStrategy? capStrategy
         +number? globalCap
+        +BlockRule? globalBlockStrategy
+        +Record~string,BlockRule~? siteBlockOverrides
+        +Record~string,BlockRule~? stratumBlockOverrides
+        +RandomizationMethod? randomizationMethod
+        +MinimizationConfig? minimizationConfig
     }
 
     class CapStrategy {
@@ -680,6 +706,29 @@ classDiagram
         MANUAL_MATRIX
         PROPORTIONAL
         MARGINAL_ONLY
+    }
+
+    class RandomizationMethod {
+        <<type>>
+        BLOCK
+        MINIMIZATION
+    }
+
+    class MinimizationConfig {
+        +number p
+        +number totalSampleSize
+    }
+
+    class BlockSelectionType {
+        <<type>>
+        RANDOM_POOL
+        FIXED_SEQUENCE
+    }
+
+    class BlockRule {
+        +BlockSelectionType selectionType
+        +number[] sizes
+        +Record~string,number~? limits
     }
 
     class TreatmentArm {
@@ -699,6 +748,7 @@ classDiagram
         +string name
         +number? targetPercentage
         +number? marginalCap
+        +number? expectedProbability
     }
 
     class StratumCap {
@@ -737,6 +787,10 @@ classDiagram
     RandomizationConfig "1" --> "*" StratificationFactor : strata
     RandomizationConfig "1" --> "*" StratumCap : stratumCaps
     RandomizationConfig --> CapStrategy : capStrategy
+    RandomizationConfig --> RandomizationMethod : randomizationMethod
+    RandomizationConfig --> MinimizationConfig : minimizationConfig
+    RandomizationConfig --> BlockRule : globalBlockStrategy
+    BlockRule --> BlockSelectionType : selectionType
     StratificationFactor "1" --> "*" StratificationLevel : levelDetails
     RandomizationResult "1" --> "1" ResultMetadata : metadata
     RandomizationResult "1" --> "*" GeneratedSchema : schema
@@ -779,7 +833,7 @@ The exported script becomes the auditable source of truth for the trial.
 
 ### 12.2 Cap strategy code generation paths
 
-Code generation now handles all three cap strategies for all three languages. A
+Code generation now handles all three cap strategies for all four languages. A
 private `validateMarginalOnlyConfig()` guard is called before each MARGINAL_ONLY
 template is emitted. It verifies that at least one stratification factor has a finite
 `marginalCap` on **every** one of its levels (using a name-keyed Map, not index lookup,
@@ -796,7 +850,7 @@ a `ConfigurationValidationError` is thrown before any code is emitted.
 
 The web app stores seeds as arbitrary strings (e.g. `"abc123"` or a random
 alphanumeric). Statistical software requires a non-negative 32-bit integer for
-`set.seed()` / `call streaminit()` / `np.random.default_rng()`.
+`set.seed()` / `call streaminit()` / `np.random.default_rng()` / `set seed`.
 
 `hashCode(seed: string): number` converts the string:
 
@@ -810,13 +864,13 @@ return (hash >>> 0) % 2_147_483_647  // unsigned right-shift → mod into 31-bit
 
 The `>>> 0` unsigned right-shift avoids the `Math.abs(-2147483648) === 2147483648`
 edge case that would exceed the 31-bit limit. The result is always in
-`[0, 2_147_483_646]` - safe for all three language seed ranges.
+`[0, 2_147_483_646]` - safe for all four language seed ranges.
 
 ### 12.4 Overall pipeline
 
 ```mermaid
 flowchart TD
-    MODAL_BTN["User clicks 'Generate Code'\n→ selects R / SAS / Python"]
+    MODAL_BTN["User clicks 'Generate Code'\n→ selects R / SAS / Python / STATA"]
     FORM4["ConfigFormComponent.onGenerateCode(lang)"]
     FACADE4["facade.openCodeGenerator(config, lang)"]
     MODAL4["CodeGeneratorModalComponent\nsetActiveTab(lang) → refreshCode()"]
@@ -829,10 +883,12 @@ flowchart TD
     CGS --> GR["generateR(config)\nreturns string"]
     CGS --> GSAS["generateSas(config)\nreturns string"]
     CGS --> GPY["generatePython(config)\nreturns string"]
+    CGS --> GSTATA["generateStata(config)\nreturns string"]
 
     GR --> DISP["<pre><code>{{ currentCode }}</code></pre>"]
     GSAS --> DISP
     GPY --> DISP
+    GSTATA --> DISP
 
     DISP --> DL["downloadCode()\nBlob → <a download> click"]
     DISP --> CP["copyCode()\nnavigator.clipboard.writeText()"]
@@ -856,7 +912,7 @@ Every generated script follows the same logical sections regardless of language:
 | **Block-math failsafe** | Abort if any block size is not a multiple of total ratio |
 | **Generation loop** | Sites × strata combinations (standard) or active-pool loop (marginal). Random block selection, Fisher-Yates shuffle, subject ID formatting, `BlockNumber` increment. |
 | **QC tables** | Overall balance, site-level balance, block-size distribution |
-| **CSV export (commented)** | `# write.csv(...)` / `# df.to_csv(...)` / `/* proc export */` |
+| CSV export (commented) | `# write.csv(...)` / `# df.to_csv(...)` / `/* proc export */` / `* export delimited` |
 
 ### 12.6 R script (`generateR`)
 
@@ -965,19 +1021,43 @@ flowchart TD
   `_block_num = _block_num + 1` explicit increment; `BlockNumber` output field;
   QC `proc freq` steps.
 
-### 12.9 PRNG comparison
+### 12.9 STATA script (`generateStata`)
 
-| | Web UI | R script | Python script | SAS script |
-|---|---|---|---|---|
-| **Library** | `seedrandom` (Alea) | Base R | NumPy | SAS built-in |
-| **Algorithm** | Alea (Mash) | Mersenne-Twister | PCG64 | Mersenne-Twister |
-| **Seed type** | Arbitrary string | 31-bit integer | 31-bit integer | 31-bit integer |
-| **Seed source** | User input or random string | `hashCode(webSeed)` | `hashCode(webSeed)` | `hashCode(webSeed)` |
-| **Sequence matches web?** | N/A | ❌ Different | ❌ Different | ❌ Different |
-| **Balance properties match?** | N/A | ✅ Same | ✅ Same | ✅ Same |
-| **Reproducible within language?** | ✅ | ✅ | ✅ | ✅ |
+```mermaid
+flowchart TD
+    STATA_SEED["set seed N"]
+    STATA_PARAMS["local macros for arms, ratios, total_ratio, sites"]
+    STATA_CAPS["Matrix for stratum caps"]
+    STATA_GRID["cross command or explicit nested loops → build observations"]
+    STATA_FAILSAFE["assert mod(block_size, total_ratio) == 0"]
+    STATA_BLOCK["Generate block slots, assign treatments based on ratios"]
+    STATA_SORT["gen rand = runiform() → sort by site strata rand → permutes block"]
+    STATA_FINAL["Keep within caps, format SubjectID"]
+    STATA_QC["tabulate Treatment\ntabulate Site Treatment\ntabulate BlockSize"]
 
-### 12.10 Code generation error hierarchy
+    STATA_SEED --> STATA_PARAMS --> STATA_CAPS --> STATA_GRID --> STATA_FAILSAFE --> STATA_BLOCK --> STATA_SORT --> STATA_FINAL --> STATA_QC
+```
+
+**Key STATA-specific details:**
+
+- Uses the `postfile` architecture for row-by-row memory writing during complex loops (especially for Minimization or Marginal-Only strategies).
+- Variable names are kept under 32 characters to comply with STATA limits.
+- Missing values (`.`) are handled mathematically as the largest possible number in STATA, so explicit guards (`< .`) are used where necessary.
+- Similar to SAS, block permutation relies on generating uniform random numbers (`runiform()`) and using `sort` rather than an in-memory array shuffle.
+
+### 12.10 PRNG comparison
+
+| | Web UI | R script | Python script | SAS script | STATA script |
+|---|---|---|---|---|---|
+| **Library** | `seedrandom` (Alea) | Base R | NumPy | SAS built-in | STATA built-in |
+| **Algorithm** | Alea (Mash) | Mersenne-Twister | PCG64 | Mersenne-Twister | KISS 32 |
+| **Seed type** | Arbitrary string | 31-bit integer | 31-bit integer | 31-bit integer | 31-bit integer |
+| **Seed source** | User input or random string | `hashCode(webSeed)` | `hashCode(webSeed)` | `hashCode(webSeed)` | `hashCode(webSeed)` |
+| **Sequence matches web?** | N/A | ❌ Different | ❌ Different | ❌ Different | ❌ Different |
+| **Balance properties match?** | N/A | ✅ Same | ✅ Same | ✅ Same | ✅ Same |
+| **Reproducible within language?** | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+### 12.11 Code generation error hierarchy
 
 All code generation failures are represented by a typed class tree rooted at
 `CodeGenerationError` (in `domain/schema-management/errors/code-generation-errors.ts`).
@@ -1010,7 +1090,7 @@ classDiagram
     }
     class UnsupportedLanguageError {
         Thrown by generate() when the language
-        argument is not R, SAS, or Python
+        argument is not R, SAS, Python, or STATA
     }
     CodeGenerationError <|-- ConfigurationValidationError
     CodeGenerationError <|-- MissingSeedError
@@ -1060,6 +1140,9 @@ Phase 2 is re-thrown as-is from Phase 3 rather than being double-wrapped.
 | `ThemeService` | `core/services/theme.service.ts` | Toggles `dark` CSS class on `<html>` element. Reads system preference on boot. |
 | `ToastService` | `core/services/toast.service.ts` | CDK Overlay (single bottom-right overlay). Exposes `toasts()` signal; auto-dismisses after a configurable timeout. |
 | `ViewportService` | `core/services/viewport.service.ts` | Wraps CDK `BreakpointObserver`. Exposes `viewportSize()` signal (`'mobile' \| 'tablet' \| 'desktop'`) and computed `isMobile()`, `isTablet()`, `isDesktop()` booleans. |
+| `SeoService` | `core/services/seo.service.ts` | Sets document metadata. |
+| `ExcelExportService` | `domain/schema-management/services/excel-export.service.ts` | Builds xlsx blobs for downloading randomizations |
+| `MethodologySpecificationService` | `domain/schema-management/services/methodology-specification.service.ts` | Generates randomization plans as narratives |
 | `SchemaViewStateService` | `domain/schema-management/services/schema-view-state.service.ts` | Shared `isUnblinded`, `activeFilter`, `filteredSchema` signals (see §9). |
 
 ---
@@ -1098,8 +1181,8 @@ graph LR
 
 ```mermaid
 graph BT
-    E2E["E2E (Playwright)\ntests_e2e/ - 5 spec files\nChromium only\nRequires ng serve @ :4200"]
-    UNIT["Unit (Vitest + Angular TestBed)\nsrc/**/*.spec.ts - 24 spec files\n~523 tests\nDirect class/signal testing"]
+    E2E["E2E (Playwright)\ntests_e2e/ - 9 spec files\nChromium only\nRequires ng serve @ :4200"]
+    UNIT["Unit (Vitest + Angular TestBed)\nsrc/**/*.spec.ts - 30 spec files\n~717 tests\nDirect class/signal testing"]
     PARITY["Golden-Master Parity\nrandomization-algorithm-parity.spec.ts\n8 tests across 5 configs\nFixed seeds → deepEqual assertion"]
 
     PARITY --> UNIT
@@ -1117,33 +1200,42 @@ graph BT
 | `cap-strategy.spec.ts` | 15 | LRM correctness, rounding guarantees, NaN/Infinity validation |
 | `crypto-hash.spec.ts` | 11 | SHA-256 determinism, known-value test |
 | `subject-id-engine.spec.ts` | 42 | All mask tokens, collision avoidance, Luhn checksum |
-| `randomization-algorithm.spec.ts` | 43 | Algorithm correctness, MARGINAL_ONLY cap enforcement, throws |
+| `minimization-algorithm.spec.ts` | 14 | Pocock-Simon minimization execution |
+| `randomization-algorithm.spec.ts` | 52 | Algorithm correctness, MARGINAL_ONLY cap enforcement, minimization, throws |
 | `randomization-algorithm-parity.spec.ts` | 8 | Output matches decommissioned legacy service |
+| `statistical-validation.spec.ts` | 17 | Validation checks |
+| `attrition-prng.spec.ts` | 6 | PRNG for Monte Carlo attrition |
 | `randomization.service.spec.ts` | 7 | Observable wrapper, error paths |
 | `randomization-engine.facade.spec.ts` | 22 | Worker dispatch, SSR fallback, signal updates |
-| `randomization-engine-monte-carlo.facade.spec.ts` | 7 | Monte Carlo progress/success signals |
-| `study-builder.store.spec.ts` | 19 | SignalStore: strata, Cartesian combinations, presets, buildConfig |
+| `randomization-engine-monte-carlo.facade.spec.ts` | 9 | Monte Carlo progress/success signals |
+| `study-builder.store.spec.ts` | 25 | SignalStore: strata, Cartesian combinations, presets, buildConfig |
 | `block-preview.component.spec.ts` | 19 | Block chip allocation, computed signals |
 | `tag-input.component.spec.ts` | 22 | Tag-input keyboard/pointer, duplicate rejection |
-| `config-form.component.spec.ts` | 42 | Reactive form init, preset loading, add/remove arms & strata, cap strategy, validation |
+| `config-form.component.spec.ts` | 45 | Reactive form init, preset loading, add/remove arms & strata, cap strategy, validation |
 | `generator.component.spec.ts` | 23 | Error/loading/results conditional rendering, Monte Carlo |
+| `excel-export.service.spec.ts` | 20 | Logic mapping to xlsx format |
+| `methodology-specification.service.spec.ts` | 37 | Testing logic creating randomization plan narratives |
 | `schema-view-state.service.spec.ts` | 12 | filteredSchema projection, cross-filter, blinding toggle |
 | `balance-verification.component.spec.ts` | 20 | Global/site/stratum aggregation, status computation |
 | `schema-analytics-dashboard.component.spec.ts` | 9 | ECharts data binding |
 | `schema-verification.component.spec.ts` | 23 | Audit hash display, verification status |
-| `results-grid.component.spec.ts` | 36 | Virtual scroll, grouped view, blinding, CSV/PDF export |
-| `code-generator-modal.component.spec.ts` | 14 | Tab switching, download, copy, error state |
-| `code-generator.service.spec.ts` | 107 | All 3 cap strategies × 3 languages, seed hashing, error hierarchy, MARGINAL_ONLY guard |
+| `results-grid.component.spec.ts` | 42 | Virtual scroll, grouped view, blinding, CSV/PDF export |
+| `code-generator-modal.component.spec.ts` | 15 | Tab switching, download, copy, error state |
+| `code-generator.service.spec.ts` | 160 | All 3 cap strategies × 4 languages, seed hashing, error hierarchy, MARGINAL_ONLY guard |
 
 ### E2E test files
 
 | File | What it covers |
 |---|---|
-| `navigation.spec.ts` | Landing page, header nav, About page, logo link, 404 redirect |
+| `a11y.spec.ts` | Checks accessibility violations across all application screens using axe-core |
+| `audit-trail.spec.ts` | Validates deterministic PRNG reproducibility, verifying that identically seeded runs produce the same assignments |
+| `code-generator.spec.ts` | All languages: tab switching, code content, file downloads |
 | `form-validation.spec.ts` | Preset loading, disabled buttons, block-size validator, add arm/stratum |
-| `schema-generation.spec.ts` | Full end-to-end: Complex preset → generate → blinding toggle |
+| `monte-carlo.spec.ts` | Validates simulation modal rendering, progress updates, and attrition-adjusted outcomes |
+| `navigation.spec.ts` | Landing page, header nav, About page, logo link, 404 redirect |
 | `results-operations.spec.ts` | Grid rendering, blinding, virtual scroll, CSV/PDF downloads |
-| `code-generator.spec.ts` | All 3 languages: tab switching, code content, file downloads |
+| `schema-generation.spec.ts` | Full end-to-end: Complex preset → generate → blinding toggle |
+| `zero-trust.spec.ts` | Ensures form inputs are properly sanitized to prevent XSS and malformed config injections |
 
 ### Running tests
 
