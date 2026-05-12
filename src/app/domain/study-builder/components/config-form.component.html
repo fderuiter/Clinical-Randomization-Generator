@@ -46,7 +46,7 @@
           </div>
           <div>
             <label for="phase" class="block text-sm mb-1">Phase</label>
-            <select id="phase" formControlName="phase" class="app-select-scheme w-full rounded-lg border px-3 py-2.5">
+            <select id="phase" formControlName="phase" class="app-themed-control w-full rounded-lg border px-3 py-2.5">
               <option value="I">Phase I</option>
               <option value="II">Phase II</option>
               <option value="III">Phase III</option>
@@ -233,14 +233,14 @@
                     <div class="grid grid-cols-2 gap-2">
                       <div>
                         <span class="block text-xs mb-1">Target Type</span>
-                        <select formControlName="targetType" class="app-select-scheme w-full rounded-lg border px-2 py-1.5 text-sm">
+                        <select formControlName="targetType" class="app-themed-control w-full rounded-lg border px-2 py-1.5 text-sm">
                           <option value="site">Site</option>
                           <option value="stratum">Stratum</option>
                         </select>
                       </div>
                       <div>
                         <span class="block text-xs mb-1">Target ID</span>
-                        <select formControlName="targetId" class="app-select-scheme w-full rounded-lg border px-2 py-1.5 text-sm">
+                        <select formControlName="targetId" class="app-themed-control w-full rounded-lg border px-2 py-1.5 text-sm">
                           <option value="">-- Select --</option>
                           @for (opt of getBlockOverrideTargetOptionItems(i); track opt.value) {
                             <option [value]="opt.value">{{ opt.label }}</option>
