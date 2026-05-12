@@ -32,9 +32,9 @@ type ResultsTab = 'grid' | 'balance';
   template: `
     <div class="space-y-8" data-testid="generator-page">
       <!-- Intro -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+      <div class="bg-surface rounded-xl shadow-sm border border-border-subtle p-6">
         <div class="flex items-start justify-between gap-4 mb-3">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100" data-testid="generator-heading">Build Your Randomization Schema</h2>
+          <h2 class="text-lg font-semibold text-main" data-testid="generator-heading">Build Your Randomization Schema</h2>
           <a routerLink="/about"
              class="shrink-0 text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
              aria-label="Learn more about Equipose">
@@ -44,7 +44,7 @@ type ResultsTab = 'grid' | 'balance';
             How does this work?
           </a>
         </div>
-        <p class="text-gray-600 dark:text-slate-400 text-sm leading-relaxed">
+        <p class="text-muted text-sm leading-relaxed">
           Configure your clinical trial parameters below to produce a statistically sound, reproducible, and balanced treatment allocation schema.
           Each schema is uniquely seeded, deterministic, and can be exported to R, Python, SAS, or Stata for inclusion in your Statistical Analysis Plan.
         </p>
@@ -82,12 +82,12 @@ type ResultsTab = 'grid' | 'balance';
         <div id="results-section" class="space-y-4">
 
           <!-- ── Tab Navigation ──────────────────────────────────────── -->
-          <div class="flex gap-1 border-b border-gray-200 dark:border-slate-700">
+          <div class="flex gap-1 border-b border-border-subtle">
             <button
               (click)="activeTab.set('grid')"
               class="px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors"
               [class]="activeTab() === 'grid'
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-surface'
                 : 'border-transparent text-gray-600 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-500'"
               aria-label="Schema Grid tab"
             >
@@ -97,7 +97,7 @@ type ResultsTab = 'grid' | 'balance';
               (click)="activeTab.set('balance')"
               class="px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors"
               [class]="activeTab() === 'balance'
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-surface'
                 : 'border-transparent text-gray-600 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-500'"
               aria-label="Balance Verification tab"
             >
@@ -116,8 +116,8 @@ type ResultsTab = 'grid' | 'balance';
               } @else {
                 <!-- Mobile: text-based analytics summary -->
                 @if (state.results(); as data) {
-                  <div data-testid="mobile-analytics-summary" class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-4 space-y-2">
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-slate-100">Schema Summary</h3>
+                  <div data-testid="mobile-analytics-summary" class="bg-surface rounded-xl shadow-sm border border-border-subtle p-4 space-y-2">
+                    <h3 class="text-sm font-semibold text-main">Schema Summary</h3>
                     <ul class="text-sm text-gray-700 dark:text-slate-300 space-y-1">
                       <li><span class="font-medium">Protocol:</span> {{data.metadata.protocolId}}</li>
                       <li><span class="font-medium">Total subjects:</span> {{data.schema.length}}</li>
