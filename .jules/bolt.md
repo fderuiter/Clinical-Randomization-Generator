@@ -1,0 +1,3 @@
+## 2024-05-12 - Early Array Filtering for O(N) Speedup
+**Learning:** In stateful Monte Carlo algorithms and randomization loops with high N counts, calling `.filter()` iteratively is an O(N) operation per step. Doing this blindly scales terribly, especially when the underlying configuration (e.g. pool caps) changes infrequently.
+**Action:** Implemented a boolean flag pattern (`poolNeedsFilter`) to short-circuit filtering operations. By precalculating when the available pool actually needs a recalculation and bounding the `.filter()` strictly to state-change events, the simulation avoids unnecessary loop overhead.

@@ -1,0 +1,93 @@
+--- src/app/domain/randomization-engine/core/minimization-algorithm.ts
++++ src/app/domain/randomization-engine/core/minimization-algorithm.ts
+@@ -160,6 +160,7 @@
+   // Precompute all strata combinations to form the initial valid pool for intersection caps.
+   type PoolCombination = Record<string, string> & { _key?: string };
+   let activePool: PoolCombination[] = [{}];
++  let poolNeedsFilter = true;
+   if (!isMarginal) {
+     for (const factor of strata) {
+       const newCombinations: PoolCombination[] = [];
+@@ -223,12 +224,15 @@
+         break;
+       }
+     } else {
+-      activePool = activePool.filter(combo => {
+-        const key = combo._key || "";
+-        const cap = capsDict[key];
+-        const count = intersectionCounts[key] ?? 0;
+-        return cap === undefined || count < cap;
+-      });
++      if (poolNeedsFilter) {
++        activePool = activePool.filter(combo => {
++          const key = combo._key || "";
++          const cap = capsDict[key];
++          const count = intersectionCounts[key] ?? 0;
++          return cap === undefined || count < cap;
++        });
++        poolNeedsFilter = false;
++      }
+
+       if (activePool.length === 0) {
+         // No more valid combinations exist; exhaustion reached.
+@@ -365,6 +369,9 @@
+         key += subjectProfile[strata[j].id] || "";
+       }
+       intersectionCounts[key] = (intersectionCounts[key] ?? 0) + 1;
++      if (capsDict[key] !== undefined && intersectionCounts[key] >= capsDict[key]) {
++        poolNeedsFilter = true;
++      }
+     }
+
+     siteSubjectCounts.set(site, siteSubjectCounts.get(site)! + 1);
+--- src/app/domain/randomization-engine/core/randomization-algorithm.ts
++++ src/app/domain/randomization-engine/core/randomization-algorithm.ts
+@@ -262,6 +262,7 @@
+
+     // Active pool of valid stratum combinations (those that haven't hit any marginal cap).
+     let activePool = [...strataCombinations];
++    let poolNeedsFilter = true;
+
+     while (activePool.length > 0) {
+       // Randomly select a combination from the active pool.
+@@ -322,21 +323,28 @@
+           if (levelValue) {
+             const countMap = marginalCounts.get(factor.id);
+             if (countMap) {
+-              countMap.set(levelValue, (countMap.get(levelValue) ?? 0) + 1);
++              const newCount = (countMap.get(levelValue) ?? 0) + 1;
++              countMap.set(levelValue, newCount);
++              const cap = marginalCapMap.get(factor.id)?.get(levelValue);
++              if (cap !== undefined && newCount >= cap) {
++                poolNeedsFilter = true;
++              }
+             }
+           }
+         }
+       }
+
+-      // Remove combinations from the pool that would now breach a marginal cap.
+-      activePool = activePool.filter(combo =>
+-        resolvedConfig.strata.every(factor => {
+-          const levelValue = combo[factor.id] || '';
+-          if (!levelValue) return true;
+-          const cap = marginalCapMap.get(factor.id)?.get(levelValue);
+-          if (cap === undefined) return true; // uncapped
+-          return (marginalCounts.get(factor.id)?.get(levelValue) ?? 0) < cap;
+-        })
+-      );
++      if (poolNeedsFilter) {
++        // Remove combinations from the pool that would now breach a marginal cap.
++        activePool = activePool.filter(combo =>
++          resolvedConfig.strata.every(factor => {
++            const levelValue = combo[factor.id] || '';
++            if (!levelValue) return true;
++            const cap = marginalCapMap.get(factor.id)?.get(levelValue);
++            if (cap === undefined) return true; // uncapped
++            return (marginalCounts.get(factor.id)?.get(levelValue) ?? 0) < cap;
++          })
++        );
++        poolNeedsFilter = false;
++      }
+     }
+   }

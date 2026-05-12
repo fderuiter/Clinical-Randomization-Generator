@@ -267,6 +267,7 @@ function generateMarginalOnly(
 
     // Active pool of valid stratum combinations (those that haven't hit any marginal cap).
     let activePool = [...strataCombinations];
+    let poolNeedsFilter = true;
 
     while (activePool.length > 0) {
       // Randomly select a combination from the active pool.
@@ -322,22 +323,30 @@ function generateMarginalOnly(
           if (levelValue) {
             const countMap = marginalCounts.get(factor.id);
             if (countMap) {
-              countMap.set(levelValue, (countMap.get(levelValue) ?? 0) + 1);
+              const newCount = (countMap.get(levelValue) ?? 0) + 1;
+              countMap.set(levelValue, newCount);
+              const cap = marginalCapMap.get(factor.id)?.get(levelValue);
+              if (cap !== undefined && newCount >= cap) {
+                poolNeedsFilter = true;
+              }
             }
           }
         }
       }
 
-      // Remove combinations from the pool that would now breach a marginal cap.
-      activePool = activePool.filter(combo =>
-        resolvedConfig.strata.every(factor => {
-          const levelValue = combo[factor.id] || '';
-          if (!levelValue) return true;
-          const cap = marginalCapMap.get(factor.id)?.get(levelValue);
-          if (cap === undefined) return true; // uncapped
-          return (marginalCounts.get(factor.id)?.get(levelValue) ?? 0) < cap;
-        })
-      );
+      if (poolNeedsFilter) {
+        // Remove combinations from the pool that would now breach a marginal cap.
+        activePool = activePool.filter(combo =>
+          resolvedConfig.strata.every(factor => {
+            const levelValue = combo[factor.id] || '';
+            if (!levelValue) return true;
+            const cap = marginalCapMap.get(factor.id)?.get(levelValue);
+            if (cap === undefined) return true; // uncapped
+            return (marginalCounts.get(factor.id)?.get(levelValue) ?? 0) < cap;
+          })
+        );
+        poolNeedsFilter = false;
+      }
     }
   }
 }
