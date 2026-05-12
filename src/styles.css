@@ -34,11 +34,27 @@
   html {
     font-feature-settings: "tnum";
   }
+
+  :where(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
+    @apply border border-gray-300 bg-white text-gray-900 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35 focus-visible:border-indigo-500;
+  }
+
+  :where(button, [type='button'], [type='submit'], [type='reset']) {
+    @apply rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35;
+  }
 }
 
 @layer components {
-  .app-select-scheme {
-    @apply bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-500;
+  .app-input-scheme,
+  .app-select-scheme,
+  .app-textarea-scheme {
+    @apply border border-gray-300 bg-white text-gray-900 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35 focus-visible:border-indigo-500;
+  }
+
+  .app-button-scheme {
+    @apply rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/35;
   }
 }
 
