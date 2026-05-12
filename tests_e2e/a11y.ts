@@ -20,9 +20,7 @@ export async function checkA11y(page: Page, includeSelector?: string) {
 
   const results = await builder.analyze();
 
-  const violations = results.violations.filter(
-    v => v.impact === 'critical' || v.impact === 'serious'
-  );
+  const violations = results.violations;
 
   if (violations.length > 0) {
     const details = violations

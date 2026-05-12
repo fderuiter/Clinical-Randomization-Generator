@@ -202,7 +202,7 @@
               <label for="blockSizesStr" class="block text-sm mb-1">Block Sizes (comma-separated)</label>
               <input id="blockSizesStr" type="text" formControlName="blockSizesStr" class="w-full rounded-lg border px-3 py-2.5">
               @if (form.errors?.['invalidBlockSize']) {
-                <p class="text-xs text-red-600 mt-1">Block sizes must be multiples of total ratio ({{ totalRatio }}).</p>
+                <p class="text-xs text-red-600 dark:text-red-400 mt-1">Block sizes must be multiples of total ratio ({{ totalRatio }}).</p>
               }
             </div>
 
@@ -221,7 +221,7 @@
             <div class="space-y-3">
               <div class="flex items-center justify-between">
                 <span class="text-sm font-medium">Block Size Overrides</span>
-                <button type="button" (click)="addBlockOverride()" class="text-xs px-3 py-1.5 rounded-lg bg-indigo-50">+ Add Override</button>
+                <button type="button" (click)="addBlockOverride()" class="text-xs px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">+ Add Override</button>
               </div>
               <div formArrayName="blockOverrides" class="space-y-3">
                 @for (override of blockOverrides.controls; track override; let i = $index) {
@@ -395,14 +395,15 @@
       <div class="space-y-4">
         <section class="rounded-lg border p-4">
           <h2 class="text-lg font-semibold mb-2">Configuration Review</h2>
-          <pre class="text-xs bg-slate-50 dark:bg-slate-900 rounded-lg p-3 overflow-auto max-h-72">{{ reviewConfigJson }}</pre>
+          <pre class="text-xs bg-slate-50 dark:bg-slate-900 rounded-lg p-3 overflow-auto max-h-72" tabindex="0" role="region" aria-label="JSON representation of current study configuration">{{ reviewConfigJson }}</pre>
         </section>
 
         <section class="bg-purple-50/60 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/40 rounded-lg p-4 space-y-2">
-          <label for="attritionRateInput" class="text-sm font-semibold">Expected Attrition / Dropout Rate</label>
+          <label for="attritionRateSlider" class="text-sm font-semibold">Expected Attrition / Dropout Rate</label>
           <div class="flex items-center gap-3">
             <input #attritionSlider id="attritionRateSlider" type="range" min="0" max="50" step="1" [value]="attritionRate()"
                    (input)="attritionRate.set(+attritionSlider.value)" class="flex-1 h-2 accent-purple-600 cursor-pointer">
+            <label for="attritionRateInput" class="sr-only">Expected Attrition Rate</label>
             <input #attritionInput id="attritionRateInput" type="number" min="0" max="50" step="1" [value]="attritionRate()"
                    (change)="attritionRate.set(clampAttritionRate(+attritionInput.value))" class="w-16 text-center rounded-md border py-1 px-2 text-sm">
             <span class="text-sm font-medium w-4">%</span>
