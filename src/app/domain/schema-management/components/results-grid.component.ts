@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Component, computed, effect, signal, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, effect, signal, inject, ChangeDetectionStrategy, DestroyRef, QueryList, ViewChildren } from '@angular/core';
 import { KeyValuePipe } from '@angular/common';
-import { CdkMenuModule } from '@angular/cdk/menu';
-import { ScrollingModule } from '@angular/cdk/scrolling';
+import { CdkMenuModule, CdkMenuTrigger } from '@angular/cdk/menu';
+import { ScrollDispatcher, ScrollingModule } from '@angular/cdk/scrolling';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { SchemaViewStateService } from '../services/schema-view-state.service';
 import { GeneratedSchema } from '../../core/models/randomization.model';
@@ -13,6 +13,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { APP_VERSION } from '../../../../environments/version';
 import { ExcelExportService } from '../services/excel-export.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export type SortDirection = 'asc' | 'desc' | 'none';
 
@@ -72,6 +73,10 @@ export class ResultsGridComponent {
   private readonly toast = inject(ToastService);
   private readonly methodologySpec = inject(MethodologySpecificationService);
   private readonly excelExport = inject(ExcelExportService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly scrollDispatcher = inject(ScrollDispatcher);
+
+  @ViewChildren(CdkMenuTrigger) private menuTriggers?: QueryList<CdkMenuTrigger>;
 
   /**
    * Tracks the row whose kebab menu is currently open so the shared menu
@@ -239,6 +244,11 @@ export class ResultsGridComponent {
     effect(() => {
       this.viewState.syncResults(this.state.results());
     });
+
+    this.scrollDispatcher
+      .scrolled()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.closeOpenMenus());
   }
 
   toggleBlinding() {
@@ -321,6 +331,22 @@ export class ResultsGridComponent {
       delete next[column];
       return next;
     });
+  }
+
+  /** Clears all active column filters at once. */
+  clearAllFilters(): void {
+    this.filterState.set({});
+  }
+
+  /** Closes any currently-open CDK menus. */
+  closeOpenMenus(): void {
+    this.menuTriggers?.forEach(trigger => trigger.close());
+  }
+
+  /** Middle-truncated display value for the audit hash banner. */
+  get truncatedAuditHash(): string {
+    const hash = this.state.results()?.metadata.auditHash ?? '';
+    return hash.length > 24 ? `${hash.substring(0, 12)}...${hash.substring(hash.length - 12)}` : hash;
   }
 
   /** Returns true when the given column has a non-empty active filter. */

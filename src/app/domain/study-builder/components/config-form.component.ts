@@ -562,20 +562,25 @@ export class ConfigFormComponent implements OnInit {
    * of a block override card, based on the selected target type.
    */
   getBlockOverrideTargetOptions(index: number): string[] {
+    return this.getBlockOverrideTargetOptionItems(index).map(option => option.value);
+  }
+
+  getBlockOverrideTargetOptionItems(index: number): { value: string; label: string }[] {
     const targetType = this.blockOverrides.at(index)?.get('targetType')?.value as string;
     if (targetType === 'site') {
-      return (this.form.get('strataGroup.sitesStr')?.value as string ?? '')
-        .split(',').map(s => s.trim()).filter(s => s);
+      return ((this.form.get('strataGroup.sitesStr')?.value as string ?? '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s))
+        .map(site => ({ value: site, label: site }));
     }
-    // For stratum: return computed stratum codes
-    return this.computedStratumCodes();
+    return this.computedStratumOptions();
   }
 
   /**
-   * Computes all stratum codes from the current strata configuration.
-   * These codes are used as keys in `stratumBlockOverrides`.
+   * Computes all stratum values from the current strata configuration.
    */
-  computedStratumCodes(): string[] {
+  private computedStratumOptions(): { value: string; label: string }[] {
     const strataVals = this.strata.value as StratumFormValue[];
     const validStrata = strataVals.filter(s => s.levelsStr?.trim());
     if (validStrata.length === 0) return [];
@@ -589,9 +594,34 @@ export class ConfigFormComponent implements OnInit {
       combos = combos.flatMap(c => levels.map(l => [...c, l]));
     }
 
-    return combos.map(combo =>
-      combo.map(l => l.substring(0, 3).toUpperCase()).join('-')
-    );
+    return combos.map(combo => ({
+      value: combo.map(l => l.substring(0, 3).toUpperCase()).join('-'),
+      label: combo.join(' | ')
+    }));
+  }
+
+  /**
+   * Computes all stratum codes from the current strata configuration.
+   * These codes are used as keys in `stratumBlockOverrides`.
+   */
+  computedStratumCodes(): string[] {
+    return this.computedStratumOptions().map(option => option.value);
+  }
+
+  onRadioGroupArrowKey(event: KeyboardEvent, control: AbstractControl | null, values: readonly string[]): void {
+    if (values.length === 0 || !control) return;
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+
+    const currentValue = String(control.value ?? values[0]);
+    const currentIndex = Math.max(0, values.indexOf(currentValue));
+    const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
+    const nextIndex = (currentIndex + direction + values.length) % values.length;
+    control.setValue(values[nextIndex]);
+
+    const radioGroup = (event.currentTarget as HTMLElement | null)?.closest('[role="radiogroup"]');
+    const radios = radioGroup?.querySelectorAll<HTMLElement>('[role="radio"]');
+    radios?.item(nextIndex)?.focus();
   }
 
   onStrataDrop(event: CdkDragDrop<FormGroup[]>): void {

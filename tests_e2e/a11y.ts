@@ -3,12 +3,13 @@ import { Page } from '@playwright/test';
 
 /**
  * Runs an axe-core accessibility audit against the current page state.
- * Enforces WCAG 2.1 AA standards and fails if any "critical" or "serious"
- * violations are found.
+ * Enforces WCAG 2.1 AA standards and fails if any violations are found
+ * across critical, serious, moderate, or minor impact levels.
  *
  * @param page - The Playwright Page object to audit.
  * @returns The axe accessibility scan results.
- * @throws If critical or serious WCAG 2.1 AA violations are detected.
+ * @throws If WCAG 2.1 AA violations are detected across any impact level
+ * (critical, serious, moderate, or minor).
  */
 export async function checkA11y(page: Page, includeSelector?: string) {
   const builder = new AxeBuilder({ page })
@@ -20,8 +21,9 @@ export async function checkA11y(page: Page, includeSelector?: string) {
 
   const results = await builder.analyze();
 
+  const supportedImpacts = new Set(['critical', 'serious', 'moderate', 'minor']);
   const violations = results.violations.filter(
-    v => v.impact === 'critical' || v.impact === 'serious'
+    v => !!v.impact && supportedImpacts.has(v.impact)
   );
 
   if (violations.length > 0) {

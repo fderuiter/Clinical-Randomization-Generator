@@ -109,10 +109,16 @@ export class TagInputComponent implements OnInit, OnDestroy {
   }
 
   commitInput(): void {
-    const val = this.inputValue.trim().replace(/,+$/, '');
-    if (val && !this.tags.includes(val)) {
-      this.tags = [...this.tags, val];
-      this.update();
+    const rawVal = this.inputValue.trim().replace(/,+$/, '');
+    if (rawVal) {
+      const newTags = rawVal
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t && !this.tags.includes(t));
+      if (newTags.length > 0) {
+        this.tags = [...this.tags, ...newTags];
+        this.update();
+      }
     }
     this.inputValue = '';
   }

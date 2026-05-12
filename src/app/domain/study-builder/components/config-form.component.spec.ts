@@ -346,6 +346,60 @@ describe('ConfigFormComponent (domain)', () => {
     });
   });
 
+  describe('block override target options', () => {
+    it('should render readable stratum labels while keeping code values', () => {
+      component.strata.at(0).get('levelsStr')?.setValue('<65, >=65');
+      component.addStratum();
+      component.strata.at(1).get('name')?.setValue('Condition');
+      component.strata.at(1).get('levelsStr')?.setValue('Diabetic, Diastolic');
+      component.addBlockOverride();
+      component.blockOverrides.at(0).get('targetType')?.setValue('stratum');
+
+      const options = component.getBlockOverrideTargetOptionItems(0);
+
+      expect(options.map(o => o.value)).toEqual(['<65-DIA', '<65-DIA', '>=6-DIA', '>=6-DIA']);
+      expect(options.map(o => o.label)).toEqual([
+        '<65 | Diabetic',
+        '<65 | Diastolic',
+        '>=65 | Diabetic',
+        '>=65 | Diastolic',
+      ]);
+    });
+  });
+
+  describe('custom radio keyboard behavior', () => {
+    it('should move to the next option on ArrowRight', () => {
+      const control = component.form.get('designGroup.randomizationMethod');
+      control?.setValue('BLOCK');
+      const button = document.createElement('button');
+      const group = document.createElement('div');
+      group.setAttribute('role', 'radiogroup');
+      const radioOne = document.createElement('button');
+      radioOne.setAttribute('role', 'radio');
+      const radioTwo = document.createElement('button');
+      radioTwo.setAttribute('role', 'radio');
+      group.append(radioOne, radioTwo);
+      group.append(button);
+      button.focus();
+      const event = new KeyboardEvent('keydown', { key: 'ArrowRight' });
+      Object.defineProperty(event, 'currentTarget', { value: radioOne });
+
+      component.onRadioGroupArrowKey(event, control, ['BLOCK', 'MINIMIZATION']);
+
+      expect(control?.value).toBe('MINIMIZATION');
+    });
+
+    it('should wrap to the last option on ArrowLeft', () => {
+      const control = component.form.get('capsGroup.capStrategy');
+      control?.setValue('MANUAL_MATRIX');
+      const event = new KeyboardEvent('keydown', { key: 'ArrowLeft' });
+
+      component.onRadioGroupArrowKey(event, control, ['MANUAL_MATRIX', 'PROPORTIONAL', 'MARGINAL_ONLY']);
+
+      expect(control?.value).toBe('MARGINAL_ONLY');
+    });
+  });
+
   describe('metadata fields', () => {
     it('should preserve seed and subjectIdMask values after metadata edits', () => {
       expect(component.form.get('metadataGroup.subjectIdMask')?.value).toBe('{SITE}-{STRATUM}-{SEQ:3}');
