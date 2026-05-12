@@ -42,12 +42,39 @@ async function assertSelectReadableStyling(select: Locator): Promise<void> {
   expect(styleState.borderColor).not.toBe('rgba(0, 0, 0, 0)');
 }
 
+async function assertInputAndButtonReadable(input: Locator, button: Locator): Promise<void> {
+  await expect(input).toBeVisible();
+  await expect(button).toBeVisible();
+
+  const inputStyle = await input.evaluate((element) => {
+    const style = window.getComputedStyle(element as HTMLElement);
+    return {
+      color: style.color,
+      backgroundColor: style.backgroundColor,
+      borderColor: style.borderColor,
+    };
+  });
+  expect(inputStyle.color).not.toBe(inputStyle.backgroundColor);
+  expect(inputStyle.borderColor).not.toBe('rgba(0, 0, 0, 0)');
+
+  const buttonStyle = await button.evaluate((element) => {
+    const style = window.getComputedStyle(element as HTMLElement);
+    return {
+      borderRadius: style.borderRadius,
+    };
+  });
+  expect(buttonStyle.borderRadius).not.toBe('0px');
+}
+
 async function runTransientStateChecks(page: Page, mode: 'light' | 'dark'): Promise<void> {
   await openGenerator(page);
   if (mode === 'dark') await applyDarkMode(page);
 
   await loadPreset(page, 'Simple');
+  await assertInputAndButtonReadable(page.locator('#protocolId'), page.getByRole('button', { name: /^Next$/i }).first());
   await assertSelectReadableStyling(page.locator('#phase'));
+  await expect(page.locator('#protocolId')).toHaveScreenshot(`input-protocol-${mode}.png`, { maxDiffPixels: 100 });
+  await expect(page.getByRole('button', { name: /^Next$/i }).first()).toHaveScreenshot(`button-next-${mode}.png`, { maxDiffPixels: 100 });
   await goToStep(page, 4);
   await page.getByRole('button', { name: /\+ Add Override/i }).click();
   const targetTypeSelect = page.locator('[formcontrolname="targetType"]').first();
