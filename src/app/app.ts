@@ -21,7 +21,7 @@ import {APP_VERSION} from '../environments/version';
     @if (updateService.updateAvailable()) {
       <app-update-banner />
     }
-    <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-sans transition-colors duration-200"
+    <div class="min-h-screen flex flex-col bg-base text-main font-sans transition-colors duration-200"
          [class.pt-10]="updateService.updateAvailable()">
       <header class="bg-indigo-700 dark:bg-slate-800 text-white shadow-md dark:shadow-slate-900/50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
@@ -226,7 +226,7 @@ import {APP_VERSION} from '../environments/version';
         <router-outlet></router-outlet>
       </main>
 
-      <footer class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
+      <footer class="bg-surface border-t border-border-base">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
 
@@ -236,26 +236,26 @@ import {APP_VERSION} from '../environments/version';
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M5 6l7-3 7 3M3 10l2 6a4 4 0 004 0l2-6M13 10l2 6a4 4 0 004 0l2-6" />
                 </svg>
-                <a href="https://equipose.org" class="font-semibold text-gray-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Equipose</a>
+                <a href="https://equipose.org" class="font-semibold text-main hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Equipose</a>
               </div>
-              <p class="text-xs text-gray-600 dark:text-slate-400 leading-relaxed">
+              <p class="text-xs text-muted leading-relaxed">
                 Free, browser-based stratified block randomization for clinical trials. No server. No sign-up. No data shared.
               </p>
-              <p class="text-xs text-gray-600 dark:text-slate-400">© {{ currentYear }} Frederick de Ruiter</p>
+              <p class="text-xs text-muted">© {{ currentYear }} Frederick de Ruiter</p>
             </div>
 
             <!-- Col 2: Links -->
             <div class="flex flex-col gap-1.5 text-sm">
-              <p class="text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1">Navigation</p>
-              <a routerLink="/about" class="text-gray-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">About</a>
-              <a routerLink="/generator" class="text-gray-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Generator</a>
-              <a routerLink="/verify" class="text-gray-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Verify Schema</a>
-              <a href="https://github.com/fderuiter/Clinical-Randomization-Generator" target="_blank" rel="noopener noreferrer" class="text-gray-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">GitHub</a>
+              <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Navigation</p>
+              <a routerLink="/about" class="text-muted hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">About</a>
+              <a routerLink="/generator" class="text-muted hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Generator</a>
+              <a routerLink="/verify" class="text-muted hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Verify Schema</a>
+              <a href="https://github.com/fderuiter/Clinical-Randomization-Generator" target="_blank" rel="noopener noreferrer" class="text-muted hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">GitHub</a>
             </div>
 
             <!-- Col 3: Technical info -->
             <div class="flex flex-col gap-2 text-sm">
-              <p class="text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1">Details</p>
+              <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Details</p>
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="inline-flex items-center gap-1 rounded-md bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 text-xs font-mono font-medium text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-700">
                   {{ appVersion }}
@@ -274,7 +274,7 @@ import {APP_VERSION} from '../environments/version';
               </p>
               <a href="https://github.com/fderuiter/Clinical-Randomization-Generator"
                  target="_blank" rel="noopener noreferrer"
-                 class="inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                 class="inline-flex items-center gap-1.5 text-xs text-muted hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
                 </svg>

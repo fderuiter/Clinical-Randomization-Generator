@@ -31,22 +31,22 @@ export type VerificationStatus = 'idle' | 'pass' | 'fail' | 'error';
     <div class="space-y-8">
 
       <!-- Header -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+      <div class="bg-surface rounded-xl shadow-sm border border-border-subtle p-6">
         <div class="flex items-center gap-3 mb-2">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600 dark:text-indigo-400" fill="none"
                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round"
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-slate-100">Verify Schema Reproducibility</h2>
+          <h2 class="text-lg font-semibold text-main">Verify Schema Reproducibility</h2>
         </div>
-        <p class="text-gray-600 dark:text-slate-400 text-sm leading-relaxed">
+        <p class="text-muted text-sm leading-relaxed">
           Upload a previously exported Randomization Result JSON file. Use the
           <strong class="text-gray-800 dark:text-slate-200">JSON</strong> export button on the
           <a routerLink="/generator" class="text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800 dark:hover:text-indigo-300">Generator</a>
           page to obtain this file, and make sure the results are
           <strong class="text-gray-800 dark:text-slate-200">unblinded before exporting</strong> -
-          blinded exports redact <code class="text-xs bg-gray-100 dark:bg-slate-700 rounded px-1">treatmentArmId</code>
+          blinded exports redact <code class="text-xs bg-subtle rounded px-1">treatmentArmId</code>
           and will cause verification to fail. The system will silently re-run
           the core algorithm using the embedded seed and configuration, then perform a strict row-by-row
           comparison to produce a formal Pass/Fail verification report.
@@ -54,30 +54,30 @@ export type VerificationStatus = 'idle' | 'pass' | 'fail' | 'error';
       </div>
 
       <!-- Upload Zone -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-slate-100 mb-4">Upload Schema File</h3>
+      <div class="bg-surface rounded-xl shadow-sm border border-border-subtle p-6">
+        <h3 class="text-sm font-semibold text-main mb-4">Upload Schema File</h3>
 
         <label
           for="schema-file-input"
           class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-xl cursor-pointer transition-colors"
           [class]="isDragging()
             ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-            : 'border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900/30 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'"
+            : 'border-border-strong bg-base/30 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'"
           (dragover)="onDragOver($event)"
           (dragleave)="onDragLeave()"
           (drop)="onDrop($event)"
           data-testid="upload-zone"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-400 dark:text-slate-500 mb-2" fill="none"
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-disabled mb-2" fill="none"
                viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round"
                   d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
           </svg>
-          <p class="text-sm text-gray-600 dark:text-slate-400">
+          <p class="text-sm text-muted">
             <span class="font-medium text-indigo-600 dark:text-indigo-400">Click to upload</span>
             &nbsp;or drag and drop
           </p>
-          <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">JSON files only</p>
+          <p class="text-xs text-disabled mt-1">JSON files only</p>
 
           <input
             id="schema-file-input"
@@ -90,7 +90,7 @@ export type VerificationStatus = 'idle' | 'pass' | 'fail' | 'error';
         </label>
 
         @if (fileName()) {
-          <p class="mt-3 text-sm text-gray-600 dark:text-slate-400">
+          <p class="mt-3 text-sm text-muted">
             <span class="font-medium">Selected:</span> {{ fileName() }}
           </p>
         }
@@ -154,14 +154,14 @@ export type VerificationStatus = 'idle' | 'pass' | 'fail' | 'error';
           </div>
 
           <!-- Discrepancy Table -->
-          <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden"
+          <div class="bg-surface rounded-xl shadow-sm border border-border-subtle overflow-hidden"
                data-testid="discrepancy-table">
-            <div class="px-6 py-4 border-b border-gray-100 dark:border-slate-700">
-              <h4 class="text-sm font-semibold text-gray-900 dark:text-slate-100">Mismatch Log</h4>
+            <div class="px-6 py-4 border-b border-border-subtle">
+              <h4 class="text-sm font-semibold text-main">Mismatch Log</h4>
             </div>
             <div class="overflow-x-auto max-h-96 overflow-y-auto">
               <table class="min-w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-slate-900/50 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider sticky top-0">
+                <thead class="bg-subtle/50 text-xs font-semibold text-muted uppercase tracking-wider sticky top-0">
                   <tr>
                     <th class="px-6 py-3 text-left">Row</th>
                     <th class="px-6 py-3 text-left">Subject ID</th>
@@ -172,10 +172,10 @@ export type VerificationStatus = 'idle' | 'pass' | 'fail' | 'error';
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
                   @for (d of discrepancies(); track d.rowIndex + '_' + d.field) {
-                    <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/30" data-testid="discrepancy-row">
+                    <tr class="hover:bg-hover/30" data-testid="discrepancy-row">
                       <td class="px-6 py-3 tabular-nums text-gray-700 dark:text-slate-300">{{ d.rowIndex + 1 }}</td>
                       <td class="px-6 py-3 font-mono text-gray-700 dark:text-slate-300">{{ d.subjectId }}</td>
-                      <td class="px-6 py-3 text-gray-600 dark:text-slate-400">{{ d.field }}</td>
+                      <td class="px-6 py-3 text-muted">{{ d.field }}</td>
                       <td class="px-6 py-3 text-emerald-700 dark:text-emerald-400">{{ d.expected }}</td>
                       <td class="px-6 py-3 text-red-700 dark:text-red-400">{{ d.actual }}</td>
                     </tr>

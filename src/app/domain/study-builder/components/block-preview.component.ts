@@ -121,15 +121,12 @@ export function buildPreviews(arms: ArmInput[], blockSizes: number[]): BlockPrev
   imports: [MatTooltipModule],
   styles: [`
     .invalid-slot {
-      background: repeating-linear-gradient(45deg, #fee2e2, #fee2e2 4px, #ffffff 4px, #ffffff 10px);
-    }
-    :host-context(.dark) .invalid-slot {
-      background: repeating-linear-gradient(45deg, #7f1d1d, #7f1d1d 4px, #1e293b 4px, #1e293b 10px);
+      background: repeating-linear-gradient(45deg, var(--invalid-stripe), var(--invalid-stripe) 4px, var(--invalid-bg) 4px, var(--invalid-bg) 10px);
     }
   `],
   template: `
     <div class="space-y-4">
-      <h3 class="text-sm font-semibold text-gray-700 dark:text-slate-300 flex items-center gap-1.5">
+      <h3 class="text-sm font-semibold text-muted flex items-center gap-1.5">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 8a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zm6-6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
         </svg>
@@ -140,12 +137,12 @@ export function buildPreviews(arms: ArmInput[], blockSizes: number[]): BlockPrev
       @if (arms().length > 0) {
         <div class="flex flex-wrap gap-2">
           @for (arm of arms(); track arm.id; let i = $index) {
-            <span class="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-slate-300">
+            <span class="inline-flex items-center gap-1 text-xs text-muted">
               <span class="inline-block h-3 w-3 rounded-sm {{ armColor(i) }}"></span>
               {{ arm.name || arm.id }}
             </span>
           }
-          <span class="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-slate-400">
+          <span class="inline-flex items-center gap-1 text-xs text-muted">
             <span class="inline-block h-3 w-3 rounded-sm border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-900/20"></span>
             Unallocatable
           </span>
@@ -158,16 +155,16 @@ export function buildPreviews(arms: ArmInput[], blockSizes: number[]): BlockPrev
         <div class="space-y-3">
           <div class="flex flex-wrap gap-2">
             @for (n of skeleton; track $index) {
-              <div class="rounded-md h-8 w-8 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600"></div>
+              <div class="rounded-md h-8 w-8 bg-subtle border border-border-base"></div>
             }
           </div>
-          <p class="text-xs text-gray-600 dark:text-slate-400 italic">Enter block sizes above to see a preview.</p>
+          <p class="text-xs text-muted italic">Enter block sizes above to see a preview.</p>
         </div>
       } @else {
         @for (preview of previews(); track preview.blockSize) {
           <div class="space-y-1">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-medium text-gray-600 dark:text-slate-300">Block size {{ preview.blockSize }}</span>
+              <span class="text-xs font-medium text-muted">Block size {{ preview.blockSize }}</span>
               @if (preview.isValid) {
                 <span class="inline-flex items-center gap-0.5 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -186,7 +183,7 @@ export function buildPreviews(arms: ArmInput[], blockSizes: number[]): BlockPrev
             </div>
             <!-- Blister-pack grid -->
             <div
-              class="grid gap-1.5 p-2 rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600"
+              class="grid gap-1.5 p-2 rounded-lg bg-subtle/50 border border-border-base"
               [style.grid-template-columns]="'repeat(' + gridCols(preview.blockSize) + ', minmax(0, 1fr))'"
               role="group"
               [attr.aria-label]="'Block of ' + preview.blockSize + ' subjects'"

@@ -20,7 +20,7 @@ import { Subscription } from 'rxjs';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
-      class="flex flex-wrap gap-1.5 items-center min-h-[44px] border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 cursor-text transition-colors"
+      class="flex flex-wrap gap-1.5 items-center min-h-[44px] border border-border-strong rounded-lg px-3 py-2 bg-white dark:bg-slate-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 cursor-text transition-colors"
       (click)="tagInput.focus()" (keydown.enter)="tagInput.focus()" tabindex="0"
     >
       @for (tag of tags; track tag) {
@@ -43,10 +43,10 @@ import { Subscription } from 'rxjs';
         (blur)="onBlur()"
         [placeholder]="tags.length === 0 ? placeholder : ''"
         [attr.aria-label]="placeholder"
-        class="flex-1 min-w-[80px] outline-none text-sm bg-transparent py-0.5 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500"
+        class="flex-1 min-w-[80px] outline-none text-sm bg-transparent py-0.5 text-main placeholder-disabled"
       />
     </div>
-    <p class="text-xs text-gray-600 dark:text-slate-400 mt-1">
+    <p class="text-xs text-muted mt-1">
       Press <kbd class="font-mono bg-gray-100 dark:bg-slate-600 dark:text-slate-300 border border-gray-200 dark:border-slate-500 rounded px-1">Enter</kbd>
       or comma to add · Backspace removes last tag
     </p>

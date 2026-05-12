@@ -20,10 +20,10 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
         <!-- Modal panel -->
-        <div class="relative inline-block align-bottom bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-xl text-left overflow-hidden shadow-xl dark:shadow-slate-900/50 transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full border border-gray-100 dark:border-slate-700">
+        <div class="relative inline-block align-bottom bg-overlay backdrop-blur-md rounded-xl text-left overflow-hidden shadow-xl dark:shadow-slate-900/50 transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full border border-border-subtle">
 
           <!-- Header -->
-          <div class="bg-white/80 dark:bg-slate-800/80 px-6 pt-5 pb-4">
+          <div class="bg-overlay/80 px-6 pt-5 pb-4">
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-3">
                 <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 dark:bg-indigo-900/40 rounded-full flex items-center justify-center">
@@ -32,10 +32,10 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                   </svg>
                 </div>
                 <div>
-                  <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-100" id="mc-modal-title">
+                  <h3 class="text-lg font-semibold text-main" id="mc-modal-title">
                     Statistical QA - Monte Carlo Validation
                   </h3>
-                  <p class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                  <p class="text-xs text-muted mt-0.5">
                     10,000 independent trial simulations using cryptographically random seeds
                   </p>
                 </div>
@@ -44,7 +44,7 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                 <button
                   type="button"
                   (click)="facade.closeMonteCarloModal()"
-                  class="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
+                  class="text-disabled hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
                   aria-label="Close"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -82,7 +82,7 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                     data-testid="mc-progress-bar"
                   ></div>
                 </div>
-                <p class="text-xs text-gray-500 dark:text-slate-400 text-center">
+                <p class="text-xs text-muted text-center">
                   {{ progressIterations() | number }} / 10,000 iterations completed - running off the main UI thread via Web Worker
                 </p>
               </div>
@@ -93,12 +93,12 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
               <!-- Summary stats -->
               <div [class]="summaryGridClass(results.attritionRate)">
                 <div class="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4 text-center">
-                  <p class="text-2xl font-bold text-gray-900 dark:text-slate-100" data-testid="simulations-run-value">{{ results.totalIterations | number }}</p>
-                  <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Simulations Run</p>
+                  <p class="text-2xl font-bold text-main" data-testid="simulations-run-value">{{ results.totalIterations | number }}</p>
+                  <p class="text-xs text-muted mt-1">Simulations Run</p>
                 </div>
                 <div class="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4 text-center">
-                  <p class="text-2xl font-bold text-gray-900 dark:text-slate-100">{{ results.totalSubjectsSimulated | number }}</p>
-                  <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Total Subjects Simulated</p>
+                  <p class="text-2xl font-bold text-main">{{ results.totalSubjectsSimulated | number }}</p>
+                  <p class="text-xs text-muted mt-1">Total Subjects Simulated</p>
                 </div>
                 @if (results.attritionRate > 0) {
                   <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center border border-purple-100 dark:border-purple-800/40">
@@ -108,7 +108,7 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                 }
                 <div [class]="deviationCardClass(results.attritionRate)">
                   <p class="text-2xl font-bold" [class]="maxDeviationClass()">{{ maxDeviation() | number:'1.4-4' }}%</p>
-                  <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Max Arm Deviation</p>
+                  <p class="text-xs text-muted mt-1">Max Arm Deviation</p>
                 </div>
               </div>
 
@@ -120,35 +120,35 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                     <div class="space-y-1">
                       <div class="flex justify-between items-center">
                         <span class="text-xs font-medium text-gray-600 dark:text-slate-300">{{ arm.armName }} ({{ arm.armId }})</span>
-                        <span class="text-xs text-gray-500 dark:text-slate-400">Deviation: <span [class]="deviationClass(arm)" class="font-semibold">{{ deviation(arm) | number:'1.4-4' }}%</span></span>
+                        <span class="text-xs text-muted">Deviation: <span [class]="deviationClass(arm)" class="font-semibold">{{ deviation(arm) | number:'1.4-4' }}%</span></span>
                       </div>
                       <!-- Expected bar -->
                       <div class="flex items-center gap-2">
-                        <span class="text-xs w-20 text-right text-gray-400 dark:text-slate-500">Expected</span>
-                        <div class="flex-1 bg-gray-100 dark:bg-slate-700 rounded-full h-4 overflow-hidden">
+                        <span class="text-xs w-20 text-right text-disabled">Expected</span>
+                        <div class="flex-1 bg-subtle rounded-full h-4 overflow-hidden">
                           <div
                             class="bg-indigo-300 dark:bg-indigo-600/60 h-4 rounded-full transition-all duration-500"
                             [style.width.%]="barWidth(arm.expectedCount, results.totalSubjectsSimulated)"
                           ></div>
                         </div>
-                        <span class="text-xs w-20 text-gray-500 dark:text-slate-400 tabular-nums">{{ arm.expectedCount | number }}</span>
+                        <span class="text-xs w-20 text-muted tabular-nums">{{ arm.expectedCount | number }}</span>
                       </div>
                       <!-- Actual bar -->
                       <div class="flex items-center gap-2">
-                        <span class="text-xs w-20 text-right text-gray-400 dark:text-slate-500">Actual</span>
-                        <div class="flex-1 bg-gray-100 dark:bg-slate-700 rounded-full h-4 overflow-hidden">
+                        <span class="text-xs w-20 text-right text-disabled">Actual</span>
+                        <div class="flex-1 bg-subtle rounded-full h-4 overflow-hidden">
                           <div
                             class="bg-indigo-600 dark:bg-indigo-400 h-4 rounded-full transition-all duration-500"
                             [style.width.%]="barWidth(arm.actualCount, results.totalSubjectsSimulated)"
                           ></div>
                         </div>
-                        <span class="text-xs w-20 text-gray-500 dark:text-slate-400 tabular-nums">{{ arm.actualCount | number }}</span>
+                        <span class="text-xs w-20 text-muted tabular-nums">{{ arm.actualCount | number }}</span>
                       </div>
                       <!-- Post-attrition bar (only when attrition > 0) -->
                       @if (results.attritionRate > 0) {
                         <div class="flex items-center gap-2">
                           <span class="text-xs w-20 text-right text-purple-500 dark:text-purple-400">Retained</span>
-                          <div class="flex-1 bg-gray-100 dark:bg-slate-700 rounded-full h-4 overflow-hidden">
+                          <div class="flex-1 bg-subtle rounded-full h-4 overflow-hidden">
                             <div
                               class="bg-purple-500 dark:bg-purple-400 h-4 rounded-full transition-all duration-500"
                               [style.width.%]="barWidth(arm.retainedCount, results.totalRetainedSubjects)"
@@ -165,11 +165,11 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                 <div class="flex flex-wrap gap-4 mt-3">
                   <div class="flex items-center gap-1.5">
                     <div class="w-3 h-3 rounded-full bg-indigo-300 dark:bg-indigo-600/60"></div>
-                    <span class="text-xs text-gray-500 dark:text-slate-400">Target (Expected)</span>
+                    <span class="text-xs text-muted">Target (Expected)</span>
                   </div>
                   <div class="flex items-center gap-1.5">
                     <div class="w-3 h-3 rounded-full bg-indigo-600 dark:bg-indigo-400"></div>
-                    <span class="text-xs text-gray-500 dark:text-slate-400">Actual (Simulated)</span>
+                    <span class="text-xs text-muted">Actual (Simulated)</span>
                   </div>
                   @if (results.attritionRate > 0) {
                     <div class="flex items-center gap-1.5">
@@ -181,7 +181,7 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
               </div>
 
               <!-- Per-arm detail table -->
-              <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-700">
+              <div class="overflow-x-auto rounded-lg border border-border-base">
                 <table class="min-w-full text-xs divide-y divide-gray-200 dark:divide-slate-700">
                   <thead class="bg-gray-50 dark:bg-slate-700/50">
                     <tr>
@@ -195,10 +195,10 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                       <th class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Deviation</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-gray-100 dark:divide-slate-700/50 bg-white dark:bg-slate-800">
+                  <tbody class="divide-y divide-gray-100 dark:divide-slate-700/50 bg-surface">
                     @for (arm of results.arms; track arm.armId) {
                       <tr>
-                        <td class="px-4 py-2 font-medium text-gray-900 dark:text-slate-100">{{ arm.armName }} <span class="text-gray-400 dark:text-slate-500">({{ arm.armId }})</span></td>
+                        <td class="px-4 py-2 font-medium text-main">{{ arm.armName }} <span class="text-disabled">({{ arm.armId }})</span></td>
                         <td class="px-4 py-2 text-right text-gray-600 dark:text-slate-300">{{ arm.ratio }}</td>
                         <td class="px-4 py-2 text-right tabular-nums text-gray-600 dark:text-slate-300">{{ arm.expectedCount | number }}</td>
                         <td class="px-4 py-2 text-right tabular-nums text-gray-600 dark:text-slate-300">{{ arm.actualCount | number }}</td>
@@ -245,11 +245,11 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
 
           <!-- Footer -->
           @if (!facade.isMonteCarloRunning()) {
-            <div class="bg-gray-50/80 dark:bg-slate-900/50 px-6 py-3 flex justify-end border-t border-gray-100 dark:border-slate-700">
+            <div class="bg-gray-50/80 dark:bg-slate-900/50 px-6 py-3 flex justify-end border-t border-border-subtle">
               <button
                 type="button"
                 (click)="facade.closeMonteCarloModal()"
-                class="inline-flex justify-center rounded-lg border border-gray-300 dark:border-slate-600 shadow-sm px-4 py-2 bg-white dark:bg-slate-700 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                class="inline-flex justify-center rounded-lg border border-border-strong shadow-sm px-4 py-2 bg-white dark:bg-slate-700 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
                 data-testid="modal-close-footer"
               >
                 Close

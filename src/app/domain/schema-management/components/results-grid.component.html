@@ -20,7 +20,7 @@
       <button
         type="button"
         (click)="copyAuditHash()"
-        class="shrink-0 p-2 rounded-lg border border-indigo-300 dark:border-indigo-600 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 transition-colors"
+        class="shrink-0 p-2 rounded-lg border border-indigo-300 dark:border-indigo-600 bg-surface text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 transition-colors"
         aria-label="Copy audit hash to clipboard"
         data-testid="copy-hash-btn">
         @if (hashCopied()) {
@@ -37,19 +37,19 @@
       </button>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
-      <div class="p-4 sm:p-6 border-b border-gray-100 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div class="bg-surface rounded-xl shadow-sm border border-border-subtle overflow-hidden">
+      <div class="p-4 sm:p-6 border-b border-border-subtle flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 class="text-xl font-bold text-gray-900 dark:text-slate-100">Generated Schema</h2>
-          <p class="text-sm text-gray-600 dark:text-slate-400 mt-1">
-            Protocol: {{data.metadata.protocolId}} | Seed: <span class="font-mono bg-gray-100 dark:bg-slate-700 dark:text-slate-300 px-1 rounded">{{data.metadata.seed}}</span>
+          <h2 class="text-xl font-bold text-main">Generated Schema</h2>
+          <p class="text-sm text-muted mt-1">
+            Protocol: {{data.metadata.protocolId}} | Seed: <span class="font-mono bg-subtle dark:text-slate-300 px-1 rounded">{{data.metadata.seed}}</span>
           </p>
         </div>
         
         <div class="flex items-center gap-3 flex-wrap">
 
           <!-- View Mode Toggle -->
-          <div class="inline-flex rounded-lg border border-gray-300 dark:border-slate-600 overflow-hidden text-sm font-medium" role="radiogroup" aria-label="View mode">
+          <div class="inline-flex rounded-lg border border-border-strong overflow-hidden text-sm font-medium" role="radiogroup" aria-label="View mode">
             <button
               type="button"
               role="radio"
@@ -66,7 +66,7 @@
               role="radio"
               [attr.aria-checked]="viewMode() === 'grouped'"
               (click)="viewMode.set('grouped')"
-              class="px-3 py-1.5 transition-colors border-l border-gray-300 dark:border-slate-600"
+              class="px-3 py-1.5 transition-colors border-l border-border-strong"
               [class]="viewMode() === 'grouped'
                 ? 'bg-indigo-500 text-white'
                 : 'bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600'">
@@ -88,7 +88,7 @@
           
           <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-1"></div>
           
-          <button (click)="exportCsv()" class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1">
+          <button (click)="exportCsv()" class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-border-strong text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
@@ -98,13 +98,13 @@
             (click)="exportXlsx()"
             data-testid="export-xlsx-btn"
             title="Export as Excel (.xlsx) – preserves leading zeros and provides two-sheet audit workbook"
-            class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1">
+            class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-border-strong text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Excel
           </button>
-          <button (click)="exportPdf()" class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1">
+          <button (click)="exportPdf()" class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-border-strong text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
@@ -116,7 +116,7 @@
             [disabled]="!isUnblinded()"
             [title]="isUnblinded() ? 'Download unblinded results as JSON for reproducibility verification' : 'Unblind the schema to enable JSON export'"
             [attr.aria-label]="isUnblinded() ? 'Export JSON' : 'JSON export requires unblinded schema'"
-            class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-slate-700">
+            class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-border-strong text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-slate-700">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
@@ -134,7 +134,7 @@
                 <span class="font-mono text-sm font-semibold text-slate-900 dark:text-slate-100">
                   @for (chunk of splitSubjectId(row.subjectId); track $index) {
                     @if ($index > 0) {
-                      <span class="text-gray-500 dark:text-slate-400">-</span>
+                      <span class="text-muted">-</span>
                     }
                     <span>{{chunk}}</span>
                   }
@@ -144,7 +144,7 @@
                   type="button"
                   [cdkMenuTriggerFor]="rowMenu"
                   (click)="openRowMenu(row)"
-                  class="inline-flex items-center justify-center w-11 h-11 rounded-full text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
+                  class="inline-flex items-center justify-center w-11 h-11 rounded-full text-muted hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
                   [attr.aria-label]="'Actions for subject ' + row.subjectId"
                   [attr.title]="'Actions for subject ' + row.subjectId"
                 >
@@ -156,20 +156,20 @@
                 </button>
               </div>
               <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                <dt class="text-gray-600 dark:text-slate-400">Site</dt>
+                <dt class="text-muted">Site</dt>
                 <dd class="font-semibold text-slate-900 dark:text-slate-100">{{row.site}}</dd>
                 @for (stratum of data.metadata.strata; track stratum.id) {
-                  <dt class="text-gray-600 dark:text-slate-400">{{stratum.name || stratum.id}}</dt>
+                  <dt class="text-muted">{{stratum.name || stratum.id}}</dt>
                   <dd class="text-gray-700 dark:text-slate-300">{{row.stratum[stratum.id]}}</dd>
                 }
-                <dt class="text-gray-600 dark:text-slate-400">Block</dt>
-                <dd class="tabular-nums text-slate-900 dark:text-slate-100">{{row.blockNumber}} <span class="text-gray-600 dark:text-slate-400">(Size: {{row.blockSize}})</span></dd>
-                <dt class="text-gray-600 dark:text-slate-400">Treatment Arm</dt>
+                <dt class="text-muted">Block</dt>
+                <dd class="tabular-nums text-slate-900 dark:text-slate-100">{{row.blockNumber}} <span class="text-muted">(Size: {{row.blockSize}})</span></dd>
+                <dt class="text-muted">Treatment Arm</dt>
                 <dd data-testid="result-arm-cell">
                   @if (isUnblinded()) {
                     <span class="font-semibold text-slate-900 dark:text-slate-100">{{row.treatmentArm}}</span>
                   } @else {
-                    <span class="text-gray-600 dark:text-slate-400">*** BLINDED ***</span>
+                    <span class="text-muted">*** BLINDED ***</span>
                   }
                 </dd>
               </dl>
@@ -181,7 +181,7 @@
         <!-- ── FLAT VIEW: CDK Virtual-Scroll Viewport ──────────────────────── -->
         @if (viewMode() === 'flat') {
           @if (processedData().length === 0) {
-            <div class="h-[600px] w-full flex items-center justify-center p-8 text-center text-gray-500 dark:text-slate-400">
+            <div class="h-[600px] w-full flex items-center justify-center p-8 text-center text-muted">
               <div class="space-y-2">
                 <p>No subjects match the current filters.</p>
                 <button type="button" (click)="clearAllFilters()" class="text-indigo-600 dark:text-indigo-400 underline">Clear Filters</button>
@@ -191,11 +191,11 @@
             <cdk-virtual-scroll-viewport itemSize="48" class="h-[600px] w-full overflow-auto" (scroll)="closeOpenMenus()">
               <table class="min-w-full border-collapse">
               <!-- Sticky header: sticks to the top of the scroll viewport -->
-              <thead class="sticky top-0 z-20 bg-gray-50 dark:bg-slate-900/50">
+              <thead class="sticky top-0 z-20 bg-subtle/50">
                 <tr>
                   <!-- Subject ID – pinned column (intersection: z-30) -->
                   <th scope="col"
-                      class="sticky left-0 z-30 bg-gray-50 dark:bg-slate-900/50 border-r border-gray-200 dark:border-slate-600 px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                      class="sticky left-0 z-30 bg-subtle/50 border-r border-border-base px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">
                     <button (click)="toggleSort('subjectId')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" aria-label="Sort by Subject ID" title="Sort by Subject ID">
                       Subject ID
                       <!-- Chevron sort indicator -->
@@ -210,7 +210,7 @@
                   </th>
 
                   <!-- Site column with sort + filter -->
-                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">
                     <div class="inline-flex items-center gap-1">
                       <button (click)="toggleSort('site')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Site" title="Sort by Site">
                         Site
@@ -240,7 +240,7 @@
 
                   <!-- Dynamic stratum columns with filter -->
                   @for (stratum of data.metadata.strata; track stratum.id) {
-                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">
                       <div class="inline-flex items-center gap-1">
                         <button (click)="toggleSort('stratum_' + stratum.id)" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" [attr.aria-label]="'Sort by ' + (stratum.name || stratum.id)" [attr.title]="'Sort by ' + (stratum.name || stratum.id)">
                           {{stratum.name || stratum.id}}
@@ -269,7 +269,7 @@
                   }
 
                   <!-- Block column -->
-                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">
                     <button (click)="toggleSort('blockNumber')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Block" title="Sort by Block">
                       Block
                       <svg class="h-3 w-3 transition-transform"
@@ -283,7 +283,7 @@
                   </th>
 
                   <!-- Treatment Arm column with sort + filter -->
-                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">
                     <div class="inline-flex items-center gap-1">
                       <button (click)="toggleSort('treatmentArm')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Treatment Arm" title="Sort by Treatment Arm">
                         Treatment Arm
@@ -311,31 +311,31 @@
                   </th>
 
                   <!-- Actions column -->
-                  <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">Actions</th>
+                  <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
 
               <!-- Virtual rows: only visible rows are in the DOM -->
-              <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+              <tbody class="bg-surface divide-y divide-gray-200 dark:divide-slate-700">
                 <tr *cdkVirtualFor="let row of processedData(); trackBy: trackBySubjectId"
                     data-testid="result-row"
                     class="group hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
                   <!-- Subject ID – pinned left (z-10 body, solid bg) -->
-                  <td class="sticky left-0 z-10 bg-white dark:bg-slate-800 group-hover:bg-gray-50 dark:group-hover:bg-slate-700/50 border-r border-gray-200 dark:border-slate-600 px-6 py-3 whitespace-nowrap text-sm font-medium font-mono tabular-nums">
+                  <td class="sticky left-0 z-10 bg-surface group-hover:bg-gray-50 dark:group-hover:bg-slate-700/50 border-r border-border-base px-6 py-3 whitespace-nowrap text-sm font-medium font-mono tabular-nums">
                     @for (chunk of splitSubjectId(row.subjectId); track $index) {
                       @if ($index > 0) {
-                        <span class="text-gray-500 dark:text-slate-400">-</span>
+                        <span class="text-muted">-</span>
                       }
                       <span class="font-semibold text-slate-900 dark:text-slate-100">{{chunk}}</span>
                     }
                   </td>
                   <td class="px-6 py-3 whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-slate-100">{{row.site}}</td>
                   @for (stratum of data.metadata.strata; track stratum.id) {
-                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-slate-400">{{row.stratum[stratum.id]}}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-muted">{{row.stratum[stratum.id]}}</td>
                   }
                   <td class="px-6 py-3 whitespace-nowrap text-sm tabular-nums">
                     <span class="font-semibold text-slate-900 dark:text-slate-100">{{row.blockNumber}}</span>
-                    <span class="text-gray-600 dark:text-slate-400"> (Size: {{row.blockSize}})</span>
+                    <span class="text-muted"> (Size: {{row.blockSize}})</span>
                   </td>
                   <td data-testid="result-arm-cell" class="px-6 py-3 whitespace-nowrap text-sm">
                     @if (isUnblinded()) {
@@ -343,7 +343,7 @@
                         {{row.treatmentArm}}
                       </span>
                     } @else {
-                      <span class="text-gray-600 dark:text-slate-400">
+                      <span class="text-muted">
                         *** BLINDED ***
                       </span>
                     }
@@ -353,7 +353,7 @@
                       type="button"
                       [cdkMenuTriggerFor]="rowMenu"
                       (click)="openRowMenu(row)"
-                      class="inline-flex items-center justify-center w-11 h-11 rounded-full text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
+                      class="inline-flex items-center justify-center w-11 h-11 rounded-full text-muted hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
                       [attr.aria-label]="'Actions for subject ' + row.subjectId"
                             [attr.title]="'Actions for subject ' + row.subjectId"
                     >
@@ -394,19 +394,19 @@
           <!-- ── GROUPED VIEW: standard scrollable table ──────────────────── -->
           <div class="h-[600px] overflow-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-              <thead class="sticky top-0 z-20 bg-gray-50 dark:bg-slate-900/50">
+              <thead class="sticky top-0 z-20 bg-subtle/50">
                 <tr>
-                  <th scope="col" class="sticky left-0 z-30 bg-gray-50 dark:bg-slate-900/50 border-r border-gray-200 dark:border-slate-600 px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Subject ID</th>
-                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Site</th>
+                  <th scope="col" class="sticky left-0 z-30 bg-subtle/50 border-r border-border-base px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Subject ID</th>
+                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Site</th>
                   @for (stratum of data.metadata.strata; track stratum.id) {
-                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">{{stratum.name || stratum.id}}</th>
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">{{stratum.name || stratum.id}}</th>
                   }
-                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Block</th>
-                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Treatment Arm</th>
-                  <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Actions</th>
+                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Block</th>
+                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Treatment Arm</th>
+                  <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-muted uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+              <tbody class="bg-surface divide-y divide-gray-200 dark:divide-slate-700">
                 @for (item of groupedRows(); track $index) {
                   @switch (item.type) {
 
@@ -423,21 +423,21 @@
 
                     @case ('data') {
                       <tr data-testid="result-row" class="group hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-                        <td class="sticky left-0 z-10 bg-white dark:bg-slate-800 group-hover:bg-gray-50 dark:group-hover:bg-slate-700/50 border-r border-gray-200 dark:border-slate-600 px-6 py-5 whitespace-nowrap text-sm font-medium font-mono tabular-nums">
+                        <td class="sticky left-0 z-10 bg-surface group-hover:bg-gray-50 dark:group-hover:bg-slate-700/50 border-r border-border-base px-6 py-5 whitespace-nowrap text-sm font-medium font-mono tabular-nums">
                           @for (chunk of splitSubjectId($any(item).data.subjectId); track $index) {
                             @if ($index > 0) {
-                              <span class="text-gray-500 dark:text-slate-400">-</span>
+                              <span class="text-muted">-</span>
                             }
                             <span class="font-semibold text-slate-900 dark:text-slate-100">{{chunk}}</span>
                           }
                         </td>
                         <td class="px-6 py-5 whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-slate-100">{{$any(item).data.site}}</td>
                         @for (stratum of data.metadata.strata; track stratum.id) {
-                          <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-600 dark:text-slate-400">{{$any(item).data.stratum[stratum.id]}}</td>
+                          <td class="px-6 py-5 whitespace-nowrap text-sm text-muted">{{$any(item).data.stratum[stratum.id]}}</td>
                         }
                         <td class="px-6 py-5 whitespace-nowrap text-sm tabular-nums">
                           <span class="font-semibold text-slate-900 dark:text-slate-100">{{$any(item).data.blockNumber}}</span>
-                          <span class="text-gray-600 dark:text-slate-400"> (Size: {{$any(item).data.blockSize}})</span>
+                          <span class="text-muted"> (Size: {{$any(item).data.blockSize}})</span>
                         </td>
                         <td data-testid="result-arm-cell" class="px-6 py-5 whitespace-nowrap text-sm">
                           @if (isUnblinded()) {
@@ -445,7 +445,7 @@
                               {{$any(item).data.treatmentArm}}
                             </span>
                           } @else {
-                            <span class="text-gray-600 dark:text-slate-400">
+                            <span class="text-muted">
                               *** BLINDED ***
                             </span>
                           }
@@ -455,7 +455,7 @@
                             type="button"
                             [cdkMenuTriggerFor]="rowMenu"
                             (click)="openRowMenu($any(item).data)"
-                            class="inline-flex items-center justify-center w-11 h-11 rounded-full text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
+                            class="inline-flex items-center justify-center w-11 h-11 rounded-full text-muted hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
                             [attr.aria-label]="'Actions for subject ' + $any(item).data.subjectId"
                             [attr.title]="'Actions for subject ' + $any(item).data.subjectId"
                           >
@@ -470,8 +470,8 @@
                     }
 
                     @case ('summary') {
-                      <tr class="border-t border-dashed border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900/40">
-                        <td [attr.colspan]="columnCount()" class="px-6 py-2 text-right text-xs font-mono text-gray-600 dark:text-slate-400">
+                      <tr class="border-t border-dashed border-border-strong bg-base/40">
+                        <td [attr.colspan]="columnCount()" class="px-6 py-2 text-right text-xs font-mono text-muted">
                           @if (isUnblinded()) {
                             Balance: {{getSummaryBalanceText($any(item).tallies)}}
                           } @else {
@@ -501,7 +501,7 @@
   <div
     cdkMenu
     role="menu"
-    class="min-w-40 rounded-xl bg-white dark:bg-slate-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 border border-gray-100 dark:border-slate-700 py-1 backdrop-blur-sm"
+    class="min-w-40 rounded-xl bg-surface shadow-lg ring-1 ring-black/5 dark:ring-white/10 border border-border-subtle py-1 backdrop-blur-sm"
   >
     <button
       cdkMenuItem
@@ -535,8 +535,8 @@
 <!-- ── Shared CDK column-filter menu ─────────────────────────────────────── -->
 <ng-template #columnFilterMenu>
   <div cdkMenu
-       class="min-w-52 rounded-xl bg-white dark:bg-slate-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 border border-gray-100 dark:border-slate-700 p-3 backdrop-blur-sm">
-    <p class="text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-2">
+       class="min-w-52 rounded-xl bg-surface shadow-lg ring-1 ring-black/5 dark:ring-white/10 border border-border-subtle p-3 backdrop-blur-sm">
+    <p class="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
       Filter: {{activeFilterColumn()}}
     </p>
     <input
@@ -545,7 +545,7 @@
       [value]="filterState()[activeFilterColumn() || ''] || ''"
       (input)="updateColumnFilter($any($event.target).value)"
       placeholder="Search…"
-      class="w-full text-sm border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      class="w-full text-sm border border-border-strong rounded-lg px-3 py-2 bg-white dark:bg-slate-700 text-main placeholder-disabled focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
     />
     @if (hasActiveFilter(activeFilterColumn() || '')) {
       <button
