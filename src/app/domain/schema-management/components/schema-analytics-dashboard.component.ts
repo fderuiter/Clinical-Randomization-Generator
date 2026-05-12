@@ -19,6 +19,7 @@ import {
 import { CanvasRenderer } from 'echarts/renderers';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { SchemaViewStateService } from '../services/schema-view-state.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 // Register only the ECharts modules we need (tree-shakeable).
 echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer]);
@@ -89,6 +90,7 @@ echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendCompone
 export class SchemaAnalyticsDashboardComponent implements OnDestroy {
   protected readonly state = inject(RandomizationEngineFacade);
   protected readonly viewState = inject(SchemaViewStateService);
+  private readonly themeService = inject(ThemeService);
 
   private readonly donutContainerRef = viewChild<ElementRef<HTMLDivElement>>('donutContainer');
   private readonly barContainerRef = viewChild<ElementRef<HTMLDivElement>>('barContainer');
@@ -126,11 +128,14 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
     return map;
   });
 
-  /** ECharts option object for the donut chart (reacts to blinding state). */
+  /** ECharts option object for the donut chart (reacts to blinding state and theme). */
   private readonly donutOption = computed(() => {
     const isUnblinded = this.viewState.isUnblinded();
     const counts = this.treatmentCounts();
+    // Track theme changes so the chart re-renders with correct colours on toggle.
+    const _dark = this.themeService.isDark();
     const blindedColour = this.getCssColor('--text-muted', '#94a3b8');
+    const textColor = this.getCssColor('--text-main', '#0f172a');
 
     if (!isUnblinded) {
       // Blinded: solid monochromatic ring, no treatment info leaked
@@ -156,7 +161,7 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
 
     return {
       tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-      legend: { orient: 'horizontal', bottom: 0, textStyle: { fontSize: 11 } },
+      legend: { orient: 'horizontal', bottom: 0, textStyle: { fontSize: 11, color: textColor } },
       series: [{
         type: 'pie',
         radius: ['45%', '70%'],
