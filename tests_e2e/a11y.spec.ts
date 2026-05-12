@@ -37,12 +37,7 @@ async function assertSelectReadableStyling(select: Locator): Promise<void> {
     };
   });
 
-  expect(styleState.classes).toEqual(expect.arrayContaining([
-    'bg-white',
-    'text-gray-900',
-    'dark:bg-slate-700',
-    'dark:text-slate-100',
-  ]));
+  expect(styleState.classes).toContain('app-select-scheme');
   expect(styleState.color).not.toBe(styleState.backgroundColor);
   expect(styleState.borderColor).not.toBe('rgba(0, 0, 0, 0)');
 }

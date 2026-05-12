@@ -36,6 +36,12 @@
   }
 }
 
+@layer components {
+  .app-select-scheme {
+    @apply bg-white text-gray-900 border-gray-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-500;
+  }
+}
+
 /* Advanced Settings accordion entrance animation */
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-6px); }
