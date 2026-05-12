@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Locator, Page } from '@playwright/test';
 import { checkA11y } from './a11y';
 import { generateSchemaFromPreset, goToStep, loadPreset, openGenerator } from './generator-helpers';
 
@@ -24,12 +24,43 @@ async function assertGeneratorVisible(page: Page): Promise<void> {
   await expect(page.getByRole('button', { name: /^Next$/i })).toBeVisible();
 }
 
+async function assertSelectReadableStyling(select: Locator): Promise<void> {
+  await expect(select).toBeVisible();
+  const styleState = await select.evaluate((element) => {
+    const classes = Array.from(element.classList);
+    const style = window.getComputedStyle(element as HTMLElement);
+    return {
+      classes,
+      color: style.color,
+      backgroundColor: style.backgroundColor,
+      borderColor: style.borderColor,
+    };
+  });
+
+  expect(styleState.classes).toEqual(expect.arrayContaining([
+    'bg-white',
+    'text-gray-900',
+    'dark:bg-slate-700',
+    'dark:text-slate-100',
+  ]));
+  expect(styleState.color).not.toBe(styleState.backgroundColor);
+  expect(styleState.borderColor).not.toBe('rgba(0, 0, 0, 0)');
+}
+
 async function runTransientStateChecks(page: Page, mode: 'light' | 'dark'): Promise<void> {
   await openGenerator(page);
   if (mode === 'dark') await applyDarkMode(page);
 
   await loadPreset(page, 'Simple');
+  await assertSelectReadableStyling(page.locator('#phase'));
   await goToStep(page, 4);
+  await page.getByRole('button', { name: /\+ Add Override/i }).click();
+  const targetTypeSelect = page.locator('[formcontrolname="targetType"]').first();
+  const targetIdSelect = page.locator('[formcontrolname="targetId"]').first();
+  await assertSelectReadableStyling(targetTypeSelect);
+  await assertSelectReadableStyling(targetIdSelect);
+  await expect(targetTypeSelect).toHaveScreenshot(`dropdown-target-type-${mode}.png`, { maxDiffPixels: 100 });
+  await expect(targetIdSelect).toHaveScreenshot(`dropdown-target-id-${mode}.png`, { maxDiffPixels: 100 });
   await expect(page.locator('#blockSizesStr')).toBeVisible();
   await page.locator('#blockSizesStr').fill('3');
   await page.locator('#blockSizesStr').press('Tab');
