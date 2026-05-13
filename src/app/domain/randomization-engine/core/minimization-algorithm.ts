@@ -208,27 +208,35 @@ export function generateMinimization(
     siteMarginals.set(site, marginals);
   }
 
+  // Performance optimization: Short-circuit O(N) filtering operations using a poolNeedsFilter flag. Only re-filter the pool when a cap is reached.
+  let poolNeedsFilter = true;
   // Generate subjects one by one up to totalSampleSize
   for (let s = 0; s < totalSampleSize; s++) {
     // Determine active pool dynamically. If MARGINAL_ONLY, filter based on marginal counts.
     if (isMarginal) {
-      const isExhausted = strata.some(factor => {
-        return factor.levels.every(level => {
-          const cap = marginalCapMap.get(factor.id)?.get(level);
-          const count = marginalCounts.get(factor.id)?.get(level) ?? 0;
-          return cap !== undefined && count >= cap;
+      if (poolNeedsFilter) {
+        const isExhausted = strata.some(factor => {
+          return factor.levels.every(level => {
+            const cap = marginalCapMap.get(factor.id)?.get(level);
+            const count = marginalCounts.get(factor.id)?.get(level) ?? 0;
+            return cap !== undefined && count >= cap;
+          });
         });
-      });
-      if (isExhausted) {
-        break;
+        if (isExhausted) {
+          break;
+        }
+        poolNeedsFilter = false;
       }
     } else {
-      activePool = activePool.filter(combo => {
-        const key = combo._key || "";
-        const cap = capsDict[key];
-        const count = intersectionCounts[key] ?? 0;
-        return cap === undefined || count < cap;
-      });
+      if (poolNeedsFilter) {
+        activePool = activePool.filter(combo => {
+          const key = combo._key || "";
+          const cap = capsDict[key];
+          const count = intersectionCounts[key] ?? 0;
+          return cap === undefined || count < cap;
+        });
+        poolNeedsFilter = false;
+      }
 
       if (activePool.length === 0) {
         // No more valid combinations exist; exhaustion reached.
@@ -356,7 +364,13 @@ export function generateMinimization(
         const lvl = subjectProfile[factor.id];
         if (lvl) {
           const map = marginalCounts.get(factor.id)!;
-          map.set(lvl, (map.get(lvl) ?? 0) + 1);
+          const newCount = (map.get(lvl) ?? 0) + 1;
+          map.set(lvl, newCount);
+
+          const cap = marginalCapMap.get(factor.id)?.get(lvl);
+          if (cap !== undefined && newCount >= cap) {
+            poolNeedsFilter = true;
+          }
         }
       }
     } else {
@@ -366,6 +380,11 @@ export function generateMinimization(
         key += subjectProfile[strata[j].id] || "";
       }
       intersectionCounts[key] = (intersectionCounts[key] ?? 0) + 1;
+
+      const cap = capsDict[key];
+      if (cap !== undefined && intersectionCounts[key] >= cap) {
+        poolNeedsFilter = true;
+      }
     }
 
     siteSubjectCounts.set(site, siteSubjectCounts.get(site)! + 1);
