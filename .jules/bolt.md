@@ -1,0 +1,3 @@
+## 2024-05-14 - Optimize O(N) array filtering in algorithm loops
+**Learning:** O(N) array filtering operations (`.filter()`) inside large simulation loops (like Monte Carlo aggregations for randomization schemas) cause significant performance degradation when called unconditionally per iteration, even if the state hasn't changed.
+**Action:** Introduce a boolean flag (e.g., `poolNeedsFilter`) to short-circuit filtering until state changes make it necessary. Initialize the flag to `true` to ensure the initial pool is correctly filtered against any historical assignments that may have already reached their caps.
