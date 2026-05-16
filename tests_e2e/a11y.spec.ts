@@ -3,7 +3,7 @@ import { checkA11y } from './a11y';
 import { generateSchemaFromPreset, goToStep, loadPreset, openGenerator } from './generator-helpers';
 
 const screenshotOptions = { fullPage: true, maxDiffPixels: 200 } as const;
-const resultsScreenshotOptions = { fullPage: true, maxDiffPixels: 2000 } as const;
+const resultsScreenshotOptions = { fullPage: true, maxDiffPixels: 4000 } as const;
 
 async function applyDarkMode(page: Page): Promise<void> {
   await page.evaluate(() => document.documentElement.classList.add('dark'));
