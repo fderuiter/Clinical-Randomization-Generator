@@ -410,10 +410,10 @@ test.describe('21 CFR Part 11 – Audit Trail: PDF export provenance', () => {
   // [REQ-21CFR11-006]
   test('PDF export contains the PRNG seed value', async ({ page }) => {
     const { text } = await downloadPdfTextWithProtocol(page, PDF_PROTOCOL_ID);
-    // The metadata table has a "PRNG Seed" row with a numeric value.
-    // Match the label and an adjacent sequence of digits.
+    // The metadata table has a "PRNG Seed" row with a hexadecimal value.
+    // Match the label and an adjacent sequence of alphanumeric characters (hex).
     expect(text).toContain('PRNG Seed');
-    expect(text).toMatch(/PRNG\s+Seed[:\s]+\d+/);
+    expect(text).toMatch(/PRNG\s+Seed[:\s]+[a-f0-9]+/i);
   });
 
   // [REQ-EXPORT-002]

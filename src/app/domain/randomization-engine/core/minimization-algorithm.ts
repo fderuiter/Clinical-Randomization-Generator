@@ -18,8 +18,7 @@ function sampleLevel(
   let explicitSum = 0;
   let undefinedCount = 0;
 
-  for (let i = 0; i < expectedProbabilities.length; i++) {
-    const p = expectedProbabilities[i];
+  for (const p of expectedProbabilities) {
     if (p !== undefined && p > 0) {
       explicitSum += p;
     } else if (p === undefined) {
