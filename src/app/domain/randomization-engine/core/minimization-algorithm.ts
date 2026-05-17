@@ -15,28 +15,49 @@ function sampleLevel(
     throw new Error('Cannot sample a level from an empty levels array.');
   }
 
-  const explicitSum = expectedProbabilities.reduce(
-    (sum: number, p) => sum + (p !== undefined && p > 0 ? p : 0),
-    0
-  );
+  let explicitSum = 0;
+  let undefinedCount = 0;
 
-  let probs: number[];
+  for (let i = 0; i < expectedProbabilities.length; i++) {
+    const p = expectedProbabilities[i];
+    if (p !== undefined && p > 0) {
+      explicitSum += p;
+    } else if (p === undefined) {
+      undefinedCount++;
+    }
+  }
+
+  const probs = new Array<number>(expectedProbabilities.length);
 
   if (explicitSum > 1.0) {
-    probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p / explicitSum : 0));
+    for (let i = 0; i < expectedProbabilities.length; i++) {
+      const p = expectedProbabilities[i];
+      probs[i] = p !== undefined && p > 0 ? p / explicitSum : 0;
+    }
   } else if (explicitSum === 1.0) {
-    probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p : 0));
+    for (let i = 0; i < expectedProbabilities.length; i++) {
+      const p = expectedProbabilities[i];
+      probs[i] = p !== undefined && p > 0 ? p : 0;
+    }
   } else if (explicitSum > 0 && explicitSum < 1.0) {
-    const undefinedCount = expectedProbabilities.filter(p => p === undefined).length;
     if (undefinedCount > 0) {
       const remainder = 1.0 - explicitSum;
       const share = remainder / undefinedCount;
-      probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p : (p === undefined ? share : 0)));
+      for (let i = 0; i < expectedProbabilities.length; i++) {
+        const p = expectedProbabilities[i];
+        probs[i] = p !== undefined && p > 0 ? p : (p === undefined ? share : 0);
+      }
     } else {
-      probs = expectedProbabilities.map(p => (p !== undefined && p > 0 ? p / explicitSum : 0));
+      for (let i = 0; i < expectedProbabilities.length; i++) {
+        const p = expectedProbabilities[i];
+        probs[i] = p !== undefined && p > 0 ? p / explicitSum : 0;
+      }
     }
   } else {
-    probs = levels.map(() => 1 / levels.length);
+    const share = 1 / levels.length;
+    for (let i = 0; i < levels.length; i++) {
+      probs[i] = share;
+    }
   }
 
   const r = rng();
@@ -114,8 +135,14 @@ export function generateMinimization(
   const baseProbabilities = new Map<string, Map<string, number | undefined>>();
   for (const factor of strata) {
     const pMap = new Map<string, number | undefined>();
+    const detailsMap = new Map<string, NonNullable<typeof factor.levelDetails>[number]>();
+    if (factor.levelDetails) {
+      for (const d of factor.levelDetails) {
+        detailsMap.set(d.name, d);
+      }
+    }
     for (const level of factor.levels) {
-      const details = factor.levelDetails?.find(d => d.name === level);
+      const details = detailsMap.get(level);
       pMap.set(level, details?.expectedProbability);
     }
     baseProbabilities.set(factor.id, pMap);
@@ -136,8 +163,14 @@ export function generateMinimization(
     for (const factor of strata) {
       const capMap = new Map<string, number | undefined>();
       const countMap = new Map<string, number>();
+      const detailsMap = new Map<string, NonNullable<typeof factor.levelDetails>[number]>();
+      if (factor.levelDetails) {
+        for (const d of factor.levelDetails) {
+          detailsMap.set(d.name, d);
+        }
+      }
       for (const level of factor.levels) {
-        const details = factor.levelDetails?.find(d => d.name === level);
+        const details = detailsMap.get(level);
         capMap.set(level, details?.marginalCap);
         countMap.set(level, 0);
       }
