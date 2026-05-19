@@ -281,11 +281,21 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label for="baseProbability" class="block text-sm mb-1">Base Probability (p)</label>
-                  <input id="baseProbability" type="number" formControlName="minimizationP" min="0.5" max="1.0" step="0.05" class="w-full rounded-lg border px-3 py-2.5">
+                  <input id="baseProbability" type="number" formControlName="minimizationP" min="0.5" max="1.0" step="0.05"
+                         class="w-full rounded-lg border px-3 py-2.5"
+                         [class.border-red-500]="allocationGroup.get('minimizationP')?.invalid && allocationGroup.get('minimizationP')?.touched">
+                  @if (allocationGroup.get('minimizationP')?.invalid && allocationGroup.get('minimizationP')?.touched) {
+                    <p class="text-xs text-red-600 mt-1">Probability must be between 0.5 and 1.0.</p>
+                  }
                 </div>
                 <div>
                   <label for="totalSampleSize" class="block text-sm mb-1">Total Sample Size (N)</label>
-                  <input id="totalSampleSize" type="number" formControlName="totalSampleSize" min="1" class="w-full rounded-lg border px-3 py-2.5">
+                  <input id="totalSampleSize" type="number" formControlName="totalSampleSize" min="1"
+                         class="w-full rounded-lg border px-3 py-2.5"
+                         [class.border-red-500]="allocationGroup.get('totalSampleSize')?.invalid && allocationGroup.get('totalSampleSize')?.touched">
+                  @if (allocationGroup.get('totalSampleSize')?.invalid && allocationGroup.get('totalSampleSize')?.touched) {
+                    <p class="text-xs text-red-600 mt-1">Total sample size must be at least 1.</p>
+                  }
                 </div>
               </div>
             </div>
