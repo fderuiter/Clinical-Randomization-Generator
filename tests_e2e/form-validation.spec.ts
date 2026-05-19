@@ -144,4 +144,73 @@ test.describe('Form Validation and Configuration', () => {
     const capRows = page.locator('[formArrayName="stratumCaps"] > div');
     await expect(capRows).toHaveCount(2, { timeout: 5000 });
   });
+
+  // ---------------------------------------------------------------------------
+  // Minimization distribution validation and submission
+  // ---------------------------------------------------------------------------
+  test('should display inline validation error and disable next when minimization probabilities do not sum to 100%', async ({ page }) => {
+    await loadPreset(page, 'Simple');
+
+    await goToStep(page, 2);
+    await page.getByRole('radio', { name: 'Minimization' }).click();
+    await page.getByRole('button', { name: /^Next$/i }).click();
+
+    await page.getByRole('button', { name: /\+ Add Factor/i }).click();
+    const strataRows = page.locator('[formArrayName="strata"] > div');
+    await expect(strataRows).toHaveCount(1, { timeout: 5000 });
+
+    const firstStratumRow = strataRows.first();
+    const levelsInput = firstStratumRow.locator('app-tag-input input').first();
+    await levelsInput.waitFor({ state: 'visible', timeout: 10000 });
+    await levelsInput.fill('Level1');
+    await levelsInput.press('Enter');
+    await levelsInput.fill('Level2');
+    await levelsInput.press('Enter');
+    await levelsInput.press('Tab');
+
+    const minimizationInputs = firstStratumRow.locator('input[type="number"]');
+    await minimizationInputs.nth(0).fill('60');
+    await minimizationInputs.nth(0).blur();
+    await minimizationInputs.nth(1).fill('30');
+    await minimizationInputs.nth(1).blur();
+
+    await expect(page.getByText('Probabilities must sum to exactly 100%.')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Next$/i })).toBeDisabled();
+  });
+
+  test('should accept fractional minimization distribution values and submit full workflow', async ({ page }) => {
+    await loadPreset(page, 'Simple');
+
+    await goToStep(page, 2);
+    await page.getByRole('radio', { name: 'Minimization' }).click();
+    await page.getByRole('button', { name: /^Next$/i }).click();
+
+    await page.getByRole('button', { name: /\+ Add Factor/i }).click();
+    const firstStratumRow = page.locator('[formArrayName="strata"] > div').first();
+    const levelsInput = firstStratumRow.locator('app-tag-input input').first();
+    await levelsInput.waitFor({ state: 'visible', timeout: 10000 });
+    await levelsInput.fill('Level1');
+    await levelsInput.press('Enter');
+    await levelsInput.fill('Level2');
+    await levelsInput.press('Enter');
+    await levelsInput.press('Tab');
+
+    const minimizationInputs = firstStratumRow.locator('input[type="number"]');
+    await minimizationInputs.nth(0).fill('33.3');
+    await minimizationInputs.nth(1).fill('66.7');
+
+    const firstInputValid = await minimizationInputs.nth(0).evaluate((el: HTMLInputElement) => el.checkValidity());
+    const secondInputValid = await minimizationInputs.nth(1).evaluate((el: HTMLInputElement) => el.checkValidity());
+    expect(firstInputValid).toBe(true);
+    expect(secondInputValid).toBe(true);
+    await expect(minimizationInputs.nth(0)).toHaveValue('33.3');
+    await expect(minimizationInputs.nth(1)).toHaveValue('66.7');
+
+    await page.getByRole('button', { name: /^Next$/i }).click();
+    await page.getByRole('button', { name: /^Next$/i }).click();
+    await page.getByRole('button', { name: /^Next$/i }).click();
+    await expect(page.getByRole('button', { name: /Generate Schema/i })).toBeVisible();
+    await page.getByRole('button', { name: /Generate Schema/i }).click();
+    await expect(page.locator('#results-section')).toBeVisible({ timeout: 15000 });
+  });
 });

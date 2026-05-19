@@ -127,6 +127,61 @@ describe('ConfigFormComponent (domain)', () => {
       expect(arg.protocolId).toBe(component.form.get('metadataGroup.protocolId')?.value);
     });
 
+    it('should strip block-control payload when switching to minimization', () => {
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('4, 8');
+      component.form.get('allocationGroup.blockSelectionType')?.setValue('FIXED_SEQUENCE');
+      component.addBlockOverride();
+      component.blockOverrides.at(0).patchValue({
+        targetType: 'site',
+        targetId: '101',
+        sizesStr: '2, 4',
+        selectionType: 'RANDOM_POOL'
+      });
+
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.setMinimizationProbability('age', '<65', 50);
+      component.setMinimizationProbability('age', '>=65', 50);
+      component.form.updateValueAndValidity();
+
+      component.onSubmit();
+
+      const arg = (mockFacade as any).generateSchema.mock.calls.at(-1)?.[0];
+      expect(arg.randomizationMethod).toBe('MINIMIZATION');
+      expect(arg.globalBlockStrategy).toBeUndefined();
+      expect(arg.siteBlockOverrides).toBeUndefined();
+      expect(arg.stratumBlockOverrides).toBeUndefined();
+      expect(arg.blockSizes).toEqual([]);
+    });
+
+    it('should only include minimization fields in raw form payload when method is MINIMIZATION', () => {
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.form.get('allocationGroup.minimizationP')?.setValue(0.85);
+      component.form.get('allocationGroup.totalSampleSize')?.setValue(240);
+
+      const formValue = (component as any).buildFormValue();
+
+      expect(formValue.randomizationMethod).toBe('MINIMIZATION');
+      expect(formValue.minimizationP).toBe(0.85);
+      expect(formValue.totalSampleSize).toBe(240);
+      expect(formValue.blockSizesStr).toBeUndefined();
+      expect(formValue.blockSelectionType).toBeUndefined();
+      expect(formValue.blockOverrides).toBeUndefined();
+    });
+
+    it('should only include block fields in raw form payload when method is BLOCK', () => {
+      component.form.get('designGroup.randomizationMethod')?.setValue('BLOCK');
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('4, 6');
+      component.form.get('allocationGroup.blockSelectionType')?.setValue('RANDOM_POOL');
+
+      const formValue = (component as any).buildFormValue();
+
+      expect(formValue.randomizationMethod).toBe('BLOCK');
+      expect(formValue.blockSizesStr).toBe('4, 6');
+      expect(formValue.blockSelectionType).toBe('RANDOM_POOL');
+      expect(formValue.minimizationP).toBeUndefined();
+      expect(formValue.totalSampleSize).toBeUndefined();
+    });
+
     it('should NOT call facade.generateSchema when the form is invalid', () => {
       component.form.get('metadataGroup.protocolId')?.setValue('');
       component.onSubmit();
@@ -291,6 +346,45 @@ describe('ConfigFormComponent (domain)', () => {
       expect(component.form.errors?.['minimizationProbabilitiesInvalid']).toBeFalsy();
       expect(component.isStrataStepNextDisabled).toBe(false);
     });
+
+    it('should display inline validation error only when touched and invalid', () => {
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+
+      // Initially untouched
+      expect(component.isMinimizationProbabilityTouched('age')).toBe(false);
+
+      // Set to invalid
+      component.setMinimizationProbability('age', '<65', 60);
+      component.setMinimizationProbability('age', '>=65', 30);
+      component.form.updateValueAndValidity();
+      expect(component.isMinimizationProbabilityInvalid('age')).toBe(true);
+
+      // Still untouched
+      expect(component.isMinimizationProbabilityTouched('age')).toBe(false);
+
+      // Trigger touched
+      component.markMinimizationProbabilityTouched('age');
+      expect(component.isMinimizationProbabilityTouched('age')).toBe(true);
+
+      // Fix probabilities (valid)
+      component.setMinimizationProbability('age', '<65', 50);
+      component.setMinimizationProbability('age', '>=65', 50);
+      component.form.updateValueAndValidity();
+      expect(component.isMinimizationProbabilityInvalid('age')).toBe(false);
+    });
+
+    it('should immediately invalidate the form when strata sync makes minimization totals stale', () => {
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.setMinimizationProbability('age', '<65', 50);
+      component.setMinimizationProbability('age', '>=65', 50);
+      component.form.updateValueAndValidity();
+      expect(component.form.errors?.['minimizationProbabilitiesInvalid']).toBeFalsy();
+
+      component.strata.at(0).get('levelsStr')?.setValue('<65');
+
+      expect(component.form.errors?.['minimizationProbabilitiesInvalid']).toBe(true);
+      expect(component.form.valid).toBe(false);
+    });
   });
 
   describe('validateBlockSizes()', () => {
@@ -417,6 +511,145 @@ describe('ConfigFormComponent (domain)', () => {
       expect(component.form.valid).toBe(true);
     });
   });
+  describe('Algorithm-switch scenarios', () => {
+    it('should cleanly transition from BLOCK to MINIMIZATION (payload cleanliness and UI state)', () => {
+      // 1. Setup as BLOCK initially with some block specific values
+      component.form.get('designGroup.randomizationMethod')?.setValue('BLOCK');
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('4, 8');
+      component.form.get('allocationGroup.blockSelectionType')?.setValue('FIXED_SEQUENCE');
+      component.addBlockOverride();
+      component.blockOverrides.at(0).patchValue({
+        targetType: 'site',
+        targetId: '101',
+        sizesStr: '2, 4',
+        selectionType: 'RANDOM_POOL'
+      });
+      component.form.updateValueAndValidity();
+
+      // Ensure block controls are enabled initially
+      expect(component.form.get('allocationGroup.blockSizesStr')?.enabled).toBe(true);
+      expect(component.form.get('allocationGroup.blockSelectionType')?.enabled).toBe(true);
+
+      // 2. Switch to MINIMIZATION
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.setMinimizationProbability('age', '<65', 50);
+      component.setMinimizationProbability('age', '>=65', 50);
+
+      // The bug #279 (#338 PR) fixes this payload so that the UI states updates without manual triggering
+      // We still updateValueAndValidity for testing flow if necessary, but the component has
+      // internal reactive subscriptions that disable the fields.
+      fixture.detectChanges();
+
+      // UI state: Block fields disabled, Min fields enabled
+      expect(component.form.get('allocationGroup.blockSizesStr')?.disabled).toBe(true);
+      expect(component.form.get('allocationGroup.blockSelectionType')?.disabled).toBe(true);
+      expect(component.form.get('allocationGroup.minimizationP')?.enabled).toBe(true);
+      expect(component.form.get('allocationGroup.totalSampleSize')?.enabled).toBe(true);
+
+      // Payload cleanliness: The generated config should not have block specific values
+      component.onSubmit();
+      const arg = (mockFacade as any).generateSchema.mock.calls.at(-1)?.[0];
+      expect(arg.randomizationMethod).toBe('MINIMIZATION');
+      expect(arg.globalBlockStrategy).toBeUndefined();
+      expect(arg.siteBlockOverrides).toBeUndefined();
+      expect(arg.stratumBlockOverrides).toBeUndefined();
+
+      // Depending on the store logic it might be [] instead of undefined since MINIMIZATION passes [] for block sizes
+      if (arg.blockSizes !== undefined) {
+        expect(arg.blockSizes).toEqual([]);
+      }
+    });
+
+    it('should cleanly transition from MINIMIZATION to BLOCK (payload cleanliness and UI state)', () => {
+      // Setup as MINIMIZATION
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.form.get('allocationGroup.minimizationP')?.setValue(0.9);
+      component.form.get('allocationGroup.totalSampleSize')?.setValue(200);
+      component.setMinimizationProbability('age', '<65', 50);
+      component.setMinimizationProbability('age', '>=65', 50);
+      component.form.updateValueAndValidity();
+
+      expect(component.form.get('allocationGroup.minimizationP')?.enabled).toBe(true);
+
+      // Switch to BLOCK
+      component.form.get('designGroup.randomizationMethod')?.setValue('BLOCK');
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('4');
+      component.form.get('allocationGroup.blockSelectionType')?.setValue('RANDOM_POOL');
+      fixture.detectChanges();
+
+      // UI State: Min fields disabled, block fields enabled
+      expect(component.form.get('allocationGroup.minimizationP')?.disabled).toBe(true);
+      expect(component.form.get('allocationGroup.totalSampleSize')?.disabled).toBe(true);
+      expect(component.form.get('allocationGroup.blockSizesStr')?.enabled).toBe(true);
+
+      // Payload cleanliness: Should not contain minimization config
+      component.onSubmit();
+      const arg = (mockFacade as any).generateSchema.mock.calls.at(-1)?.[0];
+      expect(arg.randomizationMethod).toBe('BLOCK');
+      expect(arg.minimizationConfig).toBeUndefined();
+      expect(arg.globalBlockStrategy).toBeDefined();
+    });
+
+    it('should maintain form validity through multiple algorithm switches without race conditions (revalidation)', () => {
+      // Setup invalid block size initially
+      component.form.get('designGroup.randomizationMethod')?.setValue('BLOCK');
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('3'); // Invalid block size since arms sum to 2
+      component.form.updateValueAndValidity();
+
+      expect(component.form.errors?.['invalidBlockSize']).toBe(true);
+      expect(component.form.valid).toBe(false);
+
+      // Switch to MINIMIZATION, probability valid
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.setMinimizationProbability('age', '<65', 50);
+      component.setMinimizationProbability('age', '>=65', 50);
+
+      // Because of the bugfix (#282), `this.form.updateValueAndValidity({ emitEvent: false })`
+      // in syncLevelDetails and subscriptions should ensure the form correctly revalidates
+      // when switching, clearing the block size error.
+      expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
+
+      // Need to make sure the form as a whole is valid if other things are correct.
+      // metadata has some required fields like protocolId, so let's set it.
+      component.form.get('metadataGroup.protocolId')?.setValue('TEST-001');
+      expect(component.form.valid).toBe(true);
+
+      // Switch back to BLOCK, the error should return since blockSizesStr is still '3'
+      // But wait, when disabled, does it retain value and cause error? The validator checks if method === 'MINIMIZATION' to bypass.
+      component.form.get('designGroup.randomizationMethod')?.setValue('BLOCK');
+      expect(component.form.errors?.['invalidBlockSize']).toBe(true);
+      expect(component.form.valid).toBe(false);
+
+      // Correct it
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('4');
+      expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
+      expect(component.form.valid).toBe(true);
+    });
+  });
+
+  describe('Allocation mechanics validation UI', () => {
+    const goToAllocationStep = (): void => {
+      for (let i = 0; i < 3; i += 1) {
+        const nextButton = fixture.nativeElement.querySelector('button[cdkStepperNext]') as HTMLButtonElement;
+        nextButton.click();
+        fixture.detectChanges();
+      }
+    };
+
+    it('should show minimization probability validation text when touched and out of range', () => {
+      goToAllocationStep();
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      fixture.detectChanges();
+
+      const minimizationP = component.form.get('allocationGroup.minimizationP');
+      minimizationP?.setValue(0.4);
+      minimizationP?.markAsTouched();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain('Probability must be between 0.5 and 1.0.');
+    });
+  });
+
   describe('parseCommaSeparated()', () => {
     it('should parse a comma-separated string into a trimmed string array', () => {
       expect(component.parseCommaSeparated(' a, b , c ')).toEqual(['a', 'b', 'c']);

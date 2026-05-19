@@ -64,6 +64,11 @@ export class ConfigFormComponent implements OnInit {
    */
   readonly minimizationProbabilities = signal<Record<string, Record<string, number>>>({});
 
+  /**
+   * Tracks whether the minimization probability inputs for a given factor have been touched (blurred).
+   */
+  readonly minimizationTouched = signal<Record<string, boolean>>({});
+
   /** Whether the computed proportional matrix has been generated and is ready to display. */
   readonly matrixComputed = signal(false);
 
@@ -444,6 +449,9 @@ export class ConfigFormComponent implements OnInit {
       }
       return next;
     });
+
+    // Re-run form validators after signal-backed level details are synchronized.
+    this.form.updateValueAndValidity({ emitEvent: false });
   }
 
   onStepSelectionChange(event: StepperSelectionEvent): void {
@@ -683,13 +691,16 @@ export class ConfigFormComponent implements OnInit {
       });
     }
 
+    const randomizationMethod = base.designGroup.randomizationMethod as 'BLOCK' | 'MINIMIZATION';
     // Build block overrides data from the blockOverrides form array.
-    const blockOverrides = (this.blockOverrides.value as {
-      targetType: 'site' | 'stratum';
-      targetId: string;
-      sizesStr: string;
-      selectionType: 'RANDOM_POOL' | 'FIXED_SEQUENCE';
-    }[]).filter(ov => ov.targetId?.trim());
+    const blockOverrides = randomizationMethod === 'BLOCK'
+      ? (this.blockOverrides.value as {
+          targetType: 'site' | 'stratum';
+          targetId: string;
+          sizesStr: string;
+          selectionType: 'RANDOM_POOL' | 'FIXED_SEQUENCE';
+        }[]).filter(ov => ov.targetId?.trim())
+      : undefined;
 
     return {
       protocolId: base.metadataGroup.protocolId,
@@ -698,17 +709,20 @@ export class ConfigFormComponent implements OnInit {
       arms: base.designGroup.arms,
       strata: base.strataGroup.strata,
       sitesStr: base.strataGroup.sitesStr,
-      blockSizesStr: base.allocationGroup.blockSizesStr,
-      blockSelectionType: base.allocationGroup.blockSelectionType,
-      blockOverrides,
+      ...(randomizationMethod === 'BLOCK' ? {
+        blockSizesStr: base.allocationGroup.blockSizesStr,
+        blockSelectionType: base.allocationGroup.blockSelectionType,
+        blockOverrides
+      } : {
+        minimizationP: base.allocationGroup.minimizationP,
+        totalSampleSize: base.allocationGroup.totalSampleSize
+      }),
       stratumCaps: base.capsGroup.stratumCaps,
       seed: base.metadataGroup.seed,
       subjectIdMask: base.metadataGroup.subjectIdMask,
       capStrategy: base.capsGroup.capStrategy,
       globalCap: base.capsGroup.globalCap,
-      randomizationMethod: base.designGroup.randomizationMethod,
-      minimizationP: base.allocationGroup.minimizationP,
-      totalSampleSize: base.allocationGroup.totalSampleSize,
+      randomizationMethod,
       levelDetails
     };
   }
@@ -769,6 +783,14 @@ export class ConfigFormComponent implements OnInit {
   getMinimizationProbabilityTotal(factorId: string, levels: string[]): number {
     const probs = this.minimizationProbabilities();
     return levels.reduce((sum, l) => sum + (probs[factorId]?.[l] ?? 0), 0);
+  }
+
+  isMinimizationProbabilityTouched(factorId: string): boolean {
+    return !!this.minimizationTouched()[factorId];
+  }
+
+  markMinimizationProbabilityTouched(factorId: string): void {
+    this.minimizationTouched.update(prev => ({ ...prev, [factorId]: true }));
   }
 
   isMinimizationProbabilityInvalid(factorId: string): boolean {
