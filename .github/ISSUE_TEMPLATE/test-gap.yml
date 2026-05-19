@@ -1,0 +1,61 @@
+name: Test Gap
+description: Report a missing test coverage
+title: "[Test Gap]: "
+labels: ["test-gap"]
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      description: What type of issue is this?
+      options:
+        - Test Gap
+        - Bug
+        - Feature
+        - Refactor / Tech Debt
+        - Release Hardening
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which area does this issue affect?
+      options:
+        - UI/UX
+        - Backend/API
+        - Documentation
+        - Core Algorithm
+        - Build/Infrastructure
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What is the expected behavior of the covered code?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior / Gap
+      description: What is the current test coverage gap?
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance Criteria
+      description: What needs to be done for this issue to be considered resolved?
+    validations:
+      required: true
+  - type: textarea
+    id: test-plan
+    attributes:
+      label: Test Plan
+      description: How will the new tests be verified?
+    validations:
+      required: true
