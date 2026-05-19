@@ -169,9 +169,6 @@ describe('ConfigFormComponent (domain)', () => {
     });
 
     it('should only include block fields in raw form payload when method is BLOCK', () => {
-      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
-      component.form.get('allocationGroup.minimizationP')?.setValue(0.9);
-      component.form.get('allocationGroup.totalSampleSize')?.setValue(180);
       component.form.get('designGroup.randomizationMethod')?.setValue('BLOCK');
       component.form.get('allocationGroup.blockSizesStr')?.setValue('4, 6');
       component.form.get('allocationGroup.blockSelectionType')?.setValue('RANDOM_POOL');

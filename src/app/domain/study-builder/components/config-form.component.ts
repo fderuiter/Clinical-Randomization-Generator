@@ -693,14 +693,14 @@ export class ConfigFormComponent implements OnInit {
 
     const randomizationMethod = base.designGroup.randomizationMethod as 'BLOCK' | 'MINIMIZATION';
     // Build block overrides data from the blockOverrides form array.
-    const blockOverrides = randomizationMethod === 'MINIMIZATION'
-      ? []
-      : (this.blockOverrides.value as {
+    const blockOverrides = randomizationMethod === 'BLOCK'
+      ? (this.blockOverrides.value as {
           targetType: 'site' | 'stratum';
           targetId: string;
           sizesStr: string;
           selectionType: 'RANDOM_POOL' | 'FIXED_SEQUENCE';
-        }[]).filter(ov => ov.targetId?.trim());
+        }[]).filter(ov => ov.targetId?.trim())
+      : undefined;
 
     return {
       protocolId: base.metadataGroup.protocolId,
