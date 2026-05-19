@@ -153,6 +153,35 @@ describe('ConfigFormComponent (domain)', () => {
       expect(arg.blockSizes).toEqual([]);
     });
 
+    it('should only include minimization fields in raw form payload when method is MINIMIZATION', () => {
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.form.get('allocationGroup.minimizationP')?.setValue(0.85);
+      component.form.get('allocationGroup.totalSampleSize')?.setValue(240);
+
+      const formValue = (component as any).buildFormValue();
+
+      expect(formValue.randomizationMethod).toBe('MINIMIZATION');
+      expect(formValue.minimizationP).toBe(0.85);
+      expect(formValue.totalSampleSize).toBe(240);
+      expect(formValue.blockSizesStr).toBeUndefined();
+      expect(formValue.blockSelectionType).toBeUndefined();
+      expect(formValue.blockOverrides).toBeUndefined();
+    });
+
+    it('should only include block fields in raw form payload when method is BLOCK', () => {
+      component.form.get('designGroup.randomizationMethod')?.setValue('BLOCK');
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('4, 6');
+      component.form.get('allocationGroup.blockSelectionType')?.setValue('RANDOM_POOL');
+
+      const formValue = (component as any).buildFormValue();
+
+      expect(formValue.randomizationMethod).toBe('BLOCK');
+      expect(formValue.blockSizesStr).toBe('4, 6');
+      expect(formValue.blockSelectionType).toBe('RANDOM_POOL');
+      expect(formValue.minimizationP).toBeUndefined();
+      expect(formValue.totalSampleSize).toBeUndefined();
+    });
+
     it('should NOT call facade.generateSchema when the form is invalid', () => {
       component.form.get('metadataGroup.protocolId')?.setValue('');
       component.onSubmit();
@@ -595,6 +624,29 @@ describe('ConfigFormComponent (domain)', () => {
       component.form.get('allocationGroup.blockSizesStr')?.setValue('4');
       expect(component.form.errors?.['invalidBlockSize']).toBeFalsy();
       expect(component.form.valid).toBe(true);
+    });
+  });
+
+  describe('Allocation mechanics validation UI', () => {
+    const goToAllocationStep = (): void => {
+      for (let i = 0; i < 3; i += 1) {
+        const nextButton = fixture.nativeElement.querySelector('button[cdkStepperNext]') as HTMLButtonElement;
+        nextButton.click();
+        fixture.detectChanges();
+      }
+    };
+
+    it('should show minimization probability validation text when touched and out of range', () => {
+      goToAllocationStep();
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      fixture.detectChanges();
+
+      const minimizationP = component.form.get('allocationGroup.minimizationP');
+      minimizationP?.setValue(0.4);
+      minimizationP?.markAsTouched();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain('Probability must be between 0.5 and 1.0.');
     });
   });
 
