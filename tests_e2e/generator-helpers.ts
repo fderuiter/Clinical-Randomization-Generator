@@ -19,7 +19,7 @@ export async function loadPreset(page: Page, preset: 'Simple' | 'Standard' | 'Co
  */
 export async function goToStep(page: Page, step: number): Promise<void> {
   for (let i = 0; i < Math.max(0, step - FIRST_WIZARD_STEP); i++) {
-    await page.getByRole('button', { name: /^Next$/i }).click();
+    await page.locator("button:has-text('Next'):visible").first().click();
   }
 }
 
