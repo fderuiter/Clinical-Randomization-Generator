@@ -444,6 +444,9 @@ export class ConfigFormComponent implements OnInit {
       }
       return next;
     });
+
+    // Re-run form validators after signal-backed level details are synchronized.
+    this.form.updateValueAndValidity({ emitEvent: false });
   }
 
   onStepSelectionChange(event: StepperSelectionEvent): void {
