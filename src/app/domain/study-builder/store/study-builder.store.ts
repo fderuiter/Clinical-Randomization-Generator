@@ -32,7 +32,7 @@ export interface StudyBuilderFormValue {
   arms: ArmFormValue[];
   strata: StratumFormValue[];
   sitesStr: string;
-  blockSizesStr: string;
+  blockSizesStr?: string;
   stratumCaps: { levels: string[]; cap: number }[];
   seed: string;
   subjectIdMask: string;
@@ -204,27 +204,29 @@ export const StudyBuilderStore = signalStore(
      * `RandomizationConfig` suitable for passing to the randomization engine.
      */
     buildConfig(formValue: StudyBuilderFormValue): RandomizationConfig {
-      const parseSizes = (str: string): number[] =>
-        str.split(',').map((s: string) => parseInt(s.trim(), 10)).filter((n: number) => !isNaN(n));
-
-      const globalSizes = parseSizes(formValue.blockSizesStr);
+      const parseSizes = (str?: string): number[] =>
+        (str ?? '').split(',').map((s: string) => parseInt(s.trim(), 10)).filter((n: number) => !isNaN(n));
+      const randomizationMethod = formValue.randomizationMethod ?? 'BLOCK';
+      const globalSizes = randomizationMethod === 'MINIMIZATION' ? [] : parseSizes(formValue.blockSizesStr);
       const globalSelectionType = formValue.blockSelectionType ?? 'RANDOM_POOL';
 
       // Build site and stratum override dictionaries from the override list.
       const siteBlockOverrides: Record<string, BlockRule> = {};
       const stratumBlockOverrides: Record<string, BlockRule> = {};
-      for (const ov of (formValue.blockOverrides ?? [])) {
-        const sizes = parseSizes(ov.sizesStr);
-        if (!sizes.length || !ov.targetId) continue;
-        const rule: BlockRule = {
-          selectionType: ov.selectionType,
-          sizes,
-          ...(ov.limits && Object.keys(ov.limits).length ? { limits: ov.limits } : {})
-        };
-        if (ov.targetType === 'site') {
-          siteBlockOverrides[ov.targetId] = rule;
-        } else {
-          stratumBlockOverrides[ov.targetId] = rule;
+      if (randomizationMethod !== 'MINIMIZATION') {
+        for (const ov of (formValue.blockOverrides ?? [])) {
+          const sizes = parseSizes(ov.sizesStr);
+          if (!sizes.length || !ov.targetId) continue;
+          const rule: BlockRule = {
+            selectionType: ov.selectionType,
+            sizes,
+            ...(ov.limits && Object.keys(ov.limits).length ? { limits: ov.limits } : {})
+          };
+          if (ov.targetType === 'site') {
+            siteBlockOverrides[ov.targetId] = rule;
+          } else {
+            stratumBlockOverrides[ov.targetId] = rule;
+          }
         }
       }
 
@@ -263,11 +265,11 @@ export const StudyBuilderStore = signalStore(
         subjectIdMask: formValue.subjectIdMask,
         capStrategy: formValue.capStrategy ?? 'MANUAL_MATRIX',
         globalCap: formValue.globalCap ?? 100,
-        globalBlockStrategy: { selectionType: globalSelectionType, sizes: globalSizes },
+        ...(randomizationMethod !== 'MINIMIZATION' ? { globalBlockStrategy: { selectionType: globalSelectionType, sizes: globalSizes } } : {}),
         ...(Object.keys(siteBlockOverrides).length ? { siteBlockOverrides } : {}),
         ...(Object.keys(stratumBlockOverrides).length ? { stratumBlockOverrides } : {}),
-        randomizationMethod: formValue.randomizationMethod ?? 'BLOCK',
-        ...(formValue.randomizationMethod === 'MINIMIZATION' ? {
+        randomizationMethod,
+        ...(randomizationMethod === 'MINIMIZATION' ? {
           minimizationConfig: {
             p: formValue.minimizationP ?? 0.8,
             totalSampleSize: formValue.totalSampleSize ?? 100

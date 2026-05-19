@@ -683,13 +683,16 @@ export class ConfigFormComponent implements OnInit {
       });
     }
 
+    const randomizationMethod = base.designGroup.randomizationMethod as 'BLOCK' | 'MINIMIZATION';
     // Build block overrides data from the blockOverrides form array.
-    const blockOverrides = (this.blockOverrides.value as {
-      targetType: 'site' | 'stratum';
-      targetId: string;
-      sizesStr: string;
-      selectionType: 'RANDOM_POOL' | 'FIXED_SEQUENCE';
-    }[]).filter(ov => ov.targetId?.trim());
+    const blockOverrides = randomizationMethod === 'MINIMIZATION'
+      ? undefined
+      : (this.blockOverrides.value as {
+          targetType: 'site' | 'stratum';
+          targetId: string;
+          sizesStr: string;
+          selectionType: 'RANDOM_POOL' | 'FIXED_SEQUENCE';
+        }[]).filter(ov => ov.targetId?.trim());
 
     return {
       protocolId: base.metadataGroup.protocolId,
@@ -698,15 +701,17 @@ export class ConfigFormComponent implements OnInit {
       arms: base.designGroup.arms,
       strata: base.strataGroup.strata,
       sitesStr: base.strataGroup.sitesStr,
-      blockSizesStr: base.allocationGroup.blockSizesStr,
-      blockSelectionType: base.allocationGroup.blockSelectionType,
-      blockOverrides,
+      ...(randomizationMethod === 'MINIMIZATION' ? {} : {
+        blockSizesStr: base.allocationGroup.blockSizesStr,
+        blockSelectionType: base.allocationGroup.blockSelectionType,
+        blockOverrides
+      }),
       stratumCaps: base.capsGroup.stratumCaps,
       seed: base.metadataGroup.seed,
       subjectIdMask: base.metadataGroup.subjectIdMask,
       capStrategy: base.capsGroup.capStrategy,
       globalCap: base.capsGroup.globalCap,
-      randomizationMethod: base.designGroup.randomizationMethod,
+      randomizationMethod,
       minimizationP: base.allocationGroup.minimizationP,
       totalSampleSize: base.allocationGroup.totalSampleSize,
       levelDetails

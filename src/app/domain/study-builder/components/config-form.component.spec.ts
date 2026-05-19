@@ -127,6 +127,32 @@ describe('ConfigFormComponent (domain)', () => {
       expect(arg.protocolId).toBe(component.form.get('metadataGroup.protocolId')?.value);
     });
 
+    it('should strip block-control payload when switching to minimization', () => {
+      component.form.get('allocationGroup.blockSizesStr')?.setValue('4, 8');
+      component.form.get('allocationGroup.blockSelectionType')?.setValue('FIXED_SEQUENCE');
+      component.addBlockOverride();
+      component.blockOverrides.at(0).patchValue({
+        targetType: 'site',
+        targetId: '101',
+        sizesStr: '2, 4',
+        selectionType: 'RANDOM_POOL'
+      });
+
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+      component.setMinimizationProbability('age', '<65', 50);
+      component.setMinimizationProbability('age', '>=65', 50);
+      component.form.updateValueAndValidity();
+
+      component.onSubmit();
+
+      const arg = (mockFacade as any).generateSchema.mock.calls.at(-1)?.[0];
+      expect(arg.randomizationMethod).toBe('MINIMIZATION');
+      expect(arg.globalBlockStrategy).toBeUndefined();
+      expect(arg.siteBlockOverrides).toBeUndefined();
+      expect(arg.stratumBlockOverrides).toBeUndefined();
+      expect(arg.blockSizes).toEqual([]);
+    });
+
     it('should NOT call facade.generateSchema when the form is invalid', () => {
       component.form.get('metadataGroup.protocolId')?.setValue('');
       component.onSubmit();
