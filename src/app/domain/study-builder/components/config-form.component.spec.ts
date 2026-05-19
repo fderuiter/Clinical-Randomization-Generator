@@ -318,6 +318,32 @@ describe('ConfigFormComponent (domain)', () => {
       expect(component.isStrataStepNextDisabled).toBe(false);
     });
 
+    it('should display inline validation error only when touched and invalid', () => {
+      component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
+
+      // Initially untouched
+      expect(component.isMinimizationProbabilityTouched('age')).toBe(false);
+
+      // Set to invalid
+      component.setMinimizationProbability('age', '<65', 60);
+      component.setMinimizationProbability('age', '>=65', 30);
+      component.form.updateValueAndValidity();
+      expect(component.isMinimizationProbabilityInvalid('age')).toBe(true);
+
+      // Still untouched
+      expect(component.isMinimizationProbabilityTouched('age')).toBe(false);
+
+      // Trigger touched
+      component.markMinimizationProbabilityTouched('age');
+      expect(component.isMinimizationProbabilityTouched('age')).toBe(true);
+
+      // Fix probabilities (valid)
+      component.setMinimizationProbability('age', '<65', 50);
+      component.setMinimizationProbability('age', '>=65', 50);
+      component.form.updateValueAndValidity();
+      expect(component.isMinimizationProbabilityInvalid('age')).toBe(false);
+    });
+
     it('should immediately invalidate the form when strata sync makes minimization totals stale', () => {
       component.form.get('designGroup.randomizationMethod')?.setValue('MINIMIZATION');
       component.setMinimizationProbability('age', '<65', 50);

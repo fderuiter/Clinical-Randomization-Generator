@@ -64,6 +64,11 @@ export class ConfigFormComponent implements OnInit {
    */
   readonly minimizationProbabilities = signal<Record<string, Record<string, number>>>({});
 
+  /**
+   * Tracks whether the minimization probability inputs for a given factor have been touched (blurred).
+   */
+  readonly minimizationTouched = signal<Record<string, boolean>>({});
+
   /** Whether the computed proportional matrix has been generated and is ready to display. */
   readonly matrixComputed = signal(false);
 
@@ -777,6 +782,14 @@ export class ConfigFormComponent implements OnInit {
   getMinimizationProbabilityTotal(factorId: string, levels: string[]): number {
     const probs = this.minimizationProbabilities();
     return levels.reduce((sum, l) => sum + (probs[factorId]?.[l] ?? 0), 0);
+  }
+
+  isMinimizationProbabilityTouched(factorId: string): boolean {
+    return !!this.minimizationTouched()[factorId];
+  }
+
+  markMinimizationProbabilityTouched(factorId: string): void {
+    this.minimizationTouched.update(prev => ({ ...prev, [factorId]: true }));
   }
 
   isMinimizationProbabilityInvalid(factorId: string): boolean {
