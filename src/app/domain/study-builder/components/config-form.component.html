@@ -175,13 +175,18 @@
                         <input #probInput [id]="'levelDist' + getStrataId(stratumIndex) + '_' + level" type="number" min="0" max="100" step="any"
                                [value]="getMinimizationProbability(getStrataId(stratumIndex), level)"
                                (input)="setMinimizationProbability(getStrataId(stratumIndex), level, +probInput.value)"
-                               class="w-20 rounded-lg border px-2 py-1 text-sm">
+                               (blur)="markMinimizationProbabilityTouched(getStrataId(stratumIndex))"
+                               class="w-20 rounded-lg border px-2 py-1 text-sm"
+                               [class.border-red-500]="isMinimizationProbabilityInvalid(getStrataId(stratumIndex)) && isMinimizationProbabilityTouched(getStrataId(stratumIndex))">
                         <span class="text-xs">%</span>
                       </div>
                     }
                     <p class="text-xs" [class.text-red-600]="isMinimizationProbabilityInvalid(getStrataId(stratumIndex))">
                       Total: {{ getMinimizationProbabilityTotal(getStrataId(stratumIndex), getStrataLevels(stratumIndex)) }}% (must sum to 100%)
                     </p>
+                    @if (isMinimizationProbabilityInvalid(getStrataId(stratumIndex)) && isMinimizationProbabilityTouched(getStrataId(stratumIndex))) {
+                      <p class="text-xs text-red-600 mt-1">Probabilities must sum to exactly 100%.</p>
+                    }
                   </div>
                 }
               </div>
