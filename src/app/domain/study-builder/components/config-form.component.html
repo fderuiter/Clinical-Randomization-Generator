@@ -172,7 +172,7 @@
                     @for (level of getStrataLevels(stratumIndex); track level) {
                       <div class="flex items-center gap-2 mb-1">
                         <label [for]="'levelDist' + getStrataId(stratumIndex) + '_' + level" class="text-xs flex-1">{{ level }}</label>
-                        <input #probInput [id]="'levelDist' + getStrataId(stratumIndex) + '_' + level" type="number" min="0" max="100"
+                        <input #probInput [id]="'levelDist' + getStrataId(stratumIndex) + '_' + level" type="number" min="0" max="100" step="any"
                                [value]="getMinimizationProbability(getStrataId(stratumIndex), level)"
                                (input)="setMinimizationProbability(getStrataId(stratumIndex), level, +probInput.value)"
                                class="w-20 rounded-lg border px-2 py-1 text-sm">

@@ -144,4 +144,41 @@ test.describe('Form Validation and Configuration', () => {
     const capRows = page.locator('[formArrayName="stratumCaps"] > div');
     await expect(capRows).toHaveCount(2, { timeout: 5000 });
   });
+
+  // ---------------------------------------------------------------------------
+  // Minimization distribution fractional inputs
+  // ---------------------------------------------------------------------------
+  test('should allow fractional values in minimization distribution inputs', async ({ page }) => {
+    await loadPreset(page, 'Simple');
+
+    // Setup for minimization
+    await goToStep(page, 2);
+    await page.getByRole('radio', { name: 'Minimization' }).click();
+
+    await page.locator("button:has-text('Next'):visible").first().click(); // Go to step 3
+
+    await page.getByRole('button', { name: /\+ Add Factor/i }).click();
+    const strataRows = page.locator('[formArrayName="strata"] > div');
+    await expect(strataRows).toHaveCount(1, { timeout: 5000 });
+
+    const firstStratumRow = strataRows.first();
+    const levelsInput = firstStratumRow.locator('app-tag-input input').first();
+    await levelsInput.waitFor({ state: 'visible', timeout: 10000 });
+    await levelsInput.fill('Level1');
+    await levelsInput.press('Enter');
+    await levelsInput.fill('Level2');
+    await levelsInput.press('Enter');
+    await levelsInput.press('Tab');
+
+    // Enter 0.33 into the first minimization distribution input
+    const minInput = firstStratumRow.locator('input[type="number"]').first();
+    await minInput.fill('0.33');
+
+    // Evaluate if the input is valid at the browser level
+    const isValid = await minInput.evaluate((el: HTMLInputElement) => el.checkValidity());
+    expect(isValid).toBe(true);
+
+    // We expect the value to persist and not be cleared/flagged by step validation
+    await expect(minInput).toHaveValue('0.33');
+  });
 });
