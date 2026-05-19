@@ -146,16 +146,14 @@ test.describe('Form Validation and Configuration', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Minimization distribution fractional inputs
+  // Minimization distribution validation and submission
   // ---------------------------------------------------------------------------
-  test('should allow fractional values in minimization distribution inputs', async ({ page }) => {
+  test('should display inline validation error and disable next when minimization probabilities do not sum to 100%', async ({ page }) => {
     await loadPreset(page, 'Simple');
 
-    // Setup for minimization
     await goToStep(page, 2);
     await page.getByRole('radio', { name: 'Minimization' }).click();
-
-    await page.locator("button:has-text('Next'):visible").first().click(); // Go to step 3
+    await page.getByRole('button', { name: /^Next$/i }).click();
 
     await page.getByRole('button', { name: /\+ Add Factor/i }).click();
     const strataRows = page.locator('[formArrayName="strata"] > div');
@@ -170,15 +168,49 @@ test.describe('Form Validation and Configuration', () => {
     await levelsInput.press('Enter');
     await levelsInput.press('Tab');
 
-    // Enter 0.33 into the first minimization distribution input
-    const minInput = firstStratumRow.locator('input[type="number"]').first();
-    await minInput.fill('0.33');
+    const minimizationInputs = firstStratumRow.locator('input[type="number"]');
+    await minimizationInputs.nth(0).fill('60');
+    await minimizationInputs.nth(0).blur();
+    await minimizationInputs.nth(1).fill('30');
+    await minimizationInputs.nth(1).blur();
 
-    // Evaluate if the input is valid at the browser level
-    const isValid = await minInput.evaluate((el: HTMLInputElement) => el.checkValidity());
-    expect(isValid).toBe(true);
+    await expect(page.getByText('Probabilities must sum to exactly 100%.')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Next$/i })).toBeDisabled();
+  });
 
-    // We expect the value to persist and not be cleared/flagged by step validation
-    await expect(minInput).toHaveValue('0.33');
+  test('should accept fractional minimization distribution values and submit full workflow', async ({ page }) => {
+    await loadPreset(page, 'Simple');
+
+    await goToStep(page, 2);
+    await page.getByRole('radio', { name: 'Minimization' }).click();
+    await page.getByRole('button', { name: /^Next$/i }).click();
+
+    await page.getByRole('button', { name: /\+ Add Factor/i }).click();
+    const firstStratumRow = page.locator('[formArrayName="strata"] > div').first();
+    const levelsInput = firstStratumRow.locator('app-tag-input input').first();
+    await levelsInput.waitFor({ state: 'visible', timeout: 10000 });
+    await levelsInput.fill('Level1');
+    await levelsInput.press('Enter');
+    await levelsInput.fill('Level2');
+    await levelsInput.press('Enter');
+    await levelsInput.press('Tab');
+
+    const minimizationInputs = firstStratumRow.locator('input[type="number"]');
+    await minimizationInputs.nth(0).fill('33.3');
+    await minimizationInputs.nth(1).fill('66.7');
+
+    const firstInputValid = await minimizationInputs.nth(0).evaluate((el: HTMLInputElement) => el.checkValidity());
+    const secondInputValid = await minimizationInputs.nth(1).evaluate((el: HTMLInputElement) => el.checkValidity());
+    expect(firstInputValid).toBe(true);
+    expect(secondInputValid).toBe(true);
+    await expect(minimizationInputs.nth(0)).toHaveValue('33.3');
+    await expect(minimizationInputs.nth(1)).toHaveValue('66.7');
+
+    await page.getByRole('button', { name: /^Next$/i }).click();
+    await page.getByRole('button', { name: /^Next$/i }).click();
+    await page.getByRole('button', { name: /^Next$/i }).click();
+    await expect(page.getByRole('button', { name: /Generate Schema/i })).toBeVisible();
+    await page.getByRole('button', { name: /Generate Schema/i }).click();
+    await expect(page.locator('#results-section')).toBeVisible({ timeout: 15000 });
   });
 });
