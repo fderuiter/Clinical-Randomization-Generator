@@ -1187,7 +1187,7 @@ describe('CodeGeneratorService', () => {
           ...minimizationConfig,
           strata: [],
           stratumCaps: [{ levels: [], cap: 20 }],
-          capStrategy: 'UNIFORM',
+          capStrategy: 'MANUAL_MATRIX',
         });
         expect(code).toContain('stats::setNames(20, "")');
         expect(code).toContain('key <- if (ncol(combo_row) == 0) "" else paste(unlist(combo_row), collapse="_")');
@@ -1216,7 +1216,7 @@ describe('CodeGeneratorService', () => {
           ...minimizationConfig,
           strata: [{ id: 'sex', name: 'Sex', levels: ['Male', 'Female'] }],
           stratumCaps: [{ levels: ['Male'], cap: 5 }],
-          capStrategy: 'UNIFORM',
+          capStrategy: 'MANUAL_MATRIX',
         });
         expect(code).toContain('("Male",): 5');
       });
