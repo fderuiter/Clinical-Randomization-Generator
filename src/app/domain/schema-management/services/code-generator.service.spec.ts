@@ -126,10 +126,18 @@ describe('CodeGeneratorService', () => {
 
       it('should embed named stratum caps matching the levels joined by underscore', () => {
         const code = service.generateR(fullConfig);
-        expect(code).toContain('"Male_Young" = 12');
-        expect(code).toContain('"Male_Old" = 9');
-        expect(code).toContain('"Female_Young" = 15');
-        expect(code).toContain('"Female_Old" = 6');
+        expect(code).toContain('setNames(12, "Male_Young")');
+        expect(code).toContain('setNames(9, "Male_Old")');
+        expect(code).toContain('setNames(15, "Female_Young")');
+        expect(code).toContain('setNames(6, "Female_Old")');
+      });
+
+      it('should encode unstratified caps with setNames to avoid invalid empty-key syntax', () => {
+        const code = service.generateR({
+          ...minimalConfig,
+          stratumCaps: [{ levels: [], cap: 20 }],
+        });
+        expect(code).toContain('setNames(20, "")');
       });
 
       it('should add the no-strata guard after expand.grid()', () => {
@@ -302,9 +310,11 @@ describe('CodeGeneratorService', () => {
       it('should build a pandas DataFrame and include QC checks', () => {
         const code = service.generatePython(fullConfig);
         expect(code).toContain('df = pd.DataFrame(schema)');
+        expect(code).toContain('if not df.empty:');
         expect(code).toContain("df['Treatment'].value_counts()");
         expect(code).toContain("pd.crosstab(df['Site'], df['Treatment'])");
         expect(code).toContain("df['BlockSize'].value_counts()");
+        expect(code).toContain('No rows generated; skipping QC tables.');
       });
     });
 

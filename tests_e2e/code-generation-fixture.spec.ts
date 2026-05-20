@@ -1,6 +1,8 @@
 import { test as base, expect, Page } from '@playwright/test';
+import { execFile } from 'child_process';
 import { mkdir, readFile, rm, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
+import { promisify } from 'util';
 import { goToStep, loadPreset, openGenerator } from './generator-helpers';
 
 type Language = 'R' | 'Python' | 'SAS' | 'Stata';
@@ -16,6 +18,7 @@ type ScriptFixture = {
 };
 
 const artifactRoot = resolve(process.cwd(), 'artifacts', 'code-generation-fixtures');
+const execFileAsync = promisify(execFile);
 
 const languageTabs: { language: Language; tabName: RegExp; extension: string }[] = [
   { language: 'R', tabName: /^R$/i, extension: 'R' },
@@ -75,6 +78,47 @@ test.describe.configure({ mode: 'serial' });
 
 test.describe('Code generation fixtures for script execution checks', () => {
   test.setTimeout(180_000);
+
+  const assertSubprocessSuccess = async (
+    command: string,
+    args: string[],
+    description: string,
+    options?: { env?: NodeJS.ProcessEnv },
+  ): Promise<void> => {
+    try {
+      await execFileAsync(command, args, {
+        cwd: process.cwd(),
+        maxBuffer: 10 * 1024 * 1024,
+        env: options?.env ?? process.env,
+      });
+    } catch (error) {
+      const failure = error as {
+        code?: number;
+        message: string;
+        stdout?: string;
+        stderr?: string;
+      };
+      throw new Error(
+        `${description} failed (exit code: ${failure.code ?? 'unknown'}).\n` +
+        `Command: ${command} ${args.join(' ')}\n` +
+        `stdout:\n${failure.stdout ?? ''}\n` +
+        `stderr:\n${failure.stderr ?? ''}\n` +
+        `error: ${failure.message}`,
+      );
+    }
+  };
+
+  const commandExists = async (command: string): Promise<boolean> => {
+    try {
+      await execFileAsync(command, ['--version'], {
+        cwd: process.cwd(),
+        maxBuffer: 1024 * 1024,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   test.beforeAll(async () => {
     await rm(artifactRoot, { recursive: true, force: true });
@@ -294,5 +338,24 @@ test.describe('Code generation fixtures for script execution checks', () => {
     expect(weirdCharsStata).toContain('`"Type "A""\'');
     expect(weirdCharsStata).toContain('`"C:\\path"\'');
     expect(weirdCharsStata).toContain('`"α-Ω type"\'');
+
+    const pythonScripts = scenarios.map(scenario => join(artifactRoot, scenario.id, `${scenario.id}.py`));
+    const hasPython = await commandExists('python3');
+    expect(hasPython).toBe(true);
+    for (const scriptPath of pythonScripts) {
+      await assertSubprocessSuccess('python3', [scriptPath], `Generated Python script execution (${scriptPath})`);
+    }
+
+    const rScripts = scenarios.map(scenario => join(artifactRoot, scenario.id, `${scenario.id}.R`));
+    const hasRscript = await commandExists('Rscript');
+    if (hasRscript) {
+      for (const scriptPath of rScripts) {
+        await assertSubprocessSuccess('Rscript', [scriptPath], `Generated R script execution (${scriptPath})`);
+      }
+    } else if (process.env.GITHUB_ACTIONS === 'true') {
+      throw new Error('Rscript is required in CI for generated R script execution checks.');
+    }
+
+    await assertSubprocessSuccess('node', ['scripts/validate-sas-syntax.mjs'], 'Generated SAS script static validation');
   });
 });
