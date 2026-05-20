@@ -120,6 +120,65 @@ jobs:
         path: artifacts/code-generation-fixtures/
         retention-days: 30
 
+  python_script_execution_check:
+    runs-on: ubuntu-latest
+    needs: code_generation_fixtures
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.11'
+
+    - name: Install Python dependencies
+      run: pip install numpy pandas --quiet
+
+    - name: Download code-generation fixture scripts
+      uses: actions/download-artifact@v8
+      with:
+        name: code-generation-fixtures
+        path: artifacts/code-generation-fixtures/
+
+    - name: Execute generated Python scripts
+      run: |
+        set -e
+        PASS=0
+        FAIL=0
+        ERRORS=""
+        echo "=== Running UI-generated Python scripts ==="
+        while IFS= read -r -d '' script; do
+          echo ""
+          echo "--- Running: $script ---"
+          if python3 "$script"; then
+            echo "PASS: $script"
+            PASS=$((PASS + 1))
+          else
+            echo "FAIL: $script"
+            FAIL=$((FAIL + 1))
+            ERRORS="$ERRORS\n  ✗ $script"
+          fi
+        done < <(find artifacts/code-generation-fixtures -name '*.py' -print0 | sort -z)
+        echo ""
+        echo "=== Python Script Execution Summary ==="
+        echo "  Passed: $PASS"
+        echo "  Failed: $FAIL"
+        if [ "$FAIL" -gt 0 ]; then
+          echo ""
+          echo "FAILED scripts:"
+          printf "$ERRORS\n"
+          exit 1
+        fi
+        if [ "$PASS" -eq 0 ]; then
+          echo "ERROR: No Python scripts found in artifacts/code-generation-fixtures/"
+          exit 1
+        fi
+        echo "All $PASS generated Python script(s) executed successfully."
+
   merge_reports:
     runs-on: ubuntu-latest
     needs: e2e
