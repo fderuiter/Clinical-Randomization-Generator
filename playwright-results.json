@@ -1,0 +1,285 @@
+{
+  "config": {
+    "configFile": "/home/runner/work/Equipose/Equipose/playwright.config.ts",
+    "rootDir": "/home/runner/work/Equipose/Equipose/tests_e2e",
+    "forbidOnly": true,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/fderuiter/Equipose/commit/72fbcf9e44bc4319cdf2be518345c482dcae891c",
+        "commitHash": "72fbcf9e44bc4319cdf2be518345c482dcae891c",
+        "buildHref": "https://github.com/fderuiter/Equipose/actions/runs/26171884909"
+      },
+      "gitCommit": {
+        "shortHash": "72fbcf9",
+        "hash": "72fbcf9e44bc4319cdf2be518345c482dcae891c",
+        "subject": "Initial plan",
+        "body": "Initial plan\n",
+        "author": {
+          "name": "copilot-swe-agent[bot]",
+          "email": "198982749+Copilot@users.noreply.github.com",
+          "time": 1779290146000
+        },
+        "committer": {
+          "name": "GitHub",
+          "email": "noreply@github.com",
+          "time": 1779290146000
+        },
+        "branch": "copilot/add-playwright-fixture-complex-schemas"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/Equipose/Equipose/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/fderuiter/Equipose/commit/72fbcf9e44bc4319cdf2be518345c482dcae891c",
+            "commitHash": "72fbcf9e44bc4319cdf2be518345c482dcae891c",
+            "buildHref": "https://github.com/fderuiter/Equipose/actions/runs/26171884909"
+          },
+          "gitCommit": {
+            "shortHash": "72fbcf9",
+            "hash": "72fbcf9e44bc4319cdf2be518345c482dcae891c",
+            "subject": "Initial plan",
+            "body": "Initial plan\n",
+            "author": {
+              "name": "copilot-swe-agent[bot]",
+              "email": "198982749+Copilot@users.noreply.github.com",
+              "time": 1779290146000
+            },
+            "committer": {
+              "name": "GitHub",
+              "email": "noreply@github.com",
+              "time": 1779290146000
+            },
+            "branch": "copilot/add-playwright-fixture-complex-schemas"
+          },
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/runner/work/Equipose/Equipose/tests_e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "blob",
+        null
+      ],
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 1,
+    "webServer": {
+      "command": "npm run start",
+      "url": "http://localhost:4200",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "a11y.spec.ts",
+      "file": "a11y.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Accessibility and visual regression - light mode",
+          "file": "a11y.spec.ts",
+          "line": 166,
+          "column": 6,
+          "specs": [
+            {
+              "title": "pages should pass accessibility, visibility, and screenshot baselines",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7179,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-20T15:22:21.029Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa3ad05f8c0e05077efb-cfe102708b9f5cf2acec",
+              "file": "a11y.spec.ts",
+              "line": 171,
+              "column": 7
+            },
+            {
+              "title": "transient states should remain visible and accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4139,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-20T15:22:30.180Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa3ad05f8c0e05077efb-bdaaa1d68479a59f2783",
+              "file": "a11y.spec.ts",
+              "line": 175,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Accessibility and visual regression - dark mode",
+          "file": "a11y.spec.ts",
+          "line": 180,
+          "column": 6,
+          "specs": [
+            {
+              "title": "pages should pass accessibility, visibility, and screenshot baselines",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7386,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-20T15:22:34.339Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa3ad05f8c0e05077efb-f07e302535f2a2c2576f",
+              "file": "a11y.spec.ts",
+              "line": 190,
+              "column": 7
+            },
+            {
+              "title": "transient states should remain visible and accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3911,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-20T15:22:41.743Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "aa3ad05f8c0e05077efb-395787dbd7ddd69745d5",
+              "file": "a11y.spec.ts",
+              "line": 194,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-05-20T15:22:08.473Z",
+    "duration": 37308.712,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
