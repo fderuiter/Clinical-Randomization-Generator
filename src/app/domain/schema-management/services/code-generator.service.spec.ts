@@ -1182,6 +1182,17 @@ describe('CodeGeneratorService', () => {
         expect(code).toContain('compute_imbalance_score <- function');
       });
 
+      it('should handle unstratified minimization key lookup with an explicit empty key', () => {
+        const code = service.generate('R', {
+          ...minimizationConfig,
+          strata: [],
+          stratumCaps: [{ levels: [], cap: 20 }],
+          capStrategy: 'UNIFORM',
+        });
+        expect(code).toContain('stats::setNames(20, "")');
+        expect(code).toContain('key <- if (ncol(combo_row) == 0) "" else paste(unlist(combo_row), collapse="_")');
+      });
+
       it('should calculate ratio-adjusted imbalance scores natively', () => {
         const code = service.generate('R', minimizationConfig);
         expect(code).toContain('normalized <- arm_counts[arm] / ratios[arm]');
@@ -1198,6 +1209,16 @@ describe('CodeGeneratorService', () => {
         const code = service.generate('Python', minimizationConfig);
         expect(code).toContain('p_minimization = 0.85');
         expect(code).toContain('def compute_imbalance_score');
+      });
+
+      it('should emit single-factor stratum cap keys as 1-tuples', () => {
+        const code = service.generate('Python', {
+          ...minimizationConfig,
+          strata: [{ id: 'sex', name: 'Sex', levels: ['Male', 'Female'] }],
+          stratumCaps: [{ levels: ['Male'], cap: 5 }],
+          capStrategy: 'UNIFORM',
+        });
+        expect(code).toContain('("Male",): 5');
       });
 
       it('should calculate ratio-adjusted imbalance scores natively', () => {

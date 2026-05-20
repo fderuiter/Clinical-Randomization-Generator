@@ -247,7 +247,9 @@ export class CodeGeneratorService {
                    `\n)`;
       } else {
         const caps = config.stratumCaps || [];
-        const capsVector = caps.map(c => `"${this.escapeRString(c.levels.join('_'))}" = ${c.cap}`).join(',\n  ');
+        const capsVector = caps
+          .map(c => `stats::setNames(${c.cap}, "${this.escapeRString(c.levels.join('_'))}")`)
+          .join(',\n  ');
         capsCode = `stratum_caps <- c(\n  ${capsVector}\n)\nintersection_counts <- list()`;
       }
 
@@ -396,7 +398,7 @@ ${isMarginal ? `
 ` : `
   keep_flags <- sapply(1:nrow(active_pool), function(i) {
     combo_row <- active_pool[i, , drop = FALSE]
-    key <- paste(unlist(combo_row), collapse="_")
+    key <- if (ncol(combo_row) == 0) "" else paste(unlist(combo_row), collapse="_")
     cap <- if (key %in% names(stratum_caps)) stratum_caps[[key]] else Inf
     count <- if (is.null(intersection_counts[[key]])) 0 else intersection_counts[[key]]
     is.infinite(cap) || count < cap
@@ -850,7 +852,11 @@ if (nrow(schema) > 0) {
                    `\n}`;
       } else {
         const caps = config.stratumCaps || [];
-        const pyCapsDict = caps.map(c => `    (${c.levels.map(l => `"${this.escapePythonString(l)}"`).join(', ')}): ${c.cap}`).join(',\n');
+        const pyCapsDict = caps.map(c => {
+          const tupleElements = c.levels.map(l => `"${this.escapePythonString(l)}"`).join(', ');
+          const tupleKey = c.levels.length === 1 ? `(${tupleElements},)` : `(${tupleElements})`;
+          return `    ${tupleKey}: ${c.cap}`;
+        }).join(',\n');
         capsCode = `stratum_caps = {\n${pyCapsDict || '    (): 0'}\n}\nintersection_counts = {}`;
       }
 
