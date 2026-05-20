@@ -2099,7 +2099,7 @@ title;
     let strataLines: string;
     let strataGridArgs: string;
     try {
-      rCapsVector = caps.map(c => `"${this.escapeRString(c.levels.join('_'))}" = ${c.cap}`).join(',\n  ');
+      rCapsVector = caps.map(c => `setNames(${c.cap}, "${this.escapeRString(c.levels.join('_'))}")`).join(',\n  ');
       strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + this.escapeRString(l) + '"').join(', ')})`).join('\n');
       strataGridArgs = [...strata.map(s => `${s.id} = ${s.id}_levels`), 'stringsAsFactors = FALSE'].join(',\n  ');
     } catch (e) {
@@ -2389,16 +2389,20 @@ for site in sites:
 
 df = pd.DataFrame(schema)
 print("\\n--- Generated Randomization Schema (First 5 Rows) ---")
-print(df.head())
+print(df.head() if not df.empty else "No rows generated.")
 
-print("\\n--- QC Check: Overall Allocation ---")
-print(df['Treatment'].value_counts())
+if not df.empty:
+    print("\\n--- QC Check: Overall Allocation ---")
+    print(df['Treatment'].value_counts())
 
-print("\\n--- QC Check: Site-Level Balance ---")
-print(pd.crosstab(df['Site'], df['Treatment']))
+    print("\\n--- QC Check: Site-Level Balance ---")
+    print(pd.crosstab(df['Site'], df['Treatment']))
 
-print("\\n--- QC Check: Dynamic Block Utilization ---")
-print(df['BlockSize'].value_counts())
+    print("\\n--- QC Check: Dynamic Block Utilization ---")
+    print(df['BlockSize'].value_counts())
+else:
+    print("\\n--- QC Check ---")
+    print("No rows generated; skipping QC tables.")
 # df.to_csv("randomization_schema.csv", index=False)
 `;
     } catch (e) {

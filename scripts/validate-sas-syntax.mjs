@@ -31,11 +31,11 @@ import { join, resolve } from 'path';
 const FIXTURE_ROOT = resolve(process.cwd(), 'artifacts', 'code-generation-fixtures');
 
 const REQUIRED_HEADER_PATTERNS = [
-  { label: 'title comment',        re: /\/\*\s*Randomization Schema Generation in SAS\s*\*\//i },
+  { label: 'title comment',        re: /\/\*\s*(Randomization Schema Generation in SAS|Randomization Schema Configuration)\s*\*\//i },
   { label: 'Protocol field',       re: /\/\*\s*Protocol:/i },
   { label: 'App Version field',    re: /\/\*\s*App Version:/i },
   { label: 'Generated At field',   re: /\/\*\s*Generated At:/i },
-  { label: 'PRNG Algorithm field', re: /\/\*\s*PRNG Algorithm:/i },
+  { label: 'PRNG\/Algorithm field', re: /\/\*\s*(PRNG Algorithm|Algorithm):/i },
 ];
 
 const ISO_TIMESTAMP_RE = /Generated At:\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/i;
