@@ -97,12 +97,12 @@ test.describe('Code generation fixtures for script execution checks', () => {
         },
       },
       {
-        id: 'minimization',
-        protocolId: 'FXT-MIN-001',
+        id: 'minimization-only',
+        protocolId: 'FXT-MIN-ONLY-001',
         configure: async (currentPage: Page) => {
           await loadPreset(currentPage, 'Simple');
-          await currentPage.locator('#protocolId').fill('FXT-MIN-001');
-          await currentPage.locator('#studyName').fill('Fixture Minimization Scenario');
+          await currentPage.locator('#protocolId').fill('FXT-MIN-ONLY-001');
+          await currentPage.locator('#studyName').fill('Fixture Minimization Only Scenario');
           await goToStep(currentPage, 2);
           await currentPage.getByRole('radio', { name: 'Minimization' }).click();
           await currentPage.getByRole('button', { name: /^Next$/i }).click();
@@ -119,6 +119,23 @@ test.describe('Code generation fixtures for script execution checks', () => {
           await probabilityInputs.nth(1).fill('60');
           await currentPage.getByRole('button', { name: /^Next$/i }).click();
           await currentPage.getByRole('button', { name: /^Next$/i }).click();
+          await currentPage.getByRole('radio', { name: 'Marginal Only' }).click();
+          await currentPage.getByRole('button', { name: /^Next$/i }).click();
+        },
+      },
+      {
+        id: 'zero-cap',
+        protocolId: 'FXT-ZERO-CAP-001',
+        configure: async (currentPage: Page) => {
+          await loadPreset(currentPage, 'Standard');
+          await currentPage.locator('#protocolId').fill('FXT-ZERO-CAP-001');
+          await currentPage.locator('#studyName').fill('Fixture Zero Cap Scenario');
+          await goToStep(currentPage, 5);
+          const capInputs = currentPage.locator('[formArrayName="stratumCaps"] input[formControlName="cap"]');
+          const capCount = await capInputs.count();
+          for (let i = 0; i < capCount; i++) {
+            await capInputs.nth(i).fill('0');
+          }
           await currentPage.getByRole('button', { name: /^Next$/i }).click();
         },
       },
@@ -203,7 +220,7 @@ test.describe('Code generation fixtures for script execution checks', () => {
       }),
     );
 
-    expect(summary).toHaveLength(5);
+    expect(summary).toHaveLength(6);
     summary.forEach(entry => expect(entry.files).toHaveLength(4));
   });
 });
