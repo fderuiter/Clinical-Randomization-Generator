@@ -131,10 +131,11 @@ test.describe('Code generation fixtures for script execution checks', () => {
           await currentPage.locator('#protocolId').fill('FXT-ZERO-CAP-001');
           await currentPage.locator('#studyName').fill('Fixture Zero Cap Scenario');
           await goToStep(currentPage, 5);
-          const capInputs = currentPage.locator('[formArrayName="stratumCaps"] input[formControlName="cap"]');
-          const capCount = await capInputs.count();
+          await currentPage.getByRole('radio', { name: 'Manual Matrix' }).click();
+          const capRows = currentPage.locator('[formArrayName="stratumCaps"] > div');
+          const capCount = await capRows.count();
           for (let i = 0; i < capCount; i++) {
-            await capInputs.nth(i).fill('0');
+            await capRows.nth(i).locator('input').fill('0');
           }
           await currentPage.getByRole('button', { name: /^Next$/i }).click();
         },
@@ -222,5 +223,11 @@ test.describe('Code generation fixtures for script execution checks', () => {
 
     expect(summary).toHaveLength(6);
     summary.forEach(entry => expect(entry.files).toHaveLength(4));
+
+    const zeroCapStata = await readFile(join(artifactRoot, 'zero-cap', 'zero-cap.do'), 'utf-8');
+    expect(zeroCapStata).toContain('local cap = 0');
+
+    const minimizationPython = await readFile(join(artifactRoot, 'minimization-only', 'minimization-only.py'), 'utf-8');
+    expect(minimizationPython).toContain('Algorithm: Pocock-Simon Minimization');
   });
 });
