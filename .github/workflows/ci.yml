@@ -301,6 +301,49 @@ jobs:
         path: Validation_Traceability_Matrix.md
         retention-days: 90
 
+  script_validation_report:
+    runs-on: ubuntu-latest
+    needs: [python_script_execution_check, sas_static_validation, cross_env_equivalence]
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    - name: Download code-generation fixture scripts
+      uses: actions/download-artifact@v8
+      with:
+        name: code-generation-fixtures
+        path: artifacts/code-generation-fixtures/
+      continue-on-error: true
+
+    - name: Generate script validation report
+      run: |
+        node scripts/generate-script-validation-report.mjs \
+          --python-result "${{ needs.python_script_execution_check.result }}" \
+          --r-result      "${{ needs.cross_env_equivalence.result }}" \
+          --sas-result    "${{ needs.sas_static_validation.result }}" \
+          --fixture-root  artifacts/code-generation-fixtures \
+          --out           script-validation-report.md
+        echo "=== Script Validation Report (preview) ==="
+        head -40 script-validation-report.md
+
+    - name: Upload script validation report
+      uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: script-validation-report
+        path: script-validation-report.md
+        retention-days: 90
+
   cross_env_equivalence:
     runs-on: ubuntu-latest
     needs: [build_and_test, code_generation_fixtures]
