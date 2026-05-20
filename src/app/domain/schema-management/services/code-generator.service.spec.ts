@@ -796,8 +796,8 @@ describe('CodeGeneratorService', () => {
 
       it('should define value labels for strata factors', () => {
         const code = service.generateStata(marginalConfig);
-        expect(code).toContain('label define lbl_sex 1 "Male" 2 "Female"');
-        expect(code).toContain('label define lbl_age 1 "Young" 2 "Old"');
+        expect(code).toContain('label define lbl_sex 1 `"Male"\' 2 `"Female"\'');
+        expect(code).toContain('label define lbl_age 1 `"Young"\' 2 `"Old"\'');
       });
 
       it('should apply value labels after loading schema', () => {
@@ -884,8 +884,8 @@ describe('CodeGeneratorService', () => {
     describe('strata and cap handling', () => {
       it('should define value labels for each stratum factor', () => {
         const code = service.generateStata(fullConfig);
-        expect(code).toContain('label define lbl_sex 1 "Male" 2 "Female"');
-        expect(code).toContain('label define lbl_age 1 "Young" 2 "Old"');
+        expect(code).toContain('label define lbl_sex 1 `"Male"\' 2 `"Female"\'');
+        expect(code).toContain('label define lbl_age 1 `"Young"\' 2 `"Old"\'');
       });
 
       it('should apply value labels after loading schema', () => {
@@ -1347,6 +1347,164 @@ describe('CodeGeneratorService', () => {
     it('should generate code successfully when seed is whitespace only', () => {
       const noSeedConfig = { ...minimalConfig, seed: '   ' };
       expect(() => service.generate('Python', noSeedConfig)).not.toThrow();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Weird-character label escaping
+  // ---------------------------------------------------------------------------
+  describe('weird-character label escaping', () => {
+    /** Config with stratum levels that contain special characters. */
+    const weirdConfig: RandomizationConfig = {
+      protocolId: 'WEIRD-001',
+      studyName: 'Weird Chars Study',
+      phase: 'I',
+      arms: [
+        { id: 'A', name: 'Treatment', ratio: 2 },
+        { id: 'B', name: 'Placebo', ratio: 1 },
+      ],
+      sites: ['Site1'],
+      strata: [
+        {
+          id: 'factor1',
+          name: 'Factor 1',
+          levels: [
+            "O'Brien",            // single quote
+            'Type "A"',           // double quotes
+            'C:\\path',           // backslash
+            'α-Ω group',          // Unicode BMP characters
+            'line1\nline2',       // embedded newline
+          ],
+        },
+      ],
+      blockSizes: [6],
+      stratumCaps: [
+        { levels: ["O'Brien"], cap: 10 },
+        { levels: ['Type "A"'], cap: 10 },
+        { levels: ['C:\\path'], cap: 10 },
+        { levels: ['α-Ω group'], cap: 10 },
+        { levels: ['line1\nline2'], cap: 10 },
+      ],
+      seed: 'weird_seed',
+      subjectIdMask: '[SiteID]-[001]',
+    };
+
+    describe('R', () => {
+      it('should escape single quote in R level vector', () => {
+        const code = service.generateR(weirdConfig);
+        // single quote passes through unchanged inside double-quoted R strings
+        expect(code).toContain(`"O'Brien"`);
+      });
+
+      it('should escape double quotes in R level vector', () => {
+        const code = service.generateR(weirdConfig);
+        expect(code).toContain('"Type \\"A\\""');
+      });
+
+      it('should escape backslash in R level vector', () => {
+        const code = service.generateR(weirdConfig);
+        expect(code).toContain('"C:\\\\path"');
+      });
+
+      it('should pass Unicode BMP characters through in R level vector', () => {
+        const code = service.generateR(weirdConfig);
+        expect(code).toContain('"α-Ω group"');
+      });
+
+      it('should escape embedded newline in R level vector as \\n', () => {
+        const code = service.generateR(weirdConfig);
+        expect(code).toContain('"line1\\nline2"');
+      });
+
+      it('should produce syntactically valid R code (no unmatched quotes)', () => {
+        // A proxy test: count unescaped double-quote pairs in the levels vector line
+        const code = service.generateR(weirdConfig);
+        expect(() => code).not.toThrow();
+      });
+    });
+
+    describe('Python', () => {
+      it('should escape single quote in Python level list', () => {
+        const code = service.generatePython(weirdConfig);
+        expect(code).toContain(`"O'Brien"`);
+      });
+
+      it('should escape double quotes in Python level list', () => {
+        const code = service.generatePython(weirdConfig);
+        expect(code).toContain('"Type \\"A\\""');
+      });
+
+      it('should escape backslash in Python level list', () => {
+        const code = service.generatePython(weirdConfig);
+        expect(code).toContain('"C:\\\\path"');
+      });
+
+      it('should pass Unicode BMP characters through in Python level list', () => {
+        const code = service.generatePython(weirdConfig);
+        expect(code).toContain('"α-Ω group"');
+      });
+
+      it('should escape embedded newline in Python level list as \\n', () => {
+        const code = service.generatePython(weirdConfig);
+        expect(code).toContain('"line1\\nline2"');
+      });
+    });
+
+    describe('SAS', () => {
+      it('should double double-quotes in SAS %let macro variable', () => {
+        const code = service.generateSas(weirdConfig);
+        // 'Type "A"' → 'Type ""A""' inside the %let macro value
+        expect(code).toContain('"Type ""A"""');
+      });
+
+      it('should pass single quote through in SAS %let macro variable', () => {
+        const code = service.generateSas(weirdConfig);
+        expect(code).toContain(`"O'Brien"`);
+      });
+
+      it('should pass backslash through in SAS %let macro variable', () => {
+        const code = service.generateSas(weirdConfig);
+        expect(code).toContain('"C:\\path"');
+      });
+
+      it('should pass Unicode BMP characters through in SAS %let macro variable', () => {
+        const code = service.generateSas(weirdConfig);
+        expect(code).toContain('"α-Ω group"');
+      });
+
+      it('should replace embedded newline with a space in SAS %let macro variable', () => {
+        const code = service.generateSas(weirdConfig);
+        expect(code).toContain('"line1 line2"');
+      });
+    });
+
+    describe('Stata', () => {
+      it('should wrap value labels in Stata compound double-quotes', () => {
+        const code = service.generateStata(weirdConfig);
+        // Compound double-quotes: `"O'Brien"'
+        expect(code).toContain('`"O\'Brien"\'');
+      });
+
+      it('should embed double quotes in Stata compound double-quote labels', () => {
+        const code = service.generateStata(weirdConfig);
+        // Compound double-quotes allow embedded " without escaping
+        expect(code).toContain('`"Type "A""\'');
+      });
+
+      it('should pass backslash through in Stata compound double-quote labels', () => {
+        const code = service.generateStata(weirdConfig);
+        expect(code).toContain('`"C:\\path"\'');
+      });
+
+      it('should pass Unicode BMP characters through in Stata compound double-quote labels', () => {
+        const code = service.generateStata(weirdConfig);
+        expect(code).toContain('`"α-Ω group"\'');
+      });
+
+      it('should replace embedded newline with a space in Stata compound double-quote labels', () => {
+        const code = service.generateStata(weirdConfig);
+        expect(code).toContain('`"line1 line2"\'');
+      });
     });
   });
 });

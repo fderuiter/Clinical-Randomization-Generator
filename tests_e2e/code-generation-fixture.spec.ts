@@ -207,6 +207,31 @@ test.describe('Code generation fixtures for script execution checks', () => {
           await currentPage.getByRole('button', { name: /^Next$/i }).click();
         },
       },
+      {
+        id: 'weird-chars',
+        protocolId: 'FXT-WEIRD-001',
+        configure: async (currentPage: Page) => {
+          await loadPreset(currentPage, 'Simple');
+          await currentPage.locator('#protocolId').fill('FXT-WEIRD-001');
+          await currentPage.locator('#studyName').fill('Fixture Weird Characters Scenario');
+          await goToStep(currentPage, 3);
+          await currentPage.getByRole('button', { name: /\+ Add Factor/i }).click();
+          const firstStratum = currentPage.locator('[formArrayName="strata"] > div').first();
+          await firstStratum.locator('#factorName0').fill('Special Group');
+          const levelsInput = firstStratum.locator('app-tag-input input').first();
+          await levelsInput.fill("O'Brien");     // single quote
+          await levelsInput.press('Enter');
+          await levelsInput.fill('Type "A"');    // double quote
+          await levelsInput.press('Enter');
+          await levelsInput.fill('C:\\path');    // backslash (JS = C:\path)
+          await levelsInput.press('Enter');
+          await levelsInput.fill('α-Ω type');   // Unicode BMP characters
+          await levelsInput.press('Enter');
+          await currentPage.getByRole('button', { name: /^Next$/i }).click();
+          await currentPage.getByRole('button', { name: /^Next$/i }).click();
+          await currentPage.getByRole('button', { name: /^Next$/i }).click();
+        },
+      },
     ];
 
     for (const scenario of scenarios) {
@@ -221,7 +246,7 @@ test.describe('Code generation fixtures for script execution checks', () => {
       }),
     );
 
-    expect(summary).toHaveLength(6);
+    expect(summary).toHaveLength(7);
     summary.forEach(entry => expect(entry.files).toHaveLength(4));
     expect(summary.map(entry => entry.scenario)).toEqual(expect.arrayContaining(scenarios.map(scenario => scenario.id)));
 
@@ -239,5 +264,35 @@ test.describe('Code generation fixtures for script execution checks', () => {
     minimizationOnlyContents.forEach(content => {
       expect(content).toContain('Algorithm: Pocock-Simon Minimization');
     });
+
+    // Verify special characters are properly escaped in all four generated languages.
+    const weirdCharsR     = await readFile(join(artifactRoot, 'weird-chars', 'weird-chars.R'),   'utf-8');
+    const weirdCharsPy    = await readFile(join(artifactRoot, 'weird-chars', 'weird-chars.py'),  'utf-8');
+    const weirdCharsSas   = await readFile(join(artifactRoot, 'weird-chars', 'weird-chars.sas'), 'utf-8');
+    const weirdCharsStata = await readFile(join(artifactRoot, 'weird-chars', 'weird-chars.do'),  'utf-8');
+
+    // R: single quote passes through; double-quote and backslash are escaped.
+    expect(weirdCharsR).toContain(`"O'Brien"`);
+    expect(weirdCharsR).toContain('"Type \\"A\\""');
+    expect(weirdCharsR).toContain('"C:\\\\path"');
+    expect(weirdCharsR).toContain('"α-Ω type"');
+
+    // Python: identical escape rules to R.
+    expect(weirdCharsPy).toContain(`"O'Brien"`);
+    expect(weirdCharsPy).toContain('"Type \\"A\\""');
+    expect(weirdCharsPy).toContain('"C:\\\\path"');
+    expect(weirdCharsPy).toContain('"α-Ω type"');
+
+    // SAS: double-quote is doubled; backslash is literal.
+    expect(weirdCharsSas).toContain(`"O'Brien"`);
+    expect(weirdCharsSas).toContain('"Type ""A"""');
+    expect(weirdCharsSas).toContain('"C:\\path"');
+    expect(weirdCharsSas).toContain('"α-Ω type"');
+
+    // Stata: compound double-quotes `"..."' allow all chars; backslash is literal.
+    expect(weirdCharsStata).toContain("`\"O'Brien\"'");
+    expect(weirdCharsStata).toContain('`"Type "A""\'');
+    expect(weirdCharsStata).toContain('`"C:\\path"\'');
+    expect(weirdCharsStata).toContain('`"α-Ω type"\'');
   });
 });

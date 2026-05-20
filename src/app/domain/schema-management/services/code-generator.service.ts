@@ -231,13 +231,13 @@ export class CodeGeneratorService {
     let baseProbsCode = '';
 
     try {
-      strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + l + '"').join(', ')})`).join('\n');
+      strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + this.escapeRString(l) + '"').join(', ')})`).join('\n');
 
       if (isMarginal) {
         const marginalCaps = strata.map(s => {
           const entries = s.levels.map((lvl, i) => {
             const cap = s.levelDetails?.[i]?.marginalCap;
-            return cap !== undefined ? `"${lvl}" = ${cap}` : `"${lvl}" = Inf`;
+            return cap !== undefined ? `"${this.escapeRString(lvl)}" = ${cap}` : `"${this.escapeRString(lvl)}" = Inf`;
           });
           return `  ${s.id} = c(${entries.join(', ')})`;
         }).join(',\n');
@@ -247,7 +247,7 @@ export class CodeGeneratorService {
                    `\n)`;
       } else {
         const caps = config.stratumCaps || [];
-        const capsVector = caps.map(c => `"${c.levels.join('_')}" = ${c.cap}`).join(',\n  ');
+        const capsVector = caps.map(c => `"${this.escapeRString(c.levels.join('_'))}" = ${c.cap}`).join(',\n  ');
         capsCode = `stratum_caps <- c(\n  ${capsVector}\n)\nintersection_counts <- list()`;
       }
 
@@ -640,12 +640,12 @@ if (nrow(schema) > 0) {
       rMarginalCaps = strata.map(s => {
         const entries = s.levels.map((lvl, i) => {
           const cap = s.levelDetails?.[i]?.marginalCap;
-          return cap !== undefined ? `"${lvl}" = ${cap}` : null;
+          return cap !== undefined ? `"${this.escapeRString(lvl)}" = ${cap}` : null;
         }).filter(Boolean);
         return `  ${s.id} = list(${entries.join(', ')})`;
       }).join(',\n');
       strataLines = strata.map(s =>
-        `${s.id}_levels <- c(${s.levels.map(l => '"' + l + '"').join(', ')})`
+        `${s.id}_levels <- c(${s.levels.map(l => '"' + this.escapeRString(l) + '"').join(', ')})`
       ).join('\n');
       strataGridArgs = [...strata.map(s => `${s.id} = ${s.id}_levels`), 'stringsAsFactors = FALSE'].join(',\n  ');
     } catch (e) {
@@ -833,13 +833,13 @@ if (nrow(schema) > 0) {
     let baseProbsCode = '';
 
     try {
-      const strataLevelsList = strata.map(s => `    "${s.id}": [${s.levels.map(l => '"' + l + '"').join(', ')}]`).join(',\n');
+      const strataLevelsList = strata.map(s => `    "${s.id}": [${s.levels.map(l => '"' + this.escapePythonString(l) + '"').join(', ')}]`).join(',\n');
 
       if (isMarginal) {
         const pyMarginalCaps = strata.map(s => {
           const entries = s.levels.map((lvl, i) => {
             const cap = s.levelDetails?.[i]?.marginalCap;
-            return cap !== undefined ? `        "${lvl}": ${cap}` : `        "${lvl}": float("inf")`;
+            return cap !== undefined ? `        "${this.escapePythonString(lvl)}": ${cap}` : `        "${this.escapePythonString(lvl)}": float("inf")`;
           });
           return `    "${s.id}": {\n${entries.join(',\n')}\n    }`;
         }).join(',\n');
@@ -850,7 +850,7 @@ if (nrow(schema) > 0) {
                    `\n}`;
       } else {
         const caps = config.stratumCaps || [];
-        const pyCapsDict = caps.map(c => `    (${c.levels.map(l => `"${l}"`).join(', ')}): ${c.cap}`).join(',\n');
+        const pyCapsDict = caps.map(c => `    (${c.levels.map(l => `"${this.escapePythonString(l)}"`).join(', ')}): ${c.cap}`).join(',\n');
         capsCode = `stratum_caps = {\n${pyCapsDict || '    (): 0'}\n}\nintersection_counts = {}`;
       }
 
@@ -1128,11 +1128,11 @@ else:
       pyMarginalCaps = strata.map(s => {
         const entries = s.levels.map((lvl, i) => {
           const cap = s.levelDetails?.[i]?.marginalCap;
-          return cap !== undefined ? `        "${lvl}": ${cap}` : null;
+          return cap !== undefined ? `        "${this.escapePythonString(lvl)}": ${cap}` : null;
         }).filter(Boolean);
         return `    "${s.id}": {\n${entries.join(',\n')}\n    }`;
       }).join(',\n');
-      strataLevelsList = strata.map(s => `[${s.levels.map(l => '"' + l + '"').join(', ')}]`).join(',\n    ');
+      strataLevelsList = strata.map(s => `[${s.levels.map(l => '"' + this.escapePythonString(l) + '"').join(', ')}]`).join(',\n    ');
       strataNamesArr = strata.map(s => '"' + s.id + '"').join(', ');
     } catch (e) {
       throw new StrataParsingError('Python', e, config);
@@ -1366,7 +1366,7 @@ else:
     // Per-factor character arrays mapping level index to string values
     const factorLevelArrays = strata.map(s => ({
       id: s.id,
-      values: s.levels.map(lvl => lvl.replace(/'/g, "''"))
+      values: s.levels.map(lvl => lvl.replace(/\r?\n/g, ' ').replace(/'/g, "''"))
     }));
 
     const charArrayDecls = factorLevelArrays.map(f => {
@@ -1376,11 +1376,13 @@ else:
       return `  array _lvl_name_${f.id}[${totalLevels}] $50 _temporary_ ;`;
     }).join('\n');
 
-    const charArrayInits = factorLevelArrays.map(f => {
+    const charArrayInits = strata.map(s => {
+      // Use original level names for the index lookup; use separately-escaped values for the SAS string literal.
       let initBlock = '';
-      for (const val of f.values) {
-        const idx = levelIndices.get(f.id)?.get(val) ?? 1;
-        initBlock += `  _lvl_name_${f.id}[${idx}] = '${val}';\n`;
+      for (const lvl of s.levels) {
+        const idx = levelIndices.get(s.id)?.get(lvl) ?? 1;
+        const escapedLvl = lvl.replace(/\r?\n/g, ' ').replace(/'/g, "''");
+        initBlock += `  _lvl_name_${s.id}[${idx}] = '${escapedLvl}';\n`;
       }
       return initBlock;
     }).join('');
@@ -1823,7 +1825,7 @@ title;
     // Per-factor character arrays mapping combo index → level name
     const factorLevelArrays = strata.map(s => ({
       id: s.id,
-      values: combos.map(c => (c[s.id] ?? s.levels[0] ?? '').replace(/'/g, "''"))
+      values: combos.map(c => (c[s.id] ?? s.levels[0] ?? '').replace(/\r?\n/g, ' ').replace(/'/g, "''"))
     }));
 
     // SAS macro variable strings
@@ -1849,7 +1851,7 @@ title;
     // Strata variable declarations and level-dataset building
     const strataLenDecl = nFactors > 0 ? ' ' + strata.map(s => `${s.id} $50`).join(' ') : '';
     const strataLevelMacros = nFactors > 0
-      ? strata.map(s => `%let ${s.id}_levels = ${s.levels.map(l => `"${l}"`).join(' ')};`).join('\n') + '\n'
+      ? strata.map(s => `%let ${s.id}_levels = ${s.levels.map(l => `"${this.escapeSasString(l)}"`).join(' ')};`).join('\n') + '\n'
       : '';
     const charArrayDecls = factorLevelArrays.map(f =>
       `  array _cvl_${f.id}[${nCombos}] $50 _temporary_ (${f.values.map(v => `'${v}'`).join(' ')});`
@@ -2097,8 +2099,8 @@ title;
     let strataLines: string;
     let strataGridArgs: string;
     try {
-      rCapsVector = caps.map(c => `"${c.levels.join('_')}" = ${c.cap}`).join(',\n  ');
-      strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + l + '"').join(', ')})`).join('\n');
+      rCapsVector = caps.map(c => `"${this.escapeRString(c.levels.join('_'))}" = ${c.cap}`).join(',\n  ');
+      strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + this.escapeRString(l) + '"').join(', ')})`).join('\n');
       strataGridArgs = [...strata.map(s => `${s.id} = ${s.id}_levels`), 'stringsAsFactors = FALSE'].join(',\n  ');
     } catch (e) {
       throw new StrataParsingError('R', e, config);
@@ -2284,8 +2286,8 @@ if (nrow(schema) > 0) {
     let strataLevelsList: string;
     let strataNamesArr: string;
     try {
-      pyCapsDict = caps.map(c => `    (${c.levels.map(l => `"${l}"`).join(', ')}): ${c.cap}`).join(',\n');
-      strataLevelsList = strata.map(s => `[${(s.levels || []).map(l => '"' + l + '"').join(', ')}]`).join(',\n    ');
+      pyCapsDict = caps.map(c => `    (${c.levels.map(l => `"${this.escapePythonString(l)}"`).join(', ')}): ${c.cap}`).join(',\n');
+      strataLevelsList = strata.map(s => `[${(s.levels || []).map(l => '"' + this.escapePythonString(l) + '"').join(', ')}]`).join(',\n    ');
       strataNamesArr = strata.map(s => '"' + s.id + '"').join(', ');
     } catch (e) {
       throw new StrataParsingError('Python', e, config);
@@ -2430,7 +2432,7 @@ print(df['BlockSize'].value_counts())
       strataFactorsLine = strata.length > 0
         ? `%let strata_factors = ${strata.map(s => `"${s.id}"`).join(' ')};\n`
         : '';
-      strataLevelLines = strata.map(s => `%let ${s.id}_levels = ${(s.levels || []).map(l => `"${l}"`).join(' ')};`).join('\n');
+      strataLevelLines = strata.map(s => `%let ${s.id}_levels = ${(s.levels || []).map(l => `"${this.escapeSasString(l)}"`).join(' ')};`).join('\n');
       capsLengthDecl = strata.length > 0 ? strata.map(s => ` ${s.id} $50`).join('') : '';
       if (caps.length === 0) {
         capsRows = `  max_subjects_per_stratum = 0; output;\n`;
@@ -2438,7 +2440,7 @@ print(df['BlockSize'].value_counts())
         capsRows = caps.map(c => {
           let row = '';
           if (strata.length > 0 && c.levels.length === strata.length) {
-            strata.forEach((s, idx) => { row += `  ${s.id} = "${c.levels[idx]}";`; });
+            strata.forEach((s, idx) => { row += `  ${s.id} = "${this.escapeSasString(c.levels[idx])}";`; });
           }
           row += `  max_subjects_per_stratum = ${c.cap};\n  output;\n`;
           return row;
@@ -2786,7 +2788,7 @@ title;
     // Value label definitions
     const labelDefs = strata.length > 0
       ? strata.map((s, si) => {
-          const lvlDefs = s.levels.map((lvl, j) => `${j + 1} "${lvl.replace(/"/g, "'")}"`).join(' ');
+          const lvlDefs = s.levels.map((lvl, j) => `${j + 1} ${this.stataLabelQuote(lvl)}`).join(' ');
           return `label define lbl_${varNames[si]} ${lvlDefs}, replace`;
         }).join('\n')
       : '';
@@ -3154,6 +3156,54 @@ list in 1/20, clean noobs
   }
 
   // ---------------------------------------------------------------------------
+  // String-escaping helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Escapes a string for embedding inside a double-quoted R string literal.
+   * Handles backslash, double-quote, newline, and carriage-return.
+   */
+  private escapeRString(s: string): string {
+    return s
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r');
+  }
+
+  /**
+   * Escapes a string for embedding inside a double-quoted Python string literal.
+   * Identical rules to R for these characters.
+   */
+  private escapePythonString(s: string): string {
+    return s
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r');
+  }
+
+  /**
+   * Escapes a string for embedding inside a double-quoted SAS string (DATA step or %let).
+   * SAS doubles double-quotes; newlines are collapsed to a space as they break
+   * macro variable definitions.
+   */
+  private escapeSasString(s: string): string {
+    return s
+      .replace(/"/g, '""')
+      .replace(/\r?\n/g, ' ');
+  }
+
+  /**
+   * Wraps a stratum level label in Stata compound double-quotes `"..."'.
+   * Compound double-quotes allow embedded `"` characters without escaping.
+   * Newlines are replaced with spaces (a literal newline would break label define).
+   */
+  private stataLabelQuote(s: string): string {
+    return '`"' + s.replace(/\r?\n/g, ' ') + '"\'';
+  }
+
+  // ---------------------------------------------------------------------------
   // STATA – helpers
   // ---------------------------------------------------------------------------
 
@@ -3233,7 +3283,7 @@ list in 1/20, clean noobs
     // Value label definitions
     const labelDefs = strata.length > 0
       ? strata.map((s, si) => {
-          const lvlDefs = s.levels.map((lvl, j) => `${j + 1} "${lvl.replace(/"/g, "'")}"`).join(' ');
+          const lvlDefs = s.levels.map((lvl, j) => `${j + 1} ${this.stataLabelQuote(lvl)}`).join(' ');
           return `label define lbl_${varNames[si]} ${lvlDefs}, replace`;
         }).join('\n')
       : '';
@@ -3577,7 +3627,7 @@ list in 1/20, clean noobs
 
       // Value label definitions (strata factors as 1-based integers)
       labelDefs = strata.map((s, si) => {
-        const lvlDefs = s.levels.map((lvl, j) => `${j + 1} "${lvl.replace(/"/g, "'")}"`).join(' ');
+        const lvlDefs = s.levels.map((lvl, j) => `${j + 1} ${this.stataLabelQuote(lvl)}`).join(' ');
         return `label define lbl_${varNames[si]} ${lvlDefs}, replace`;
       }).join('\n');
 
