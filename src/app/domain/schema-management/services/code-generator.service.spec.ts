@@ -1427,9 +1427,10 @@ describe('CodeGeneratorService', () => {
       });
 
       it('should produce syntactically valid R code (no unmatched quotes)', () => {
-        // A proxy test: count unescaped double-quote pairs in the levels vector line
         const code = service.generateR(weirdConfig);
-        expect(() => code).not.toThrow();
+        expect(code).toContain(
+          'factor1_levels <- c("O\'Brien", "Type \\"A\\"", "C:\\\\path", "α-Ω group", "line1\\nline2")',
+        );
       });
     });
 

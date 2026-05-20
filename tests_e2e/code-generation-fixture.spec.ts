@@ -77,6 +77,7 @@ const test = base.extend<ScriptFixture>({
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Code generation fixtures for script execution checks', () => {
+  test.skip(process.env.CODEGEN_FIXTURES !== '1', 'Runs only in dedicated code-generation fixture CI job.');
   test.setTimeout(180_000);
 
   const assertSubprocessSuccess = async (
@@ -339,11 +340,25 @@ test.describe('Code generation fixtures for script execution checks', () => {
     expect(weirdCharsStata).toContain('`"C:\\path"\'');
     expect(weirdCharsStata).toContain('`"α-Ω type"\'');
 
+    const pythonExecutable = process.env.PYTHON || 'python3';
+
     const pythonScripts = scenarios.map(scenario => join(artifactRoot, scenario.id, `${scenario.id}.py`));
-    const hasPython = await commandExists('python3');
+    const hasPython = await commandExists(pythonExecutable);
     expect(hasPython).toBe(true);
+
+    await assertSubprocessSuccess(
+      pythonExecutable,
+      ['-c', 'import numpy, pandas'],
+      'Python dependency preflight check for generated scripts',
+    );
+
     for (const scriptPath of pythonScripts) {
-      await assertSubprocessSuccess('python3', [scriptPath], `Generated Python script execution (${scriptPath})`);
+      await assertSubprocessSuccess(
+        pythonExecutable,
+        [scriptPath],
+        `Generated Python script execution (${scriptPath})`,
+        { env: { ...process.env, PYTHON: pythonExecutable } },
+      );
     }
 
     const rScripts = scenarios.map(scenario => join(artifactRoot, scenario.id, `${scenario.id}.R`));

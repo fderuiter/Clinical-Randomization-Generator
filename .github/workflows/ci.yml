@@ -124,6 +124,8 @@ jobs:
       run: npx playwright test tests_e2e/code-generation-fixture.spec.ts
       env:
         CI: true
+        CODEGEN_FIXTURES: '1'
+        PYTHON: python3
 
     - name: Upload code-generation fixture scripts
       uses: actions/upload-artifact@v7
