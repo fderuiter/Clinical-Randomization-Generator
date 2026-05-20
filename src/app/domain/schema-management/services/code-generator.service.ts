@@ -243,7 +243,7 @@ export class CodeGeneratorService {
         }).join(',\n');
         capsCode = `marginal_caps <- list(\n${marginalCaps}\n)\n\n` +
                    `marginal_counts <- list(\n` +
-                   strata.map(s => `  ${s.id} = setNames(rep(0, ${s.levels.length}), ${s.id}_levels)`).join(',\n') +
+                   strata.map(s => `  ${s.id} = stats::setNames(rep(0, ${s.levels.length}), ${s.id}_levels)`).join(',\n') +
                    `\n)`;
       } else {
         const caps = config.stratumCaps || [];
@@ -289,7 +289,7 @@ for (factor_id in names(strata_grid)) {
   levels <- get(paste0(factor_id, "_levels"))
   marginal_imbalance[[factor_id]] <- list()
   for (lvl in levels) {
-    marginal_imbalance[[factor_id]][[lvl]] <- setNames(rep(0, length(arms)), arms)
+    marginal_imbalance[[factor_id]][[lvl]] <- stats::setNames(rep(0, length(arms)), arms)
   }
 }
 `;
@@ -312,7 +312,7 @@ if (length(sites) == 0) stop("Sites array is empty.")
 ${setupCode}
 
 # Setup site counts
-site_subject_counts <- setNames(rep(0, length(sites)), sites)
+site_subject_counts <- stats::setNames(rep(0, length(sites)), sites)
 schema_list <- list()
 row_idx <- 1
 used_subject_ids <- character(0)
@@ -716,7 +716,7 @@ for (site in sites) {
 
   # Per-factor, per-level enrollment counts (reset for each site)
   marginal_counts <- lapply(marginal_caps, function(mc) {
-    setNames(rep(0L, length(mc)), names(mc))
+    stats::setNames(rep(0L, length(mc)), names(mc))
   })
 
   # Active pool of strata combinations (those not yet exhausted)
@@ -2099,7 +2099,7 @@ title;
     let strataLines: string;
     let strataGridArgs: string;
     try {
-      rCapsVector = caps.map(c => `setNames(${c.cap}, "${this.escapeRString(c.levels.join('_'))}")`).join(',\n  ');
+      rCapsVector = caps.map(c => `stats::setNames(${c.cap}, "${this.escapeRString(c.levels.join('_'))}")`).join(',\n  ');
       strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + this.escapeRString(l) + '"').join(', ')})`).join('\n');
       strataGridArgs = [...strata.map(s => `${s.id} = ${s.id}_levels`), 'stringsAsFactors = FALSE'].join(',\n  ');
     } catch (e) {

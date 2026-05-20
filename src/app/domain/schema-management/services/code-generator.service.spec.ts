@@ -126,10 +126,10 @@ describe('CodeGeneratorService', () => {
 
       it('should embed named stratum caps matching the levels joined by underscore', () => {
         const code = service.generateR(fullConfig);
-        expect(code).toContain('setNames(12, "Male_Young")');
-        expect(code).toContain('setNames(9, "Male_Old")');
-        expect(code).toContain('setNames(15, "Female_Young")');
-        expect(code).toContain('setNames(6, "Female_Old")');
+        expect(code).toContain('stats::setNames(12, "Male_Young")');
+        expect(code).toContain('stats::setNames(9, "Male_Old")');
+        expect(code).toContain('stats::setNames(15, "Female_Young")');
+        expect(code).toContain('stats::setNames(6, "Female_Old")');
       });
 
       it('should encode unstratified caps with setNames to avoid invalid empty-key syntax', () => {
@@ -137,7 +137,7 @@ describe('CodeGeneratorService', () => {
           ...minimalConfig,
           stratumCaps: [{ levels: [], cap: 20 }],
         });
-        expect(code).toContain('setNames(20, "")');
+        expect(code).toContain('stats::setNames(20, "")');
       });
 
       it('should add the no-strata guard after expand.grid()', () => {
