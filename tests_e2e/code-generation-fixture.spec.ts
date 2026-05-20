@@ -134,8 +134,8 @@ test.describe('Code generation fixtures for script execution checks', () => {
           await currentPage.getByRole('radio', { name: 'Manual Matrix' }).click();
           const capRows = currentPage.locator('[formArrayName="stratumCaps"] > div');
           const capCount = await capRows.count();
-          for (let i = 0; i < capCount; i++) {
-            await capRows.nth(i).locator('input').fill('0');
+          for (let capIndex = 0; capIndex < capCount; capIndex++) {
+            await capRows.nth(capIndex).locator('input').fill('0');
           }
           await currentPage.getByRole('button', { name: /^Next$/i }).click();
         },
@@ -226,8 +226,9 @@ test.describe('Code generation fixtures for script execution checks', () => {
     expect(summary.map(entry => entry.scenario)).toEqual(expect.arrayContaining(scenarios.map(scenario => scenario.id)));
 
     const zeroCapStata = await readFile(join(artifactRoot, 'zero-cap', 'zero-cap.do'), 'utf-8');
-    const zeroCapMatches = zeroCapStata.match(/local cap = 0/g) ?? [];
-    expect(zeroCapMatches.length).toBeGreaterThanOrEqual(3);
+    const zeroCapAssignments = [...zeroCapStata.matchAll(/local cap = (\d+)/g)].map(match => Number(match[1]));
+    expect(zeroCapAssignments.length).toBeGreaterThan(0);
+    expect(zeroCapAssignments.every(cap => cap === 0)).toBe(true);
 
     const minimizationOnlyContents = await Promise.all([
       readFile(join(artifactRoot, 'minimization-only', 'minimization-only.R'), 'utf-8'),
