@@ -522,7 +522,7 @@ if (is.null(schema) || nrow(schema) == 0) {
   schema <- cbind(base_schema, strata_grid[0, , drop = FALSE])
 }
 
-print(head(schema))
+print(utils::head(schema))
 
 if (nrow(schema) > 0) {
   cat("\\n--- QC Check: Overall Allocation ---\\n")
@@ -795,7 +795,7 @@ if (is.null(schema) || nrow(schema) == 0) {
   )
   schema <- cbind(base_schema, strata_grid[0, , drop = FALSE])
 }
-print(head(schema))
+print(utils::head(schema))
 
 if (nrow(schema) > 0) {
   cat("\\n--- QC Check: Overall Allocation ---\\n")
@@ -2248,7 +2248,7 @@ if (is.null(schema) || nrow(schema) == 0) {
   )
   schema <- cbind(base_schema, strata_grid[0, , drop=FALSE])
 }
-print(head(schema))
+print(utils::head(schema))
 
 if (nrow(schema) > 0) {
   cat("\\n--- QC Check: Overall Allocation ---\\n")

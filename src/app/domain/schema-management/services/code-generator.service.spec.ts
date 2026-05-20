@@ -624,6 +624,7 @@ describe('CodeGeneratorService', () => {
       it('should include QC checks', () => {
         const code = service.generateR(marginalConfig);
         expect(code).toContain('QC Check: Overall Allocation');
+        expect(code).toContain('utils::head(schema)');
       });
 
       it('should handle levels without a marginalCap (uncapped levels omitted from list)', () => {
@@ -1180,6 +1181,7 @@ describe('CodeGeneratorService', () => {
         const code = service.generate('R', minimizationConfig);
         expect(code).toContain('p_minimization <- 0.85');
         expect(code).toContain('compute_imbalance_score <- function');
+        expect(code).toContain('utils::head(schema)');
       });
 
       it('should handle unstratified minimization key lookup with an explicit empty key', () => {
@@ -1452,6 +1454,7 @@ describe('CodeGeneratorService', () => {
         expect(code).toContain(
           'factor1_levels <- c("O\'Brien", "Type \\"A\\"", "C:\\\\path", "α-Ω group", "line1\\nline2")',
         );
+        expect(code).toContain('utils::head(schema)');
       });
     });
 
