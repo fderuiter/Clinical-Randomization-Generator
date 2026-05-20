@@ -227,7 +227,7 @@ test.describe('Code generation fixtures for script execution checks', () => {
     const zeroCapStata = await readFile(join(artifactRoot, 'zero-cap', 'zero-cap.do'), 'utf-8');
     expect(zeroCapStata).toContain('local cap = 0');
 
-    const minimizationPython = await readFile(join(artifactRoot, 'minimization-only', 'minimization-only.py'), 'utf-8');
-    expect(minimizationPython).toContain('Algorithm: Pocock-Simon Minimization');
+    const minimizationOnlyPython = await readFile(join(artifactRoot, 'minimization-only', 'minimization-only.py'), 'utf-8');
+    expect(minimizationOnlyPython).toContain('Algorithm: Pocock-Simon Minimization');
   });
 });
