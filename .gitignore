@@ -52,6 +52,9 @@ testem.log
 .playwright/
 playwright/.cache/
 playwright-report/
+blob-report/
+playwright-results.json
+artifacts/
 test-results/
 __screenshots__/
 
