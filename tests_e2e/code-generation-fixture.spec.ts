@@ -163,12 +163,12 @@ test.describe('Code generation fixtures for script execution checks', () => {
         },
       },
       {
-        id: 'weird-character-labels',
-        protocolId: 'FXT-WEIRD-001',
+        id: 'unicode-character-labels',
+        protocolId: 'FXT-UNICODE-001',
         configure: async (currentPage: Page) => {
           await loadPreset(currentPage, 'Simple');
-          await currentPage.locator('#protocolId').fill('FXT-WEIRD-001');
-          await currentPage.locator('#studyName').fill('Fixture Weird Labels Scenario');
+          await currentPage.locator('#protocolId').fill('FXT-UNICODE-001');
+          await currentPage.locator('#studyName').fill('Fixture Unicode Labels Scenario');
           await goToStep(currentPage, 2);
           await currentPage.locator('#armName0').fill('Dose α/β');
           await currentPage.locator('#armName1').fill('Placebo™ & Control');
