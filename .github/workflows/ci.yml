@@ -120,6 +120,31 @@ jobs:
         path: artifacts/code-generation-fixtures/
         retention-days: 30
 
+  sas_static_validation:
+    runs-on: ubuntu-latest
+    needs: code_generation_fixtures
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    - name: Download code-generation fixture scripts
+      uses: actions/download-artifact@v8
+      with:
+        name: code-generation-fixtures
+        path: artifacts/code-generation-fixtures/
+
+    - name: Run SAS static syntax validator
+      run: node scripts/validate-sas-syntax.mjs
+
   merge_reports:
     runs-on: ubuntu-latest
     needs: e2e

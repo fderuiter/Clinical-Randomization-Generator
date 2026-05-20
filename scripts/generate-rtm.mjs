@@ -332,6 +332,10 @@ lines.push('');
 lines.push('Mathematical result validation for SAS and Stata is deferred to the end-user ');
 lines.push('environment per the formal Exception Report. See `docs/SAS_Stata_Exception_Report.md`.');
 lines.push('');
+lines.push('Static syntax validation of generated SAS scripts is automated in CI via the ');
+lines.push('`sas_static_validation` job (`scripts/validate-sas-syntax.mjs`). ');
+lines.push('See `docs/adr/0001-sas-static-validation-strategy.md` for the validation strategy ADR.');
+lines.push('');
 
 const markdown = lines.join('\n');
 const resolvedOutputPath = isAbsolute(outputPath) ? outputPath : join(repoRoot, outputPath);
