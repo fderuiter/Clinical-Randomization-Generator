@@ -217,17 +217,26 @@ test.describe('Code generation fixtures for script execution checks', () => {
       scenarios.map(async scenario => {
         const manifestPath = join(artifactRoot, scenario.id, 'manifest.json');
         const raw = await readFile(manifestPath, 'utf-8');
-        return JSON.parse(raw) as { files: Array<{ file: string }> };
+        return JSON.parse(raw) as { scenario: string; files: Array<{ file: string }> };
       }),
     );
 
     expect(summary).toHaveLength(6);
     summary.forEach(entry => expect(entry.files).toHaveLength(4));
+    expect(summary.map(entry => entry.scenario)).toEqual(expect.arrayContaining(scenarios.map(scenario => scenario.id)));
 
     const zeroCapStata = await readFile(join(artifactRoot, 'zero-cap', 'zero-cap.do'), 'utf-8');
-    expect(zeroCapStata).toContain('local cap = 0');
+    const zeroCapMatches = zeroCapStata.match(/local cap = 0/g) ?? [];
+    expect(zeroCapMatches.length).toBeGreaterThanOrEqual(3);
 
-    const minimizationOnlyPython = await readFile(join(artifactRoot, 'minimization-only', 'minimization-only.py'), 'utf-8');
-    expect(minimizationOnlyPython).toContain('Algorithm: Pocock-Simon Minimization');
+    const minimizationOnlyContents = await Promise.all([
+      readFile(join(artifactRoot, 'minimization-only', 'minimization-only.R'), 'utf-8'),
+      readFile(join(artifactRoot, 'minimization-only', 'minimization-only.py'), 'utf-8'),
+      readFile(join(artifactRoot, 'minimization-only', 'minimization-only.sas'), 'utf-8'),
+      readFile(join(artifactRoot, 'minimization-only', 'minimization-only.do'), 'utf-8'),
+    ]);
+    minimizationOnlyContents.forEach(content => {
+      expect(content).toContain('Algorithm: Pocock-Simon Minimization');
+    });
   });
 });
