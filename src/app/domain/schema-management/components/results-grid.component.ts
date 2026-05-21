@@ -427,7 +427,10 @@ export class ResultsGridComponent {
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
   }
 
   async exportXlsx(): Promise<void> {
