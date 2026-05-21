@@ -445,7 +445,7 @@
             Run Statistical QA
           </button>
           <div class="relative inline-block text-left" #dropdownContainer>
-            <button type="button" (click)="dropdownOpen = !dropdownOpen" [disabled]="!form.valid" class="bg-white border border-indigo-200 text-indigo-700 px-4 py-2 rounded-lg disabled:opacity-50 text-sm">
+            <button type="button" (click)="dropdownOpen = !dropdownOpen" [disabled]="!form.valid" aria-haspopup="menu" [attr.aria-expanded]="dropdownOpen" class="bg-white border border-indigo-200 text-indigo-700 px-4 py-2 rounded-lg disabled:opacity-50 text-sm">
               Generate Code
             </button>
             @if (dropdownOpen) {
