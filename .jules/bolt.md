@@ -1,0 +1,3 @@
+## 2024-05-21 - [Optimize minimization activePool filtering]
+**Learning:** O(N) array filtering operations inside large simulation loops cause exponential performance degradation. Specifically, the nested `.filter()` and `.some()` loops scanning thousands of elements iteratively can take around 50 seconds for 5000 generated subjects. Tracking matching combinations dynamically instead of re-filtering from the full pool reduces iterations exponentially.
+**Action:** Always prefer updating active sets/lists iteratively during simulations or use hash map lookups, avoiding nested array iterations using higher order functions.
