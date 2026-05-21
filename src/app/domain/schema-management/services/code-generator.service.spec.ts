@@ -1181,6 +1181,7 @@ describe('CodeGeneratorService', () => {
         const code = service.generate('R', minimizationConfig);
         expect(code).toContain('p_minimization <- 0.85');
         expect(code).toContain('compute_imbalance_score <- function');
+        expect(code).toContain('stats::runif(1)');
         expect(code).toContain('utils::head(schema)');
       });
 

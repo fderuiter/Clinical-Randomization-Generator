@@ -466,7 +466,7 @@ ${isMarginal ? `
   if (length(preferred) == length(arms) || length(non_preferred) == 0) {
     assigned_arm_id <- sample(preferred, 1, prob = ratios[preferred] / sum(ratios[preferred]))
   } else {
-    if (runif(1) < p_minimization) {
+    if (stats::runif(1) < p_minimization) {
       assigned_arm_id <- sample(preferred, 1, prob = ratios[preferred] / sum(ratios[preferred]))
     } else {
       assigned_arm_id <- sample(non_preferred, 1, prob = ratios[non_preferred] / sum(ratios[non_preferred]))
