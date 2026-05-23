@@ -286,6 +286,7 @@ export function generateMinimization(
     let validSubject = true;
 
     // Sample each factor sequentially, dynamically adjusting probabilities based on active pool
+    const processedFactors: string[] = [];
     for (const factor of strata) {
       let availableLevels: string[];
 
@@ -298,14 +299,15 @@ export function generateMinimization(
       } else {
         // Find levels that are still present in at least one combination in the activePool
         // that matches the already sampled prefix.
-        const prefixKeys = Object.keys(currentCombinationPrefix);
         availableLevels = factor.levels.filter(level =>
           activePool.some(combo => {
+            // Short-circuit: check if combo matches the target level first before iterating prefix
+            if (combo[factor.id] !== level) return false;
             // check if combo matches current prefix
-            for (const k of prefixKeys) {
+            for (const k of processedFactors) {
               if (combo[k] !== currentCombinationPrefix[k]) return false;
             }
-            return combo[factor.id] === level;
+            return true;
           })
         );
       }
@@ -321,6 +323,7 @@ export function generateMinimization(
       subjectProfile[factor.id] = level;
       stratum[factor.id] = level;
       currentCombinationPrefix[factor.id] = level;
+      processedFactors.push(factor.id);
     }
 
     if (!validSubject) break;
