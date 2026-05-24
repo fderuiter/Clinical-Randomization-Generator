@@ -299,15 +299,24 @@ export function generateMinimization(
         // Find levels that are still present in at least one combination in the activePool
         // that matches the already sampled prefix.
         const prefixKeys = Object.keys(currentCombinationPrefix);
-        availableLevels = factor.levels.filter(level =>
-          activePool.some(combo => {
-            // check if combo matches current prefix
-            for (const k of prefixKeys) {
-              if (combo[k] !== currentCombinationPrefix[k]) return false;
+
+        // Optimize: Find all valid levels in a single pass through activePool,
+        // short-circuiting if we find all possible levels.
+        const seenLevels = new Set<string>();
+        for (const combo of activePool) {
+          let match = true;
+          for (const k of prefixKeys) {
+            if (combo[k] !== currentCombinationPrefix[k]) {
+              match = false;
+              break;
             }
-            return combo[factor.id] === level;
-          })
-        );
+          }
+          if (match) {
+            seenLevels.add(combo[factor.id]);
+            if (seenLevels.size === factor.levels.length) break; // found all possible levels
+          }
+        }
+        availableLevels = factor.levels.filter(l => seenLevels.has(l));
       }
 
       if (availableLevels.length === 0) {
