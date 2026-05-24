@@ -379,6 +379,20 @@ export class ResultsGridComponent {
     });
   }
 
+  /** Sanitizes a string to prevent CSV injection vulnerabilities and escapes existing quotes. */
+  private sanitizeCsvCell(value: string): string {
+    if (value === null || value === undefined) return '""';
+    let str = String(value);
+
+    // Prevent CSV Injection (Formula Injection) by prepending a single quote to executable prefixes
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = "'" + str;
+    }
+
+    // Escape double quotes and wrap the whole string in double quotes
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+
   exportCsv() {
     const data = this.state.results();
     if (!data) return;
@@ -413,8 +427,8 @@ export class ResultsGridComponent {
       `# PRNG Seed: ${data.metadata.seed}`,
       `# SHA-256 Audit Hash: ${data.metadata.auditHash}`,
       methodologyComments,
-      headers.join(','),
-      ...rows.map(e => e.join(','))
+      headers.map(h => this.sanitizeCsvCell(h)).join(','),
+      ...rows.map(e => e.map(cell => this.sanitizeCsvCell(cell)).join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
