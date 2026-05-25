@@ -336,15 +336,31 @@ function generateMarginalOnly(
 
       // Remove combinations from the pool that would now breach a marginal cap.
       if (poolNeedsFilter) {
-        activePool = activePool.filter(combo =>
-          resolvedConfig.strata.every(factor => {
-            const levelValue = combo[factor.id] || '';
-            if (!levelValue) return true;
-            const cap = marginalCapMap.get(factor.id)?.get(levelValue);
-            if (cap === undefined) return true; // uncapped
-            return (marginalCounts.get(factor.id)?.get(levelValue) ?? 0) < cap;
-          })
-        );
+        const newPool: Record<string, string>[] = [];
+        for (const combo of activePool) {
+
+          let valid = true;
+          for (const factor of resolvedConfig.strata) {
+            const factorId = factor.id;
+            const levelValue = combo[factorId] || '';
+            if (!levelValue) continue;
+
+            const factorCaps = marginalCapMap.get(factorId);
+            const cap = factorCaps ? factorCaps.get(levelValue) : undefined;
+
+            if (cap !== undefined) {
+              const count = marginalCounts.get(factorId)?.get(levelValue) ?? 0;
+              if (count >= cap) {
+                valid = false;
+                break;
+              }
+            }
+          }
+          if (valid) {
+            newPool.push(combo);
+          }
+        }
+        activePool = newPool;
         poolNeedsFilter = false;
       }
     }

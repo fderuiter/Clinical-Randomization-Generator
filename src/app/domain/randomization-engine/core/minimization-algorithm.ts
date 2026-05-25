@@ -258,12 +258,16 @@ export function generateMinimization(
       }
     } else {
       if (poolNeedsFilter) {
-        activePool = activePool.filter(combo => {
+        const newPool: PoolCombination[] = [];
+        for (const combo of activePool) {
+
           const key = combo._key || "";
           const cap = capsDict[key];
-          const count = intersectionCounts[key] ?? 0;
-          return cap === undefined || count < cap;
-        });
+          if (cap === undefined || (intersectionCounts[key] ?? 0) < cap) {
+            newPool.push(combo);
+          }
+        }
+        activePool = newPool;
         poolNeedsFilter = false;
       }
 
@@ -298,16 +302,31 @@ export function generateMinimization(
       } else {
         // Find levels that are still present in at least one combination in the activePool
         // that matches the already sampled prefix.
+        // Find levels that are still present in at least one combination in the activePool
+        // that matches the already sampled prefix.
         const prefixKeys = Object.keys(currentCombinationPrefix);
-        availableLevels = factor.levels.filter(level =>
-          activePool.some(combo => {
-            // check if combo matches current prefix
-            for (const k of prefixKeys) {
-              if (combo[k] !== currentCombinationPrefix[k]) return false;
+        const activeLevels = new Set<string>();
+        for (const combo of activePool) {
+
+          // Optimization: Check the specific target factor level first before doing the full prefix check.
+          // This allows us to skip the entire inner loop if we already know this level is valid.
+          const levelVal = combo[factor.id];
+          if (activeLevels.has(levelVal)) continue;
+
+          let match = true;
+          for (const k of prefixKeys) {
+
+            if (combo[k] !== currentCombinationPrefix[k]) {
+              match = false;
+              break;
             }
-            return combo[factor.id] === level;
-          })
-        );
+          }
+          if (match) {
+            activeLevels.add(levelVal);
+            if (activeLevels.size === factor.levels.length) break;
+          }
+        }
+        availableLevels = factor.levels.filter(level => activeLevels.has(level));
       }
 
       if (availableLevels.length === 0) {
