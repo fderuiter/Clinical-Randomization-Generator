@@ -1,0 +1,4 @@
+## 2024-05-25 - Prevent CSV Injection (Formula Injection)
+**Vulnerability:** Data exported to CSV can contain fields that start with executable characters (e.g., `=`, `+`, `-`, `@`, `\t`, `\r`), which spreadsheet programs like Excel or Google Sheets may automatically execute as formulas. This could lead to local command execution or data exfiltration.
+**Learning:** In the `ResultsGridComponent`, the `exportCsv` method generated CSV content simply by joining values with commas. It did not properly sanitize or wrap fields to prevent formula execution or handle fields containing quotes or commas correctly.
+**Prevention:** Always sanitize CSV fields. Wrap all values in double quotes, escape existing double quotes by replacing `"` with `""`, and prepend a single quote (`'`) to any value starting with an executable prefix (`=`, `+`, `-`, `@`, `\t`, `\r`).

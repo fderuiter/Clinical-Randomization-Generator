@@ -354,6 +354,16 @@ export class ResultsGridComponent {
     return !!(this.filterState()[column]);
   }
 
+  /** Sanitizes a field to prevent CSV Injection and properly escapes quotes/commas. */
+  private sanitizeCsvField(value: string | number | null | undefined): string {
+    if (value === null || value === undefined) return '""';
+    let str = String(value);
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = "'" + str;
+    }
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+
   /** Sanitizes a string for use in filenames by replacing invalid characters with underscores. */
   private sanitizeFilename(s: string): string {
     return s.replace(/[^A-Za-z0-9._-]/g, '_').trim();
@@ -413,8 +423,8 @@ export class ResultsGridComponent {
       `# PRNG Seed: ${data.metadata.seed}`,
       `# SHA-256 Audit Hash: ${data.metadata.auditHash}`,
       methodologyComments,
-      headers.join(','),
-      ...rows.map(e => e.join(','))
+      headers.map(h => this.sanitizeCsvField(h)).join(','),
+      ...rows.map(e => e.map(v => this.sanitizeCsvField(v)).join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
