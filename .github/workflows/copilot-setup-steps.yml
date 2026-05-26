@@ -1,0 +1,38 @@
+name: "Copilot Setup Steps"
+
+# Re-run and validate the workspace configuration whenever this file changes
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # CRITICAL: This exact job key name is required by GitHub Copilot
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # Automatically picks up the appropriate version or defaults to latest stable
+          run_install: false 
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22" # Aligns with modern environment typings specified in the repository
+          cache: "pnpm"      # Leverages pnpm's global store cache topology for performance
+
+      - name: Install Dependencies
+        # Enforces strict lockfile compliance based on your pnpm-lock.yaml file
+        run: pnpm install --frozen-lockfile
