@@ -1,6 +1,6 @@
 import goldenFixtures from './randomization-algorithm-golden.json';
 import { generateRandomizationSchema } from './randomization-algorithm';
-import { RandomizationConfig } from '../../../core/models/randomization.model';
+import { RandomizationConfig } from '../../core/models/randomization.model';
 
 describe('Golden Regression Fixtures', () => {
   for (const [key, fixture] of Object.entries(goldenFixtures)) {
