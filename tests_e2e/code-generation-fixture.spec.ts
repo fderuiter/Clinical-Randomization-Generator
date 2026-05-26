@@ -272,6 +272,8 @@ test.describe('Code generation fixtures for script execution checks', () => {
           await levelsInput.press('Enter');
           await levelsInput.fill('α-Ω type');   // Unicode BMP characters
           await levelsInput.press('Enter');
+          await levelsInput.fill('semi;colon');  // semicolon
+          await levelsInput.press('Enter');
           await currentPage.getByRole('button', { name: /^Next$/i }).click();
           await currentPage.getByRole('button', { name: /^Next$/i }).click();
           await currentPage.getByRole('button', { name: /^Next$/i }).click();
@@ -321,24 +323,28 @@ test.describe('Code generation fixtures for script execution checks', () => {
     expect(weirdCharsR).toContain('"Type \\"A\\""');
     expect(weirdCharsR).toContain('"C:\\\\path"');
     expect(weirdCharsR).toContain('"α-Ω type"');
+    expect(weirdCharsR).toContain('"semi;colon"');
 
     // Python: identical escape rules to R.
     expect(weirdCharsPy).toContain(`"O'Brien"`);
     expect(weirdCharsPy).toContain('"Type \\"A\\""');
     expect(weirdCharsPy).toContain('"C:\\\\path"');
     expect(weirdCharsPy).toContain('"α-Ω type"');
+    expect(weirdCharsPy).toContain('"semi;colon"');
 
     // SAS: double-quote is doubled; backslash is literal.
     expect(weirdCharsSas).toContain(`"O'Brien"`);
     expect(weirdCharsSas).toContain('"Type ""A"""');
     expect(weirdCharsSas).toContain('"C:\\path"');
     expect(weirdCharsSas).toContain('"α-Ω type"');
+    expect(weirdCharsSas).toContain('"semi;colon"');
 
     // Stata: compound double-quotes `"..."' allow all chars; backslash is literal.
     expect(weirdCharsStata).toContain("`\"O'Brien\"'");
     expect(weirdCharsStata).toContain('`"Type "A""\'');
     expect(weirdCharsStata).toContain('`"C:\\path"\'');
     expect(weirdCharsStata).toContain('`"α-Ω type"\'');
+    expect(weirdCharsStata).toContain('`"semi;colon"\'');
 
     const pythonExecutable = process.env.PYTHON || 'python3';
 
