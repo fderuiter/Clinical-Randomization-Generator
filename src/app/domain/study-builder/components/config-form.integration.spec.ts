@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { fireEvent, render, waitFor } from '@testing-library/angular';
 import { vi } from 'vitest';
 import { ConfigFormComponent } from './config-form.component';
+import { RandomizationConfig } from '../../core/models/randomization.model';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { StudyBuilderStore } from '../store/study-builder.store';
 
@@ -21,7 +22,7 @@ const createFacadeMock = () => {
     error,
     showCodeGenerator,
     codeLanguage,
-    generateSchema: vi.fn((nextConfig: unknown) => {
+    generateSchema: vi.fn((nextConfig: RandomizationConfig) => {
       config.set(nextConfig);
       isGenerating.set(true);
     }),
