@@ -54,12 +54,16 @@ function runMonteCarlo(id: string, { config, attritionRate }: MonteCarloPayload)
   const dropoutProbability = clampedAttritionRate / 100;
 
   // Initialise per-arm accumulators (before and after attrition)
-  const armCounts: Record<string, number> = {};
-  const retainedArmCounts: Record<string, number> = {};
-  for (const arm of config.arms) {
-    armCounts[arm.id] = 0;
-    retainedArmCounts[arm.id] = 0;
+  // ⚡ Bolt Optimization: Use Float64Array and pre-map indices to avoid object property
+  // lookups and reduce garbage collection overhead inside the hot loop.
+  const numArms = config.arms.length;
+  const armIndexMap = new Map<string, number>();
+  for (let i = 0; i < numArms; i++) {
+    armIndexMap.set(config.arms[i].id, i);
   }
+
+  const armCounts = new Float64Array(numArms);
+  const retainedArmCounts = new Float64Array(numArms);
 
   let totalSubjects = 0;
   let totalRetained = 0;
@@ -78,14 +82,17 @@ function runMonteCarlo(id: string, { config, attritionRate }: MonteCarloPayload)
       const rng = dropoutProbability > 0 ? mulberry32(i * 1_000_003 + 7) : null;
 
       for (const subject of result.schema) {
-        armCounts[subject.treatmentArmId] = (armCounts[subject.treatmentArmId] ?? 0) + 1;
-        totalSubjects++;
+        const armIdx = armIndexMap.get(subject.treatmentArmId);
+        if (armIdx !== undefined) {
+          armCounts[armIdx]++;
+          totalSubjects++;
 
-        // Apply attrition filter: subject is retained when random threshold is not met
-        const retained = rng === null || rng() >= dropoutProbability;
-        if (retained) {
-          retainedArmCounts[subject.treatmentArmId] = (retainedArmCounts[subject.treatmentArmId] ?? 0) + 1;
-          totalRetained++;
+          // Apply attrition filter: subject is retained when random threshold is not met
+          const retained = rng === null || rng() >= dropoutProbability;
+          if (retained) {
+            retainedArmCounts[armIdx]++;
+            totalRetained++;
+          }
         }
       }
     } catch {
@@ -111,14 +118,14 @@ function runMonteCarlo(id: string, { config, attritionRate }: MonteCarloPayload)
   // the algorithm's inherent fairness can be assessed independently of attrition.
   // expectedRetainedCount is based on total retained subjects for post-attrition analysis.
   const totalRatio = config.arms.reduce((sum, arm) => sum + arm.ratio, 0);
-  const arms = config.arms.map(arm => ({
+  const arms = config.arms.map((arm, idx) => ({
     armId: arm.id,
     armName: arm.name,
     ratio: arm.ratio,
     expectedCount: Math.round((arm.ratio / totalRatio) * totalSubjects),
-    actualCount: armCounts[arm.id] ?? 0,
+    actualCount: armCounts[idx],
     expectedRetainedCount: Math.round((arm.ratio / totalRatio) * totalRetained),
-    retainedCount: retainedArmCounts[arm.id] ?? 0
+    retainedCount: retainedArmCounts[idx]
   }));
 
   const successPayload: MonteCarloSuccessPayload = {
