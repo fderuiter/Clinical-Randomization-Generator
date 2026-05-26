@@ -126,10 +126,18 @@ describe('CodeGeneratorService', () => {
 
       it('should embed named stratum caps matching the levels joined by underscore', () => {
         const code = service.generateR(fullConfig);
-        expect(code).toContain('"Male_Young" = 12');
-        expect(code).toContain('"Male_Old" = 9');
-        expect(code).toContain('"Female_Young" = 15');
-        expect(code).toContain('"Female_Old" = 6');
+        expect(code).toContain('stats::setNames(12, "Male_Young")');
+        expect(code).toContain('stats::setNames(9, "Male_Old")');
+        expect(code).toContain('stats::setNames(15, "Female_Young")');
+        expect(code).toContain('stats::setNames(6, "Female_Old")');
+      });
+
+      it('should encode unstratified caps with setNames to avoid invalid empty-key syntax', () => {
+        const code = service.generateR({
+          ...minimalConfig,
+          stratumCaps: [{ levels: [], cap: 20 }],
+        });
+        expect(code).toContain('stats::setNames(20, "")');
       });
 
       it('should add the no-strata guard after expand.grid()', () => {
@@ -302,9 +310,11 @@ describe('CodeGeneratorService', () => {
       it('should build a pandas DataFrame and include QC checks', () => {
         const code = service.generatePython(fullConfig);
         expect(code).toContain('df = pd.DataFrame(schema)');
+        expect(code).toContain('if not df.empty:');
         expect(code).toContain("df['Treatment'].value_counts()");
         expect(code).toContain("pd.crosstab(df['Site'], df['Treatment'])");
         expect(code).toContain("df['BlockSize'].value_counts()");
+        expect(code).toContain('No rows generated; skipping QC tables.');
       });
     });
 
@@ -614,6 +624,7 @@ describe('CodeGeneratorService', () => {
       it('should include QC checks', () => {
         const code = service.generateR(marginalConfig);
         expect(code).toContain('QC Check: Overall Allocation');
+        expect(code).toContain('utils::head(schema)');
       });
 
       it('should handle levels without a marginalCap (uncapped levels omitted from list)', () => {
@@ -796,8 +807,8 @@ describe('CodeGeneratorService', () => {
 
       it('should define value labels for strata factors', () => {
         const code = service.generateStata(marginalConfig);
-        expect(code).toContain('label define lbl_sex 1 "Male" 2 "Female"');
-        expect(code).toContain('label define lbl_age 1 "Young" 2 "Old"');
+        expect(code).toContain('label define lbl_sex 1 `"Male"\' 2 `"Female"\'');
+        expect(code).toContain('label define lbl_age 1 `"Young"\' 2 `"Old"\'');
       });
 
       it('should apply value labels after loading schema', () => {
@@ -884,8 +895,8 @@ describe('CodeGeneratorService', () => {
     describe('strata and cap handling', () => {
       it('should define value labels for each stratum factor', () => {
         const code = service.generateStata(fullConfig);
-        expect(code).toContain('label define lbl_sex 1 "Male" 2 "Female"');
-        expect(code).toContain('label define lbl_age 1 "Young" 2 "Old"');
+        expect(code).toContain('label define lbl_sex 1 `"Male"\' 2 `"Female"\'');
+        expect(code).toContain('label define lbl_age 1 `"Young"\' 2 `"Old"\'');
       });
 
       it('should apply value labels after loading schema', () => {
@@ -1170,6 +1181,19 @@ describe('CodeGeneratorService', () => {
         const code = service.generate('R', minimizationConfig);
         expect(code).toContain('p_minimization <- 0.85');
         expect(code).toContain('compute_imbalance_score <- function');
+        expect(code).toContain('stats::runif(1)');
+        expect(code).toContain('utils::head(schema)');
+      });
+
+      it('should handle unstratified minimization key lookup with an explicit empty key', () => {
+        const code = service.generate('R', {
+          ...minimizationConfig,
+          strata: [],
+          stratumCaps: [{ levels: [], cap: 20 }],
+          capStrategy: 'MANUAL_MATRIX',
+        });
+        expect(code).toContain('stats::setNames(20, "")');
+        expect(code).toContain('key <- if (ncol(combo_row) == 0) "" else paste(unlist(combo_row), collapse="_")');
       });
 
       it('should calculate ratio-adjusted imbalance scores natively', () => {
@@ -1188,6 +1212,16 @@ describe('CodeGeneratorService', () => {
         const code = service.generate('Python', minimizationConfig);
         expect(code).toContain('p_minimization = 0.85');
         expect(code).toContain('def compute_imbalance_score');
+      });
+
+      it('should emit single-factor stratum cap keys as 1-tuples', () => {
+        const code = service.generate('Python', {
+          ...minimizationConfig,
+          strata: [{ id: 'sex', name: 'Sex', levels: ['Male', 'Female'] }],
+          stratumCaps: [{ levels: ['Male'], cap: 5 }],
+          capStrategy: 'MANUAL_MATRIX',
+        });
+        expect(code).toContain('("Male",): 5');
       });
 
       it('should calculate ratio-adjusted imbalance scores natively', () => {
@@ -1347,6 +1381,166 @@ describe('CodeGeneratorService', () => {
     it('should generate code successfully when seed is whitespace only', () => {
       const noSeedConfig = { ...minimalConfig, seed: '   ' };
       expect(() => service.generate('Python', noSeedConfig)).not.toThrow();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Weird-character label escaping
+  // ---------------------------------------------------------------------------
+  describe('weird-character label escaping', () => {
+    /** Config with stratum levels that contain special characters. */
+    const weirdConfig: RandomizationConfig = {
+      protocolId: 'WEIRD-001',
+      studyName: 'Weird Chars Study',
+      phase: 'I',
+      arms: [
+        { id: 'A', name: 'Treatment', ratio: 2 },
+        { id: 'B', name: 'Placebo', ratio: 1 },
+      ],
+      sites: ['Site1'],
+      strata: [
+        {
+          id: 'factor1',
+          name: 'Factor 1',
+          levels: [
+            "O'Brien",            // single quote
+            'Type "A"',           // double quotes
+            'C:\\path',           // backslash
+            'α-Ω group',          // Unicode BMP characters
+            'line1\nline2',       // embedded newline
+          ],
+        },
+      ],
+      blockSizes: [6],
+      stratumCaps: [
+        { levels: ["O'Brien"], cap: 10 },
+        { levels: ['Type "A"'], cap: 10 },
+        { levels: ['C:\\path'], cap: 10 },
+        { levels: ['α-Ω group'], cap: 10 },
+        { levels: ['line1\nline2'], cap: 10 },
+      ],
+      seed: 'weird_seed',
+      subjectIdMask: '[SiteID]-[001]',
+    };
+
+    describe('R', () => {
+      it('should escape single quote in R level vector', () => {
+        const code = service.generateR(weirdConfig);
+        // single quote passes through unchanged inside double-quoted R strings
+        expect(code).toContain(`"O'Brien"`);
+      });
+
+      it('should escape double quotes in R level vector', () => {
+        const code = service.generateR(weirdConfig);
+        expect(code).toContain('"Type \\"A\\""');
+      });
+
+      it('should escape backslash in R level vector', () => {
+        const code = service.generateR(weirdConfig);
+        expect(code).toContain('"C:\\\\path"');
+      });
+
+      it('should pass Unicode BMP characters through in R level vector', () => {
+        const code = service.generateR(weirdConfig);
+        expect(code).toContain('"α-Ω group"');
+      });
+
+      it('should escape embedded newline in R level vector as \\n', () => {
+        const code = service.generateR(weirdConfig);
+        expect(code).toContain('"line1\\nline2"');
+      });
+
+      it('should produce syntactically valid R code (no unmatched quotes)', () => {
+        const code = service.generateR(weirdConfig);
+        expect(code).toContain(
+          'factor1_levels <- c("O\'Brien", "Type \\"A\\"", "C:\\\\path", "α-Ω group", "line1\\nline2")',
+        );
+        expect(code).toContain('utils::head(schema)');
+      });
+    });
+
+    describe('Python', () => {
+      it('should escape single quote in Python level list', () => {
+        const code = service.generatePython(weirdConfig);
+        expect(code).toContain(`"O'Brien"`);
+      });
+
+      it('should escape double quotes in Python level list', () => {
+        const code = service.generatePython(weirdConfig);
+        expect(code).toContain('"Type \\"A\\""');
+      });
+
+      it('should escape backslash in Python level list', () => {
+        const code = service.generatePython(weirdConfig);
+        expect(code).toContain('"C:\\\\path"');
+      });
+
+      it('should pass Unicode BMP characters through in Python level list', () => {
+        const code = service.generatePython(weirdConfig);
+        expect(code).toContain('"α-Ω group"');
+      });
+
+      it('should escape embedded newline in Python level list as \\n', () => {
+        const code = service.generatePython(weirdConfig);
+        expect(code).toContain('"line1\\nline2"');
+      });
+    });
+
+    describe('SAS', () => {
+      it('should double double-quotes in SAS %let macro variable', () => {
+        const code = service.generateSas(weirdConfig);
+        // 'Type "A"' → 'Type ""A""' inside the %let macro value
+        expect(code).toContain('"Type ""A"""');
+      });
+
+      it('should pass single quote through in SAS %let macro variable', () => {
+        const code = service.generateSas(weirdConfig);
+        expect(code).toContain(`"O'Brien"`);
+      });
+
+      it('should pass backslash through in SAS %let macro variable', () => {
+        const code = service.generateSas(weirdConfig);
+        expect(code).toContain('"C:\\path"');
+      });
+
+      it('should pass Unicode BMP characters through in SAS %let macro variable', () => {
+        const code = service.generateSas(weirdConfig);
+        expect(code).toContain('"α-Ω group"');
+      });
+
+      it('should replace embedded newline with a space in SAS %let macro variable', () => {
+        const code = service.generateSas(weirdConfig);
+        expect(code).toContain('"line1 line2"');
+      });
+    });
+
+    describe('Stata', () => {
+      it('should wrap value labels in Stata compound double-quotes', () => {
+        const code = service.generateStata(weirdConfig);
+        // Compound double-quotes: `"O'Brien"'
+        expect(code).toContain('`"O\'Brien"\'');
+      });
+
+      it('should embed double quotes in Stata compound double-quote labels', () => {
+        const code = service.generateStata(weirdConfig);
+        // Compound double-quotes allow embedded " without escaping
+        expect(code).toContain('`"Type "A""\'');
+      });
+
+      it('should pass backslash through in Stata compound double-quote labels', () => {
+        const code = service.generateStata(weirdConfig);
+        expect(code).toContain('`"C:\\path"\'');
+      });
+
+      it('should pass Unicode BMP characters through in Stata compound double-quote labels', () => {
+        const code = service.generateStata(weirdConfig);
+        expect(code).toContain('`"α-Ω group"\'');
+      });
+
+      it('should replace embedded newline with a space in Stata compound double-quote labels', () => {
+        const code = service.generateStata(weirdConfig);
+        expect(code).toContain('`"line1 line2"\'');
+      });
     });
   });
 });

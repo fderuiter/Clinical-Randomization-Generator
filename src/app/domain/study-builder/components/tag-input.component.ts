@@ -29,8 +29,9 @@ import { Subscription } from 'rxjs';
           <button
             type="button"
             (click)="removeTag(tag); $event.stopPropagation()" (keydown.enter)="removeTag(tag); $event.stopPropagation()" tabindex="0"
-            class="ml-0.5 text-indigo-500 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 focus:outline-none leading-none font-bold"
+            class="ml-0.5 text-indigo-500 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 rounded-sm leading-none font-bold"
             [attr.aria-label]="'Remove ' + tag"
+            [attr.title]="'Remove ' + tag"
           >×</button>
         </span>
       }

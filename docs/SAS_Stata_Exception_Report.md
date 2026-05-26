@@ -24,14 +24,14 @@ this exception may be re-evaluated.
 
 ## 2. Scope
 
-| Item | In Scope | Out of Scope |
-|---|---|---|
-| SAS syntax correctness (static analysis) | ✅ | |
-| Stata syntax correctness (static analysis) | ✅ | |
-| Mathematical result equivalence — SAS | | ✅ (exception granted) |
-| Mathematical result equivalence — Stata | | ✅ (exception granted) |
-| R mathematical result equivalence | ✅ | |
-| Python mathematical result equivalence | ✅ | |
+| Item | In Scope | Out of Scope | CI Job |
+|---|---|---|---|
+| SAS syntax correctness (static analysis) | ✅ | | `sas_static_validation` |
+| Stata syntax correctness (static analysis) | ✅ | | unit tests |
+| Mathematical result equivalence — SAS | | ✅ (exception granted) | — |
+| Mathematical result equivalence — Stata | | ✅ (exception granted) | — |
+| R mathematical result equivalence | ✅ | | `cross_env_equivalence` |
+| Python mathematical result equivalence | ✅ | | `cross_env_equivalence` |
 
 ---
 
@@ -60,10 +60,31 @@ despite the absence of automated execution validation:
 
 ### 4.1 Static Syntax Validation (CI — Automated)
 
-The `ci.yml` `security_scan` job includes a static check for usage of
-`Math.random()` in the randomization engine. In addition, the generated SAS
-and Stata code is produced by the `CodeGeneratorService`, which is covered by
-**unit tests** that verify:
+The `ci.yml` pipeline includes two layers of automated static validation:
+
+**Layer 1 — Security scan (`security_scan` job):**
+Checks for usage of `Math.random()` in the randomization engine.
+
+**Layer 2 — SAS static syntax validator (`sas_static_validation` job):**
+The script `scripts/validate-sas-syntax.mjs` runs against every `.sas` file
+exported by the `code_generation_fixtures` job and verifies:
+
+- All five required header comment fields are present (`Randomization Schema
+  Generation in SAS`, `Protocol:`, `App Version:`, `Generated At:`,
+  `PRNG Algorithm:`)
+- The `Generated At:` value is a valid ISO 8601 timestamp
+- A `%let seed = <number>;` statement is present
+- Every `/*` block comment has a matching `*/` (no unclosed comments)
+- Every `data <name>;` step is closed by `run;`
+- Every `proc <name>` step is closed by `run;` or `quit;`
+- Every `%macro` definition is closed by a matching `%mend`
+
+See `docs/adr/0001-sas-static-validation-strategy.md` for the full decision
+record explaining the choice of approach.
+
+**Layer 3 — Unit tests (`CodeGeneratorService`):**
+The generated SAS and Stata code is produced by the `CodeGeneratorService`,
+which is covered by **unit tests** that verify:
 
 - Correct PRNG seed embedding (`%let seed = <N>;` / `set seed <N>`)
 - Correct protocol ID embedding
@@ -146,4 +167,6 @@ This exception will be re-evaluated if any of the following occur:
 - ICH E6(R2) – Good Clinical Practice (2016)
 - GAMP 5 – Risk-Based Approach to Compliant GxP Computerised Systems (ISPE, 2008)
 - Equipose `docs/ARCHITECTURE.md` §12 – Code Generation Service
+- Equipose `docs/adr/0001-sas-static-validation-strategy.md` – SAS Validation Strategy ADR
+- Equipose `scripts/validate-sas-syntax.mjs` – Static SAS Syntax Validator
 - Equipose `Validation_Traceability_Matrix.md` – Requirements Traceability Matrix

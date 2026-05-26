@@ -218,23 +218,110 @@ assert_structural_properties <- function(df) {
 }
 
 # ---------------------------------------------------------------------------
+# Generated UI-script execution checks
+# ---------------------------------------------------------------------------
+
+get_script_path <- function() {
+  file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+  if (length(file_arg) == 0) return(NULL)
+  sub("^--file=", "", file_arg[[1]])
+}
+
+resolve_fixture_root <- function(arg_path = NULL) {
+  if (!is.null(arg_path) && nzchar(arg_path)) {
+    return(normalizePath(arg_path, winslash = "/", mustWork = FALSE))
+  }
+
+  script_path <- get_script_path()
+  if (is.null(script_path)) return(NULL)
+
+  repo_root <- normalizePath(file.path(dirname(script_path), "..", ".."), winslash = "/", mustWork = FALSE)
+  normalizePath(file.path(repo_root, "artifacts", "code-generation-fixtures"), winslash = "/", mustWork = FALSE)
+}
+
+execute_generated_script <- function(script_path) {
+  env <- new.env(parent = baseenv())
+
+  tryCatch({
+    sys.source(script_path, envir = env)
+
+    if (!exists("schema", envir = env, inherits = FALSE)) {
+      stop("Expected generated script to define a 'schema' data.frame.")
+    }
+
+    schema <- get("schema", envir = env, inherits = FALSE)
+    if (!is.data.frame(schema)) {
+      stop("Generated script did not produce a data.frame named 'schema'.")
+    }
+
+    list(ok = TRUE, rows = nrow(schema))
+  }, error = function(err) {
+    list(ok = FALSE, message = conditionMessage(err))
+  })
+}
+
+verify_generated_scripts <- function(fixture_root, explicit_path = FALSE) {
+  if (is.null(fixture_root)) return(character(0))
+
+  if (!dir.exists(fixture_root)) {
+    if (explicit_path) {
+      return(sprintf("Generated fixture directory does not exist: %s", fixture_root))
+    }
+
+    cat(sprintf("\nGenerated UI R script execution check skipped (fixture directory not found: %s)\n", fixture_root))
+    return(character(0))
+  }
+
+  script_paths <- sort(list.files(
+    fixture_root,
+    pattern = "\\.R$",
+    recursive = TRUE,
+    full.names = TRUE,
+    ignore.case = TRUE
+  ))
+
+  if (length(script_paths) == 0) {
+    return(sprintf("No generated R scripts were found in fixture directory: %s", fixture_root))
+  }
+
+  failures <- character(0)
+  cat(sprintf("\nGenerated UI R Script Execution Check\n  Fixture root: %s\n", fixture_root))
+
+  for (script_path in script_paths) {
+    scenario_id <- basename(dirname(script_path))
+    cat(sprintf("  - Running %s (%s)\n", basename(script_path), scenario_id))
+
+    result <- execute_generated_script(script_path)
+    if (!isTRUE(result$ok)) {
+      failures <- c(failures, sprintf("%s: %s", script_path, result$message))
+      next
+    }
+
+    cat(sprintf("    PASS — schema rows: %d\n", result$rows))
+  }
+
+  if (length(failures) == 0) {
+    cat(sprintf("Generated UI R Script Execution Check: PASS — %d script(s) executed\n", length(script_paths)))
+  }
+
+  failures
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
+args <- commandArgs(trailingOnly = TRUE)
+explicit_fixture_root <- length(args) > 0
+fixture_root <- resolve_fixture_root(if (explicit_fixture_root) args[[1]] else NULL)
 
 cat(sprintf("Cross-Environment Equivalence Check (R)\n"))
 cat(sprintf("  Protocol: %s\n", PROTOCOL_ID))
 cat(sprintf("  Seed:     %d\n", SEED))
 cat(sprintf("  Expected subjects: %d\n\n", EXPECTED_TOTAL))
 
-df       <- generate_schema(SEED)
-failures <- assert_structural_properties(df)
-
-if (length(failures) > 0) {
-  cat("FAILURES:\n")
-  for (msg in failures) cat(sprintf("  x %s\n", msg))
-  cat(sprintf("\nCROSS_ENV_CHECK: FAIL (%d assertion(s) failed)\n", length(failures)))
-  quit(status = 1)
-}
+df <- generate_schema(SEED)
+equivalence_failures <- assert_structural_properties(df)
 
 arm_counts <- table(df$Treatment)
 cat(sprintf("  Total subjects generated: %d\n", nrow(df)))
@@ -242,5 +329,16 @@ for (nm in names(arm_counts)) {
   pct <- arm_counts[nm] / nrow(df) * 100
   cat(sprintf("  %s: %d (%.1f%%)\n", nm, arm_counts[nm], pct))
 }
-cat(sprintf("\nCROSS_ENV_CHECK: PASS — all %d subjects verified\n", nrow(df)))
+
+generated_script_failures <- verify_generated_scripts(fixture_root, explicit_fixture_root)
+failures <- c(equivalence_failures, generated_script_failures)
+
+if (length(failures) > 0) {
+  cat("\nFAILURES:\n")
+  for (msg in failures) cat(sprintf("  x %s\n", msg))
+  cat(sprintf("\nCROSS_ENV_CHECK: FAIL (%d assertion(s) failed)\n", length(failures)))
+  quit(status = 1)
+}
+
+cat(sprintf("\nCROSS_ENV_CHECK: PASS — all %d subjects verified and generated R scripts executed cleanly\n", nrow(df)))
 quit(status = 0)

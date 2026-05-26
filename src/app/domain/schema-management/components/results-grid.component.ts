@@ -367,6 +367,26 @@ export class ResultsGridComponent {
     return `${yyyy}${mm}${dd}`;
   }
 
+  /**
+   * Sanitizes a value for CSV export to prevent Formula Injection (CSV Injection).
+   * It escapes double quotes, wraps the value in double quotes, and prepends a single
+   * quote if the value starts with an executable prefix.
+   */
+  private sanitizeCsvValue(value: string | null | undefined): string {
+    if (value === null || value === undefined) {
+      return '""';
+    }
+    const strValue = String(value);
+    const escapedValue = strValue.replace(/"/g, '""');
+
+    // Check for formula injection prefixes
+    if (/^[=+\-@\t\r]/.test(escapedValue)) {
+      return `"'${escapedValue}"`;
+    }
+
+    return `"${escapedValue}"`;
+  }
+
   /** Copies the audit hash to the clipboard and briefly shows a ✓ icon. */
   copyAuditHash(): void {
     const hash = this.state.results()?.metadata.auditHash;
@@ -384,7 +404,8 @@ export class ResultsGridComponent {
     if (!data) return;
 
     const strataHeaders = data.metadata.strata?.map(s => s.name || s.id) || [];
-    const headers = ['Subject ID', 'Site', ...strataHeaders, 'Block Number', 'Block Size', 'Treatment Arm'];
+    const headers = ['Subject ID', 'Site', ...strataHeaders, 'Block Number', 'Block Size', 'Treatment Arm']
+      .map(h => this.sanitizeCsvValue(h));
 
     const rows = data.schema.map(r => {
       const strataValues = data.metadata.strata?.map(s => r.stratum[s.id] || '') || [];
@@ -395,7 +416,7 @@ export class ResultsGridComponent {
         r.blockNumber.toString(),
         r.blockSize.toString(),
         this.isUnblinded() ? r.treatmentArm : '*** BLINDED ***'
-      ];
+      ].map(val => this.sanitizeCsvValue(val));
     });
 
     const watermark = "DRAFT SCHEMA - DO NOT USE FOR ENROLLMENT. Execute the generated R/SAS/Python script to generate the official trial schema.";
@@ -427,7 +448,10 @@ export class ResultsGridComponent {
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
   }
 
   async exportXlsx(): Promise<void> {
