@@ -1,3 +1,4 @@
+import fc from 'fast-check';
 import { generateRandomizationSchema } from './randomization-algorithm';
 import { RandomizationConfig } from '../../core/models/randomization.model';
 
@@ -422,6 +423,89 @@ describe('generateRandomizationSchema – new token syntax', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Cap Strategy Invariants (Property-Based Tests)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('generateRandomizationSchema – Cap Strategy Invariants (Property-Based Tests)', () => {
+  it('MARGINAL_ONLY: never generates more subjects per level than the defined marginal caps', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 100 }),
+        fc.integer({ min: 0, max: 100 }),
+        (maleCap, femaleCap) => {
+          const marginalConfig: RandomizationConfig = {
+            ...BASE_CONFIG,
+            capStrategy: 'MARGINAL_ONLY',
+            strata: [
+              {
+                id: 'gender',
+                name: 'Gender',
+                levels: ['Male', 'Female'],
+                levelDetails: [
+                  { name: 'Male', marginalCap: maleCap },
+                  { name: 'Female', marginalCap: femaleCap }
+                ]
+              }
+            ],
+            stratumCaps: [] // not used in MARGINAL_ONLY
+          };
+
+          const result = generateRandomizationSchema(marginalConfig);
+
+          const maleCount = result.schema.filter(r => r.stratum['gender'] === 'Male').length;
+          const femaleCount = result.schema.filter(r => r.stratum['gender'] === 'Female').length;
+
+          // Invariants:
+          expect(maleCount).toBeLessThanOrEqual(maleCap);
+          expect(femaleCount).toBeLessThanOrEqual(femaleCap);
+          // And total shouldn't exceed sum of marginal caps
+          expect(result.schema.length).toBeLessThanOrEqual(maleCap + femaleCap);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('MANUAL_MATRIX: never generates more subjects per stratum than the defined stratum caps', () => {
+    // Generate arbitrary intersection caps for a 2x2 matrix (4 intersections).
+    fc.assert(
+      fc.property(
+        fc.array(fc.integer({ min: 0, max: 50 }), { minLength: 4, maxLength: 4 }),
+        (caps) => {
+          const config: RandomizationConfig = {
+            ...BASE_CONFIG,
+            capStrategy: 'MANUAL_MATRIX',
+            strata: [
+              { id: 'gender', name: 'Gender', levels: ['Male', 'Female'] },
+              { id: 'diabetes', name: 'Diabetes', levels: ['Diabetic', 'Non-Diabetic'] }
+            ],
+            stratumCaps: [
+              { levels: ['Male', 'Diabetic'], cap: caps[0] },
+              { levels: ['Male', 'Non-Diabetic'], cap: caps[1] },
+              { levels: ['Female', 'Diabetic'], cap: caps[2] },
+              { levels: ['Female', 'Non-Diabetic'], cap: caps[3] }
+            ]
+          };
+
+          const result = generateRandomizationSchema(config);
+
+          const maleDiabeticCount = result.schema.filter(r => r.stratum['gender'] === 'Male' && r.stratum['diabetes'] === 'Diabetic').length;
+          const maleNonDiabeticCount = result.schema.filter(r => r.stratum['gender'] === 'Male' && r.stratum['diabetes'] === 'Non-Diabetic').length;
+          const femaleDiabeticCount = result.schema.filter(r => r.stratum['gender'] === 'Female' && r.stratum['diabetes'] === 'Diabetic').length;
+          const femaleNonDiabeticCount = result.schema.filter(r => r.stratum['gender'] === 'Female' && r.stratum['diabetes'] === 'Non-Diabetic').length;
+
+          expect(maleDiabeticCount).toBeLessThanOrEqual(caps[0]);
+          expect(maleNonDiabeticCount).toBeLessThanOrEqual(caps[1]);
+          expect(femaleDiabeticCount).toBeLessThanOrEqual(caps[2]);
+          expect(femaleNonDiabeticCount).toBeLessThanOrEqual(caps[3]);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MARGINAL_ONLY strategy
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -627,6 +711,28 @@ describe('generateRandomizationSchema – hierarchical block strategy', () => {
       const result = generateRandomizationSchema(config);
       // All rows should use size 4 (stratum override beats site override)
       result.schema.forEach(r => expect(r.blockSize).toBe(4));
+    });
+  });
+
+  describe('Boundary Cases', () => {
+    it('generates an unstratified schema when strata is empty', () => {
+      const config: RandomizationConfig = { ...BASE_CONFIG, strata: [] };
+      const result = generateRandomizationSchema(config);
+      expect(result.schema).toBeTruthy();
+      expect(result.schema.length).toBeGreaterThan(0);
+      result.schema.forEach(row => {
+        expect(row.stratumCode).toBe('');
+      });
+    });
+
+    it('throws when arm count is zero', () => {
+      const config: RandomizationConfig = { ...BASE_CONFIG, arms: [] };
+      expect(() => generateRandomizationSchema(config)).toThrow('Total arm ratio must be greater than zero');
+    });
+
+    it('throws when block sizes are empty', () => {
+      const config: RandomizationConfig = { ...BASE_CONFIG, blockSizes: [] };
+      expect(() => generateRandomizationSchema(config)).toThrow('At least one block size must be configured');
     });
   });
 
