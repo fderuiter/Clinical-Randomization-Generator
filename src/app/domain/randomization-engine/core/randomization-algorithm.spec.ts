@@ -1,6 +1,6 @@
 import * as fc from 'fast-check';
 import { generateRandomizationSchema } from './randomization-algorithm';
-import { RandomizationConfig } from '../../core/models/randomization.model';
+import { RandomizationConfig, StratificationFactor } from '../../core/models/randomization.model';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -82,7 +82,7 @@ describe('generateRandomizationSchema – core behaviour', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('generateRandomizationSchema – property tests', () => {
-  const validConfigArbitrary = fc
+  const validConfigArbitrary: fc.Arbitrary<RandomizationConfig> = fc
     .record({
       protocolId: fc.constant('PROP-001'),
       studyName: fc.constant('Prop Test'),
@@ -96,22 +96,30 @@ describe('generateRandomizationSchema – property tests', () => {
         { minLength: 2, maxLength: 5 }
       ),
       sites: fc.array(fc.string({ minLength: 1, maxLength: 5 }), { minLength: 1, maxLength: 5 }),
-      strata: fc.constant([]), // simplify by omitting strata
+      strata: fc.constant([] as StratificationFactor[]), // simplify by omitting strata
       seed: fc.string(),
       capStrategy: fc.constant('PROPORTIONAL' as const),
-      randomizationMethod: fc.constant('PERMUTED_BLOCK' as const)
+      randomizationMethod: fc.constant('BLOCK' as const)
     })
     .chain(base => {
       const totalRatio = base.arms.reduce((sum, arm) => sum + arm.ratio, 0);
       return fc.record({
-        ...Object.fromEntries(Object.entries(base).map(([k, v]) => [k, fc.constant(v)])),
+        protocolId: fc.constant(base.protocolId),
+        studyName: fc.constant(base.studyName),
+        phase: fc.constant(base.phase),
+        arms: fc.constant(base.arms),
+        sites: fc.constant(base.sites),
+        strata: fc.constant(base.strata),
+        seed: fc.constant(base.seed),
+        capStrategy: fc.constant(base.capStrategy),
+        randomizationMethod: fc.constant(base.randomizationMethod),
         blockSizes: fc.array(
           fc.integer({ min: 1, max: 10 }).map(m => m * totalRatio),
           { minLength: 1, maxLength: 3 }
         ),
-        stratumCaps: fc.integer({ min: 1, max: 100 }).map(cap => [{ levels: [], cap }]),
+        stratumCaps: fc.integer({ min: 1, max: 100 }).map(cap => [{ levels: [] as string[], cap }]),
         subjectIdMask: fc.constant('[SiteID]-[001]')
-      }) as fc.Arbitrary<RandomizationConfig>;
+      });
     });
 
   it('maintains invariants: executes successfully and generates correct sequence length for valid configurations', () => {
