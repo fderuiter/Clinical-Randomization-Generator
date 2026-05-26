@@ -396,12 +396,30 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
     strataCombinations = newCombinations;
   }
 
-  // Calculate total ratio sum
-  const totalRatio = resolvedConfig.arms.reduce((sum, arm) => sum + arm.ratio, 0);
+  if (resolvedConfig.randomizationMethod === 'MINIMIZATION') {
+    const hasCapConfigs =
+      (resolvedConfig.stratumCaps && resolvedConfig.stratumCaps.length > 0) ||
+      resolvedConfig.capStrategy !== undefined ||
+      resolvedConfig.globalCap !== undefined;
+    if (hasCapConfigs) {
+      throw new Error('Minimization algorithm does not support cap strategies, global caps, or stratum caps.');
+    }
+  }
+
+  // Calculate total ratio sum and validate arm ratios
+  const totalRatio = resolvedConfig.arms.reduce((sum, arm) => {
+    if (arm.ratio <= 0) {
+      throw new Error(`Arm ratio must be a positive number, got: ${arm.ratio}`);
+    }
+    return sum + arm.ratio;
+  }, 0);
 
   // Validate block sizes from all rules (skip for minimization - block sizes don't apply).
   if (resolvedConfig.randomizationMethod !== 'MINIMIZATION') {
     for (const size of collectAllBlockSizes(resolvedConfig)) {
+      if (size <= 0) {
+        throw new Error(`Block size must be positive, got: ${size}`);
+      }
       if (size % totalRatio !== 0) {
         throw new Error(`Block size ${size} is not a multiple of total ratio ${totalRatio}`);
       }

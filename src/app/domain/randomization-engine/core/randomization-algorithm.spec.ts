@@ -648,6 +648,35 @@ describe('generateRandomizationSchema – hierarchical block strategy', () => {
       };
       expect(() => generateRandomizationSchema(config)).toThrow(/not a multiple/);
     });
+
+    it('throws when an arm ratio is negative', () => {
+      const config: RandomizationConfig = {
+        ...BASE_2_ARM,
+        arms: [
+          { id: '1', name: 'A', ratio: -1 },
+          { id: '2', name: 'B', ratio: 1 }
+        ]
+      };
+      expect(() => generateRandomizationSchema(config)).toThrow(/must be a positive number/);
+    });
+
+    it('throws when randomizationMethod is MINIMIZATION and a cap strategy is provided', () => {
+      const config: RandomizationConfig = {
+        ...BASE_2_ARM,
+        randomizationMethod: 'MINIMIZATION',
+        minimizationConfig: { p: 0.8, totalSampleSize: 10 },
+        capStrategy: 'MANUAL_MATRIX'
+      };
+      expect(() => generateRandomizationSchema(config)).toThrow(/does not support cap strategies/);
+    });
+
+    it('throws when globalBlockStrategy has a zero or negative size', () => {
+      const config: RandomizationConfig = {
+        ...BASE_2_ARM,
+        globalBlockStrategy: { selectionType: 'RANDOM_POOL', sizes: [0] }
+      };
+      expect(() => generateRandomizationSchema(config)).toThrow(/must be positive/);
+    });
   });
 });
 
