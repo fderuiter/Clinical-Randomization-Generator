@@ -1,5 +1,6 @@
+import * as fc from 'fast-check';
 import { generateRandomizationSchema } from './randomization-algorithm';
-import { RandomizationConfig } from '../../core/models/randomization.model';
+import { RandomizationConfig, StratificationFactor } from '../../core/models/randomization.model';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -73,6 +74,66 @@ describe('generateRandomizationSchema – core behaviour', () => {
     expect(result.metadata.protocolId).toBe(BASE_CONFIG.protocolId);
     expect(result.metadata.studyName).toBe(BASE_CONFIG.studyName);
     expect(result.metadata.phase).toBe(BASE_CONFIG.phase);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Property Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('generateRandomizationSchema – property tests', () => {
+  const validConfigArbitrary: fc.Arbitrary<RandomizationConfig> = fc
+    .record({
+      protocolId: fc.constant('PROP-001'),
+      studyName: fc.constant('Prop Test'),
+      phase: fc.constant('Phase I'),
+      arms: fc.array(
+        fc.record({
+          id: fc.string({ minLength: 1, maxLength: 5 }),
+          name: fc.string({ minLength: 1, maxLength: 10 }),
+          ratio: fc.integer({ min: 1, max: 5 })
+        }),
+        { minLength: 2, maxLength: 5 }
+      ),
+      sites: fc.array(fc.string({ minLength: 1, maxLength: 5 }), { minLength: 1, maxLength: 5 }),
+      strata: fc.constant([] as StratificationFactor[]), // simplify by omitting strata
+      seed: fc.string(),
+      capStrategy: fc.constant('PROPORTIONAL' as const),
+      randomizationMethod: fc.constant('BLOCK' as const)
+    })
+    .chain(base => {
+      const totalRatio = base.arms.reduce((sum, arm) => sum + arm.ratio, 0);
+      return fc.record({
+        protocolId: fc.constant(base.protocolId),
+        studyName: fc.constant(base.studyName),
+        phase: fc.constant(base.phase),
+        arms: fc.constant(base.arms),
+        sites: fc.constant(base.sites),
+        strata: fc.constant(base.strata),
+        seed: fc.constant(base.seed),
+        capStrategy: fc.constant(base.capStrategy),
+        randomizationMethod: fc.constant(base.randomizationMethod),
+        blockSizes: fc.array(
+          fc.integer({ min: 1, max: 10 }).map(m => m * totalRatio),
+          { minLength: 1, maxLength: 3 }
+        ),
+        stratumCaps: fc.integer({ min: 1, max: 100 }).map(cap => [{ levels: [] as string[], cap }]),
+        subjectIdMask: fc.constant('[SiteID]-[001]')
+      });
+    });
+
+  it('maintains invariants: executes successfully and generates correct sequence length for valid configurations', () => {
+    fc.assert(
+      fc.property(validConfigArbitrary, config => {
+        const result = generateRandomizationSchema(config);
+
+        // Invariant: generated sequence length matches expected total caps (sites * cap for 0 strata)
+        const expectedLength = config.sites.length * config.stratumCaps[0].cap;
+
+        return result.schema.length === expectedLength;
+      }),
+      { numRuns: 100 }
+    );
   });
 });
 
@@ -627,6 +688,28 @@ describe('generateRandomizationSchema – hierarchical block strategy', () => {
       const result = generateRandomizationSchema(config);
       // All rows should use size 4 (stratum override beats site override)
       result.schema.forEach(r => expect(r.blockSize).toBe(4));
+    });
+  });
+
+  describe('Boundary Cases', () => {
+    it('generates an unstratified schema when strata is empty', () => {
+      const config: RandomizationConfig = { ...BASE_CONFIG, strata: [] };
+      const result = generateRandomizationSchema(config);
+      expect(result.schema).toBeTruthy();
+      expect(result.schema.length).toBeGreaterThan(0);
+      result.schema.forEach(row => {
+        expect(row.stratumCode).toBe('');
+      });
+    });
+
+    it('throws when arm count is zero', () => {
+      const config: RandomizationConfig = { ...BASE_CONFIG, arms: [] };
+      expect(() => generateRandomizationSchema(config)).toThrow('Total arm ratio must be greater than zero');
+    });
+
+    it('throws when block sizes are empty', () => {
+      const config: RandomizationConfig = { ...BASE_CONFIG, blockSizes: [] };
+      expect(() => generateRandomizationSchema(config)).toThrow('At least one block size must be configured');
     });
   });
 
