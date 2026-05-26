@@ -89,43 +89,10 @@ function stripBlockComments(src) {
  * Empty tokens are discarded.
  */
 function tokeniseStatements(stripped) {
-  const tokens = [];
-  let currentToken = '';
-  let inString = false;
-  let stringChar = '';
-
-  for (let i = 0; i < stripped.length; i++) {
-    const char = stripped[i];
-    if (inString) {
-      currentToken += char;
-      if (char === stringChar) {
-        // Handle SAS doubled quotes
-        if (i + 1 < stripped.length && stripped[i + 1] === stringChar) {
-          currentToken += stringChar;
-          i++;
-        } else {
-          inString = false;
-        }
-      }
-    } else {
-      if (char === '"' || char === "'") {
-        inString = true;
-        stringChar = char;
-        currentToken += char;
-      } else if (char === ';') {
-        tokens.push(currentToken.trim());
-        currentToken = '';
-      } else {
-        currentToken += char;
-      }
-    }
-  }
-
-  if (currentToken.trim().length > 0) {
-    tokens.push(currentToken.trim());
-  }
-
-  return tokens.filter(t => t.length > 0);
+  return stripped
+    .split(';')
+    .map(t => t.trim())
+    .filter(t => t.length > 0);
 }
 
 /**

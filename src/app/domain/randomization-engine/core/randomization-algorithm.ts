@@ -414,17 +414,9 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
     return sum + arm.ratio;
   }, 0);
 
-  if (totalRatio === 0) {
-    throw new Error('Total arm ratio must be greater than zero');
-  }
-
   // Validate block sizes from all rules (skip for minimization - block sizes don't apply).
   if (resolvedConfig.randomizationMethod !== 'MINIMIZATION') {
-    const allSizes = collectAllBlockSizes(resolvedConfig);
-    if (allSizes.length === 0) {
-      throw new Error('At least one block size must be configured');
-    }
-    for (const size of allSizes) {
+    for (const size of collectAllBlockSizes(resolvedConfig)) {
       if (size <= 0) {
         throw new Error(`Block size must be positive, got: ${size}`);
       }

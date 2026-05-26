@@ -1,5 +1,6 @@
 {
   "name": "equipose",
+  "packageManager": "pnpm@10.30.3",
   "version": "1.32.0",
   "scripts": {
     "ng": "ng",
@@ -34,12 +35,12 @@
     "@angular/ssr": "21.2.8",
     "@fontsource-variable/inter": "^5.2.8",
     "@ngrx/signals": "^21.1.0",
-    "echarts": "^6.1.0",
+    "echarts": "^6.0.0",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
-    "motion": "^12.39.0",
+    "motion": "^12.23.24",
     "rxjs": "~7.8.0",
     "seedrandom": "^3.0.5",
     "tslib": "^2.3.0"
@@ -50,7 +51,6 @@
     "@angular/compiler-cli": "21.2.7",
     "@angular/platform-browser-dynamic": "21.2.7",
     "@axe-core/playwright": "^4.11.3",
-    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.58.2",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.1",
@@ -68,7 +68,6 @@
     "angular-eslint": "21.4.0",
     "cross-env": "^10.1.0",
     "eslint": "^10.4.0",
-    "fast-check": "^4.8.0",
     "jsdom": "^29.1.0",
     "pdf-parse": "^2.4.5",
     "postcss": "^8.5.12",
@@ -76,7 +75,7 @@
     "tailwindcss": "^4.2.4",
     "typescript": "~5.9.2",
     "typescript-eslint": "8.59.3",
-    "vitest": "^4.1.7",
+    "vitest": "^4.1.2",
     "wrangler": "^4.90.1",
     "zone.js": "^0.16.1"
   },
