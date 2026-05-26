@@ -21,6 +21,7 @@ describe('ConfigFormComponent (domain)', () => {
       showCodeGenerator: signal(false),
       codeLanguage: signal('R'),
       generateSchema: vi.fn(),
+      runMonteCarlo: vi.fn(),
       openCodeGenerator: vi.fn(),
       closeCodeGenerator: vi.fn(),
       clearResults: vi.fn()
@@ -438,6 +439,39 @@ describe('ConfigFormComponent (domain)', () => {
       expect(component.form.get('capsGroup.capStrategy')?.value).toBe('MANUAL_MATRIX');
       expect(component.form.get('capsGroup.globalCap')?.disabled).toBe(true);
     });
+
+    it('should expose proportional helper state for valid and invalid matrix inputs', () => {
+      component.form.get('capsGroup.capStrategy')?.setValue('PROPORTIONAL');
+      component.form.get('capsGroup.globalCap')?.enable();
+      component.form.get('capsGroup.globalCap')?.setValue(100);
+
+      expect(component.getPercentage('missing', 'level')).toBe(0);
+
+      component.setPercentage('age', '<65', 60);
+      component.setPercentage('age', '>=65', 40);
+
+      expect(component.getPercentage('age', '<65')).toBe(60);
+      expect(component.getFactorPercentageTotal('age', ['<65', '>=65'])).toBe(100);
+      expect(component.isFactorPercentageInvalid('age')).toBe(false);
+      expect(component.canComputeMatrix).toBe(true);
+
+      component.form.get('capsGroup.globalCap')?.setValue(0);
+      expect(component.canComputeMatrix).toBe(false);
+    });
+
+    it('should preserve and clear marginal cap helper values', () => {
+      expect(component.getMarginalCap('age', '<65')).toBeUndefined();
+
+      component.setMarginalCap('age', '<65', 12);
+      expect(component.getMarginalCap('age', '<65')).toBe(12);
+
+      component.setMarginalCap('age', '<65', undefined);
+      expect(component.getMarginalCap('age', '<65')).toBeUndefined();
+      expect(component.parseMarginalCapInput('')).toBeUndefined();
+      expect(component.parseMarginalCapInput('7')).toBe(7);
+      expect(component.parseMarginalCapInput('1.5')).toBeUndefined();
+      expect(component.parseMarginalCapInput('-1')).toBeUndefined();
+    });
   });
 
   describe('block override target options', () => {
@@ -458,6 +492,27 @@ describe('ConfigFormComponent (domain)', () => {
         '>=65 | Diabetic',
         '>=65 | Diastolic',
       ]);
+    });
+
+    it('should expose target option codes for both site and stratum overrides', () => {
+      component.addBlockOverride();
+      component.blockOverrides.at(0).get('targetType')?.setValue('site');
+
+      expect(component.getBlockOverrideTargetOptions(0)).toEqual(['101', '102', '103']);
+
+      component.addStratum();
+      component.strata.at(1).patchValue({
+        id: 'gender',
+        name: 'Gender',
+        levelsStr: 'M, F'
+      });
+      component.blockOverrides.at(0).get('targetType')?.setValue('stratum');
+
+      expect(component.getBlockOverrideTargetOptions(0)).toEqual(['<65-M', '<65-F', '>=6-M', '>=6-F']);
+      expect(component.computedStratumCodes()).toEqual(['<65-M', '<65-F', '>=6-M', '>=6-F']);
+
+      component.removeBlockOverride(0);
+      expect(component.blockOverrides.length).toBe(0);
     });
   });
 
@@ -511,6 +566,53 @@ describe('ConfigFormComponent (domain)', () => {
       expect(component.form.valid).toBe(true);
     });
   });
+
+  describe('error handling helpers', () => {
+    it('should clamp attrition rates into the supported range', () => {
+      expect(component.clampAttritionRate(Number.NaN)).toBe(0);
+      expect(component.clampAttritionRate(-5)).toBe(0);
+      expect(component.clampAttritionRate(17)).toBe(17);
+      expect(component.clampAttritionRate(60)).toBe(50);
+    });
+
+    it('should show an error toast when code generation fails', () => {
+      const toastSpy = vi.spyOn((component as any).toastService, 'showError');
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      (mockFacade as any).openCodeGenerator.mockImplementation(() => { throw new Error('boom'); });
+
+      component.onGenerateCode('R');
+
+      expect(toastSpy).toHaveBeenCalledWith('Error generating code. Please check your configuration.');
+      consoleSpy.mockRestore();
+    });
+
+    it('should show an error toast when Monte Carlo startup fails', () => {
+      const toastSpy = vi.spyOn((component as any).toastService, 'showError');
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      (mockFacade as any).runMonteCarlo.mockImplementation(() => { throw new Error('boom'); });
+
+      component.onRunMonteCarlo();
+
+      expect(toastSpy).toHaveBeenCalledWith('Error starting simulation. Please check your configuration.');
+      consoleSpy.mockRestore();
+    });
+
+    it('should show an error toast when schema generation fails and fall back to empty review JSON', () => {
+      const toastSpy = vi.spyOn((component as any).toastService, 'showError');
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      (mockFacade as any).generateSchema.mockImplementation(() => { throw new Error('boom'); });
+
+      component.onSubmit();
+
+      expect(toastSpy).toHaveBeenCalledWith('Error generating schema. Please check your configuration.');
+
+      const buildSpy = vi.spyOn(component.store, 'buildConfig').mockImplementation(() => { throw new Error('bad json'); });
+      expect(component.reviewConfigJson).toBe('{}');
+      buildSpy.mockRestore();
+      consoleSpy.mockRestore();
+    });
+  });
+
   describe('Algorithm-switch scenarios', () => {
     it('should cleanly transition from BLOCK to MINIMIZATION (payload cleanliness and UI state)', () => {
       // 1. Setup as BLOCK initially with some block specific values

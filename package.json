@@ -59,6 +59,7 @@
     "@semantic-release/npm": "^13.1.5",
     "@semantic-release/release-notes-generator": "^14.1.0",
     "@tailwindcss/postcss": "^4.2.4",
+    "@testing-library/angular": "^19.3.0",
     "@types/express": "^5.0.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.5.2",
