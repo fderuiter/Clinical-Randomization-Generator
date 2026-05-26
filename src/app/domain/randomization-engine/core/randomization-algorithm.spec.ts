@@ -630,6 +630,28 @@ describe('generateRandomizationSchema – hierarchical block strategy', () => {
     });
   });
 
+  describe('Boundary Cases', () => {
+    it('generates an unstratified schema when strata is empty', () => {
+      const config: RandomizationConfig = { ...BASE_CONFIG, strata: [] };
+      const result = generateRandomizationSchema(config);
+      expect(result.schema).toBeTruthy();
+      expect(result.schema.length).toBeGreaterThan(0);
+      result.schema.forEach(row => {
+        expect(row.stratumCode).toBe('');
+      });
+    });
+
+    it('throws when arm count is zero', () => {
+      const config: RandomizationConfig = { ...BASE_CONFIG, arms: [] };
+      expect(() => generateRandomizationSchema(config)).toThrow('Total arm ratio must be greater than zero');
+    });
+
+    it('throws when block sizes are empty', () => {
+      const config: RandomizationConfig = { ...BASE_CONFIG, blockSizes: [] };
+      expect(() => generateRandomizationSchema(config)).toThrow('At least one block size must be configured');
+    });
+  });
+
   describe('Validation', () => {
     it('throws when globalBlockStrategy has a size not divisible by totalRatio', () => {
       const config: RandomizationConfig = {
