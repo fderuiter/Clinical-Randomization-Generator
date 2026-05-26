@@ -1,3 +1,4 @@
+import * as fc from 'fast-check';
 import { generateRandomizationSchema } from './randomization-algorithm';
 import { RandomizationConfig } from '../../core/models/randomization.model';
 
@@ -73,6 +74,58 @@ describe('generateRandomizationSchema – core behaviour', () => {
     expect(result.metadata.protocolId).toBe(BASE_CONFIG.protocolId);
     expect(result.metadata.studyName).toBe(BASE_CONFIG.studyName);
     expect(result.metadata.phase).toBe(BASE_CONFIG.phase);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Property Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('generateRandomizationSchema – property tests', () => {
+  const validConfigArbitrary = fc
+    .record({
+      protocolId: fc.constant('PROP-001'),
+      studyName: fc.constant('Prop Test'),
+      phase: fc.constant('Phase I'),
+      arms: fc.array(
+        fc.record({
+          id: fc.string({ minLength: 1, maxLength: 5 }),
+          name: fc.string({ minLength: 1, maxLength: 10 }),
+          ratio: fc.integer({ min: 1, max: 5 })
+        }),
+        { minLength: 2, maxLength: 5 }
+      ),
+      sites: fc.array(fc.string({ minLength: 1, maxLength: 5 }), { minLength: 1, maxLength: 5 }),
+      strata: fc.constant([]), // simplify by omitting strata
+      seed: fc.string(),
+      capStrategy: fc.constant('PROPORTIONAL' as const),
+      randomizationMethod: fc.constant('PERMUTED_BLOCK' as const)
+    })
+    .chain(base => {
+      const totalRatio = base.arms.reduce((sum, arm) => sum + arm.ratio, 0);
+      return fc.record({
+        ...Object.fromEntries(Object.entries(base).map(([k, v]) => [k, fc.constant(v)])),
+        blockSizes: fc.array(
+          fc.integer({ min: 1, max: 10 }).map(m => m * totalRatio),
+          { minLength: 1, maxLength: 3 }
+        ),
+        stratumCaps: fc.integer({ min: 1, max: 100 }).map(cap => [{ levels: [], cap }]),
+        subjectIdMask: fc.constant('[SiteID]-[001]')
+      }) as fc.Arbitrary<RandomizationConfig>;
+    });
+
+  it('maintains invariants: executes successfully and generates correct sequence length for valid configurations', () => {
+    fc.assert(
+      fc.property(validConfigArbitrary, config => {
+        const result = generateRandomizationSchema(config);
+
+        // Invariant: generated sequence length matches expected total caps (sites * cap for 0 strata)
+        const expectedLength = config.sites.length * config.stratumCaps[0].cap;
+
+        return result.schema.length === expectedLength;
+      }),
+      { numRuns: 100 }
+    );
   });
 });
 
