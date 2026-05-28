@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import seedrandom from 'seedrandom';
 import { RandomizationConfig, StratificationFactor } from '../../core/models/randomization.model';
 import { APP_VERSION } from '../../../../environments/version';
 import {
@@ -17,7 +18,6 @@ export class CodeGeneratorService {
    * seed field empty.  Kept well within R's `set.seed()` / Python's
    * `SeedSequence` / SAS's `call streaminit` valid range (0..2^31-2).
    */
-  private static readonly MAX_AUTO_SEED = 1_000_000;
   /**
    * Phase 0 – Language dispatch entry point.
    * Runs pre-flight config validation, then delegates to the appropriate generator.
@@ -78,6 +78,7 @@ export class CodeGeneratorService {
       `Generated At: ${generatedAt}`,
       ``,
       `Algorithm: Pocock-Simon Minimization`,
+      `Source Seed Hash: ${this.get128BitHash(config.seed)}`,
       `Base Probability (p): ${p}`,
       `Total Sample Size (N): ${n}`,
       `Sites: ${(config.sites || []).join(', ')}`,
@@ -187,26 +188,29 @@ export class CodeGeneratorService {
     );
   }
 
-  private hashCode(str: string | undefined): number {
-    // When no seed is provided the generator picks a random numeric seed.
-    // The range [0, MAX_AUTO_SEED) is well within the valid seed range for
-    // R set.seed(), Python SeedSequence, and SAS call streaminit (0..2^31-2).
-    if (!str) {
-      const array = new Uint32Array(1);
-      globalThis.crypto.getRandomValues(array);
-      return array[0] % CodeGeneratorService.MAX_AUTO_SEED;
+  public get128BitHash(seed: string | undefined): string {
+    const s = seed || '';
+    if (/^[0-9a-f]{32}$/i.test(s)) {
+      return s.toLowerCase();
     }
-    const s = String(str);
-    let hash = 0;
-    for (let i = 0; i < s.length; i++) {
-      const char = s.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+    const rng = seedrandom(s);
+    const arr = new Uint32Array(4);
+    for (let i = 0; i < 4; i++) {
+      arr[i] = Math.abs(rng.int32());
+    }
+    return Array.from(arr, n => n.toString(16).padStart(8, '0')).join('');
+  }
+
+  private hashCode(str: string | undefined): number {
+    const hex128 = this.get128BitHash(str);
+    // Use FNV-1a to map the 128-bit hex string uniformly into a 31-bit integer.
+    // The valid seed range for R set.seed(), Python SeedSequence, and SAS call streaminit is 0..2^31-2.
+    let hash = 2166136261;
+    for (let i = 0; i < hex128.length; i++) {
+      hash ^= hex128.charCodeAt(i);
+      hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
       hash |= 0;
     }
-    // Use unsigned right-shift to get a non-negative 32-bit integer, then mod into
-    // R's set.seed() / Python's SeedSequence / SAS's call streaminit range (0..2^31-2).
-    // Math.abs(-2147483648) === 2147483648, which exceeds the 31-bit limit; this
-    // approach avoids that edge case entirely.
     return (hash >>> 0) % 2147483647;
   }
 
@@ -669,6 +673,7 @@ if (nrow(schema) > 0) {
 # App Version: ${APP_VERSION}
 # Generated At: ${generatedAt}
 # PRNG Algorithm: Mersenne-Twister
+# Source Seed Hash: ${this.get128BitHash(config.seed)}
 ${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
 ${methodologyBlock}
 # Subjects are allocated by randomly selecting valid stratum combinations
@@ -1158,6 +1163,7 @@ else:
 # App Version: ${APP_VERSION}
 # Generated At: ${generatedAt}
 # PRNG Algorithm: PCG64
+# Source Seed Hash: ${this.get128BitHash(config.seed)}
 ${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
 ${methodologyBlock}
 # Subjects are allocated by randomly selecting valid stratum combinations
@@ -1893,6 +1899,7 @@ title;
 /* App Version: ${APP_VERSION} */
 /* Generated At: ${generatedAt} */
 /* PRNG Algorithm: Mersenne Twister */
+/* Source Seed Hash: ${this.get128BitHash(config.seed)} */
 /* Cap Strategy: MARGINAL_ONLY */
 /* Per-factor, per-level caps; no intersection caps needed. */
 /* Implementation: SAS DATA step with temporary arrays (base SAS 9.2+). */
@@ -2131,6 +2138,7 @@ title;
 # App Version: ${APP_VERSION}
 # Generated At: ${generatedAt}
 # PRNG Algorithm: Mersenne-Twister
+# Source Seed Hash: ${this.get128BitHash(config.seed)}
 ${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
 ${methodologyBlock}
 
@@ -2320,6 +2328,7 @@ if (nrow(schema) > 0) {
 # App Version: ${APP_VERSION}
 # Generated At: ${generatedAt}
 # PRNG Algorithm: PCG64
+# Source Seed Hash: ${this.get128BitHash(config.seed)}
 ${this.buildCapStrategySection('#', config)}${blockStrategySection ? '\n' + blockStrategySection : ''}
 ${methodologyBlock}
 
@@ -2495,6 +2504,7 @@ else:
 /* App Version: ${APP_VERSION} */
 /* Generated At: ${generatedAt} */
 /* PRNG Algorithm: Mersenne Twister */
+/* Source Seed Hash: ${this.get128BitHash(config.seed)} */
 ${sasCapStrategyComment}${sasBlockStrategyComment ? '\n' + sasBlockStrategyComment : ''}
 ${sasMethodologyBlock}
 
@@ -3392,6 +3402,7 @@ list in 1/20, clean noobs
 * App Version: ${APP_VERSION}
 * Generated At: ${generatedAt}
 * PRNG Algorithm: Mersenne Twister
+* Source Seed Hash: ${this.get128BitHash(config.seed)}
 * Cap Strategy: MARGINAL_ONLY
 * Per-factor, per-level caps; no intersection caps needed.
 ${stataBlockStrategyComment ? stataBlockStrategyComment + '\n' : ''}${capAnnotations ? capAnnotations + '\n' : ''}${stataMethodologyBlock}
@@ -3750,6 +3761,7 @@ list in 1/20, clean noobs
 * App Version: ${APP_VERSION}
 * Generated At: ${generatedAt}
 * PRNG Algorithm: Mersenne Twister
+* Source Seed Hash: ${this.get128BitHash(config.seed)}
 ${stataCapComment}${stataBlockComment ? '\n' + stataBlockComment : ''}
 ${stataMethodology}
 
