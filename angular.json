@@ -60,6 +60,12 @@
               ],
               "outputHashing": "all"
             },
+            "pwa": {
+              "serviceWorker": "ngsw-config.json",
+              "optimization": true,
+              "extractLicenses": false,
+              "sourceMap": true
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,
@@ -73,6 +79,9 @@
           "configurations": {
             "production": {
               "buildTarget": "app:build:production"
+            },
+            "pwa": {
+              "buildTarget": "app:build:pwa"
             },
             "development": {
               "buildTarget": "app:build:development"
