@@ -260,7 +260,7 @@ describe('GeneratorComponent (domain)', () => {
     fixture.detectChanges();
     const heading = fixture.nativeElement.querySelector('[data-testid="generator-heading"]');
     expect(heading).toBeTruthy();
-    expect(heading?.textContent).toContain('Build Your Randomization Schema');
+    expect(heading?.textContent).toContain('Build Your RTSM Randomization Schema');
   });
 
   it('should always render the config form', () => {

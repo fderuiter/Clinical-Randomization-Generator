@@ -419,7 +419,7 @@ export class ResultsGridComponent {
       ].map(val => this.sanitizeCsvValue(val));
     });
 
-    const watermark = "DRAFT SCHEMA - DO NOT USE FOR ENROLLMENT. Execute the generated R/SAS/Python script to generate the official trial schema.";
+    const watermark = "DRAFT SCHEMA - DO NOT USE FOR ENROLLMENT. Execute the generated R/SAS/Python script to generate the official trial schema for RTSM/IRT implementation.";
     const timestamp = new Date(data.metadata.generatedAt).toISOString();
     const methodologyComments = this.methodologySpec.formatForCsv(
       this.methodologySpec.generateNarrative(data.metadata.config)
@@ -515,13 +515,13 @@ export class ResultsGridComponent {
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(40, 40, 40);
-    doc.text('CERTIFICATE OF RANDOMIZATION GENERATION', pageWidth / 2, 18, { align: 'center' });
+    doc.text('RTSM/IRT RANDOMIZATION GENERATION CERTIFICATE', pageWidth / 2, 18, { align: 'center' });
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80, 80, 80);
     const statement =
-      'This document certifies the algorithmic generation of the clinical randomization schema detailed ' +
+      'This document certifies the algorithmic generation of the RTSM/IRT randomization schema detailed ' +
       'below. The integrity of this dataset is mathematically verified by the attached cryptographic hash.';
     const splitStatement = doc.splitTextToSize(statement, pageWidth - 28);
     doc.text(splitStatement, 14, 26);

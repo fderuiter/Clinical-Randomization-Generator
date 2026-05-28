@@ -38,7 +38,7 @@ export type VerificationStatus = 'idle' | 'pass' | 'fail' | 'error';
             <path stroke-linecap="round" stroke-linejoin="round"
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h2 class="text-lg font-semibold text-main">Verify Schema Reproducibility</h2>
+          <h2 class="text-lg font-semibold text-main">Verify RTSM Schema Reproducibility</h2>
         </div>
         <p class="text-muted text-sm leading-relaxed">
           Upload a previously exported Randomization Result JSON file. Use the
@@ -55,7 +55,7 @@ export type VerificationStatus = 'idle' | 'pass' | 'fail' | 'error';
 
       <!-- Upload Zone -->
       <div class="bg-surface rounded-xl shadow-sm border border-border-subtle p-6">
-        <h3 class="text-sm font-semibold text-main mb-4">Upload Schema File</h3>
+        <h3 class="text-sm font-semibold text-main mb-4">Upload RTSM Schema File</h3>
 
         <label
           for="schema-file-input"
@@ -122,9 +122,9 @@ export type VerificationStatus = 'idle' | 'pass' | 'fail' | 'error';
               </svg>
             </div>
             <div>
-              <h3 class="text-lg font-bold text-emerald-800 dark:text-emerald-300">Reproducibility Verified</h3>
+              <h3 class="text-lg font-bold text-emerald-800 dark:text-emerald-300">RTSM Reproducibility Verified</h3>
               <p class="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
-                The provided PRNG seed perfectly reconstructs the uploaded schema with 100% mathematical
+                The provided PRNG seed perfectly reconstructs the uploaded RTSM schema with 100% mathematical
                 accuracy across all <strong>{{ uploadedSchema().length }}</strong> subjects.
               </p>
             </div>
@@ -144,9 +144,9 @@ export type VerificationStatus = 'idle' | 'pass' | 'fail' | 'error';
                 </svg>
               </div>
               <div>
-                <h3 class="text-lg font-bold text-red-800 dark:text-red-300">Reproducibility Failed</h3>
+                <h3 class="text-lg font-bold text-red-800 dark:text-red-300">RTSM Reproducibility Failed</h3>
                 <p class="mt-1 text-sm text-red-700 dark:text-red-400">
-                  {{ discrepancies().length }} discrepancy(ies) were found between the uploaded schema
+                  {{ discrepancies().length }} discrepancy(ies) were found between the uploaded RTSM schema
                   and the freshly generated schema. Review the mismatch log below.
                 </p>
               </div>
@@ -157,7 +157,7 @@ export type VerificationStatus = 'idle' | 'pass' | 'fail' | 'error';
           <div class="bg-surface rounded-xl shadow-sm border border-border-subtle overflow-hidden"
                data-testid="discrepancy-table">
             <div class="px-6 py-4 border-b border-border-subtle">
-              <h4 class="text-sm font-semibold text-main">Mismatch Log</h4>
+              <h4 class="text-sm font-semibold text-main">RTSM Audit Mismatch Log</h4>
             </div>
             <div class="overflow-x-auto max-h-96 overflow-y-auto">
               <table class="min-w-full text-sm">
@@ -203,7 +203,7 @@ export class SchemaVerificationComponent {
 
   constructor() {
     inject(SeoService).setPage({
-      title: 'Verify Schema Reproducibility | Equipose',
+      title: 'Verify RTSM Schema Reproducibility | Equipose',
       description: 'Upload a previously exported Equipose JSON schema to verify its reproducibility. The tool re-runs the algorithm and performs a strict row-by-row comparison.',
       canonicalPath: '/verify',
     });

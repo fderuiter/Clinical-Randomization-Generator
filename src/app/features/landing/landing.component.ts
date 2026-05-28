@@ -31,9 +31,9 @@ import {SeoService} from '../../core/services/seo.service';
         <div class="mx-auto max-w-2xl py-28 sm:py-40 lg:py-52">
           <div class="text-center">
             <h1 class="text-5xl font-bold tracking-tight text-main sm:text-7xl">Equipose</h1>
-            <p class="mt-4 text-xl font-medium text-indigo-600 dark:text-indigo-400">Free Stratified Block Randomization for Clinical Trials</p>
+            <p class="mt-4 text-xl font-medium text-indigo-600 dark:text-indigo-400">RTSM & IRT Stratified Block Randomization</p>
             <p class="mt-6 text-lg leading-8 text-muted">
-              Design, simulate, and export statistically sound, reproducible treatment allocation schemas for your clinical trial.
+              Design, simulate, and export statistically sound, reproducible treatment allocation schemas for your RTSM and IRT workflows.
               Equipose uses a seeded Fisher-Yates shuffle for stratified block randomization across multiple sites and
               stratification factors — and exports the exact logic to validated <strong class="text-gray-700 dark:text-slate-300">R</strong>,
               <strong class="text-gray-700 dark:text-slate-300">Python</strong>,
@@ -95,7 +95,7 @@ import {SeoService} from '../../core/services/seo.service';
       <!-- ── Feature Grid ───────────────────────────────────────────────── -->
       <div class="mx-auto max-w-7xl px-6 py-20 lg:px-8">
         <div class="mx-auto max-w-2xl text-center mb-12">
-          <h2 class="text-3xl font-bold tracking-tight text-main">Everything you need for compliant randomization</h2>
+          <h2 class="text-3xl font-bold tracking-tight text-main">Everything you need for compliant RTSM randomization</h2>
           <p class="mt-4 text-base text-muted">A complete toolkit for biostatisticians, CROs, and clinical trial teams — built entirely in the browser.</p>
         </div>
         <dl class="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
@@ -134,9 +134,10 @@ import {SeoService} from '../../core/services/seo.service';
 export class LandingComponent {
   constructor() {
     inject(SeoService).setPage({
-      title: 'Equipose — Clinical Trial Randomization Tool',
-      description: 'Free, browser-based stratified block randomization for clinical trials. Generate, simulate, and export balanced treatment allocation schemas to R, Python, SAS, or Stata. 100% client-side.',
+      title: 'Equipose — RTSM & IRT Randomization Design Tool',
+      description: 'Free, browser-based stratified block randomization utility for clinical trials. Design, simulate, and export balanced allocation schemas for RTSM, IRT, and IWRS workflows.',
       canonicalPath: '/',
+      keywords: 'RTSM, IRT, IWRS, Randomization, Clinical Trials, RTSM design utility, IRT randomization tool',
     });
   }
 
