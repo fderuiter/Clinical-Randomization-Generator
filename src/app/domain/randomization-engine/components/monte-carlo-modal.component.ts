@@ -1,29 +1,21 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { DialogRef } from '@angular/cdk/dialog';
 import { RandomizationEngineFacade } from '../randomization-engine.facade';
 import type { MonteCarloArmResult } from '../worker/worker-protocol';
+import { KeyboardScrollDirective } from '../../../core/directives/keyboard-scroll.directive';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-monte-carlo-modal',
   standalone: true,
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, KeyboardScrollDirective],
   template: `
-    <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="mc-modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- Backdrop -->
-        <div
-          class="fixed inset-0 bg-gray-500/60 dark:bg-slate-900/70 backdrop-blur-sm transition-opacity"
-          aria-hidden="true"
-          (click)="!facade.isMonteCarloRunning() && facade.closeMonteCarloModal()"
-        ></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+    <!-- Modal panel (CDK Dialog provides the backdrop and container) -->
+    <div class="relative flex flex-col align-bottom bg-overlay backdrop-blur-md rounded-xl text-left overflow-hidden shadow-xl dark:shadow-slate-900/50 transform transition-all w-full max-w-4xl max-h-[90vh] border border-border-subtle" role="dialog" aria-modal="true" aria-labelledby="mc-modal-title">
 
-        <!-- Modal panel -->
-        <div class="relative inline-block align-bottom bg-overlay backdrop-blur-md rounded-xl text-left overflow-hidden shadow-xl dark:shadow-slate-900/50 transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full border border-border-subtle">
-
-          <!-- Header -->
-          <div class="bg-overlay/80 px-6 pt-5 pb-4">
+      <!-- Header -->
+      <div class="bg-overlay/80 px-6 pt-5 pb-4 flex-none">
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-3">
                 <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 dark:bg-indigo-900/40 rounded-full flex items-center justify-center">
@@ -55,10 +47,10 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
             </div>
           </div>
 
-          <!-- Body -->
-          <div class="px-6 pb-6 space-y-6">
+      <!-- Body -->
+      <div class="px-6 pb-6 space-y-6 overflow-y-auto">
 
-            <!-- Seed disclaimer banner -->
+        <!-- Seed disclaimer banner -->
             <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg p-3 flex items-start gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -68,14 +60,17 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
               </p>
             </div>
 
-            <!-- Progress state -->
-            @if (facade.isMonteCarloRunning()) {
-              <div class="space-y-3">
-                <div class="flex justify-between items-center">
-                  <span class="text-sm font-medium text-gray-700 dark:text-slate-300">Simulating trials…</span>
-                  <span class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{{ facade.monteCarloProgress() }}%</span>
-                </div>
-                <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
+        <!-- Progress state -->
+        @if (facade.isMonteCarloRunning()) {
+          <div class="space-y-3">
+            <div aria-live="polite" class="sr-only">
+              Simulating trials, {{ facade.monteCarloProgress() }}% completed
+            </div>
+            <div class="flex justify-between items-center" aria-hidden="true">
+              <span class="text-sm font-medium text-gray-700 dark:text-slate-300">Simulating trials…</span>
+              <span class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{{ facade.monteCarloProgress() }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden" aria-hidden="true">
                   <div
                     class="bg-indigo-600 dark:bg-indigo-500 h-3 rounded-full transition-all duration-300 ease-out"
                     [style.width.%]="facade.monteCarloProgress()"
@@ -180,37 +175,37 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                 </div>
               </div>
 
-              <!-- Per-arm detail table -->
-              <div class="overflow-x-auto rounded-lg border border-border-base">
-                <table class="min-w-full text-xs divide-y divide-gray-200 dark:divide-slate-700">
-                  <thead class="bg-gray-50 dark:bg-slate-700/50">
-                    <tr>
-                      <th class="px-4 py-2 text-left font-semibold text-gray-600 dark:text-slate-300">Arm</th>
-                      <th class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Ratio</th>
-                      <th class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Expected</th>
-                      <th class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Actual</th>
-                      @if (results.attritionRate > 0) {
-                        <th class="px-4 py-2 text-right font-semibold text-purple-600 dark:text-purple-400">Retained</th>
-                      }
-                      <th class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Deviation</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100 dark:divide-slate-700/50 bg-surface">
-                    @for (arm of results.arms; track arm.armId) {
-                      <tr>
-                        <td class="px-4 py-2 font-medium text-main">{{ arm.armName }} <span class="text-disabled">({{ arm.armId }})</span></td>
-                        <td class="px-4 py-2 text-right text-gray-600 dark:text-slate-300">{{ arm.ratio }}</td>
-                        <td class="px-4 py-2 text-right tabular-nums text-gray-600 dark:text-slate-300">{{ arm.expectedCount | number }}</td>
-                        <td class="px-4 py-2 text-right tabular-nums text-gray-600 dark:text-slate-300">{{ arm.actualCount | number }}</td>
-                        @if (results.attritionRate > 0) {
-                          <td class="px-4 py-2 text-right tabular-nums text-purple-600 dark:text-purple-300">{{ arm.retainedCount | number }}</td>
-                        }
-                        <td class="px-4 py-2 text-right tabular-nums font-semibold" [class]="deviationClass(arm)">{{ deviation(arm) | number:'1.4-4' }}%</td>
-                      </tr>
+          <!-- Per-arm detail table -->
+          <div class="overflow-x-auto rounded-lg border border-border-base" tabindex="0" appKeyboardScroll aria-label="Per-Arm Detail Table">
+            <table class="min-w-full text-xs divide-y divide-gray-200 dark:divide-slate-700">
+              <thead class="bg-gray-50 dark:bg-slate-700/50">
+                <tr>
+                  <th scope="col" class="px-4 py-2 text-left font-semibold text-gray-600 dark:text-slate-300">Arm</th>
+                  <th scope="col" class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Ratio</th>
+                  <th scope="col" class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Expected</th>
+                  <th scope="col" class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Actual</th>
+                  @if (results.attritionRate > 0) {
+                    <th scope="col" class="px-4 py-2 text-right font-semibold text-purple-600 dark:text-purple-400">Retained</th>
+                  }
+                  <th scope="col" class="px-4 py-2 text-right font-semibold text-gray-600 dark:text-slate-300">Deviation</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-slate-700/50 bg-surface">
+                @for (arm of results.arms; track arm.armId) {
+                  <tr>
+                    <th scope="row" class="px-4 py-2 font-medium text-main text-left">{{ arm.armName }} <span class="text-disabled">({{ arm.armId }})</span></th>
+                    <td class="px-4 py-2 text-right text-gray-600 dark:text-slate-300">{{ arm.ratio }}</td>
+                    <td class="px-4 py-2 text-right tabular-nums text-gray-600 dark:text-slate-300">{{ arm.expectedCount | number }}</td>
+                    <td class="px-4 py-2 text-right tabular-nums text-gray-600 dark:text-slate-300">{{ arm.actualCount | number }}</td>
+                    @if (results.attritionRate > 0) {
+                      <td class="px-4 py-2 text-right tabular-nums text-purple-600 dark:text-purple-300">{{ arm.retainedCount | number }}</td>
                     }
-                  </tbody>
-                </table>
-              </div>
+                    <td class="px-4 py-2 text-right tabular-nums font-semibold" [class]="deviationClass(arm)">{{ deviation(arm) | number:'1.4-4' }}%</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
 
               <!-- High imbalance warning (shown only with attrition and significant deviation) -->
               @if (results.attritionRate > 0 && maxRetainedDeviation() > ATTRITION_WARNING_THRESHOLD_PCT) {
@@ -239,31 +234,30 @@ import type { MonteCarloArmResult } from '../worker/worker-protocol';
                   }
                 </p>
               </div>
-            }
+        }
 
-          </div>
-
-          <!-- Footer -->
-          @if (!facade.isMonteCarloRunning()) {
-            <div class="bg-gray-50/80 dark:bg-slate-900/50 px-6 py-3 flex justify-end border-t border-border-subtle">
-              <button
-                type="button"
-                (click)="facade.closeMonteCarloModal()"
-                class="inline-flex justify-center rounded-lg border border-border-strong shadow-sm px-4 py-2 bg-white dark:bg-slate-700 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-                data-testid="modal-close-footer"
-              >
-                Close
-              </button>
-            </div>
-          }
-
-        </div>
       </div>
+
+      <!-- Footer -->
+      @if (!facade.isMonteCarloRunning()) {
+        <div class="bg-gray-50/80 dark:bg-slate-900/50 px-6 py-3 flex justify-end border-t border-border-subtle flex-none">
+          <button
+            type="button"
+            (click)="facade.closeMonteCarloModal()"
+            class="inline-flex justify-center rounded-lg border border-border-strong shadow-sm px-4 py-2 bg-white dark:bg-slate-700 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            data-testid="modal-close-footer"
+          >
+            Close
+          </button>
+        </div>
+      }
+
     </div>
   `
 })
 export class MonteCarloModalComponent {
   readonly facade = inject(RandomizationEngineFacade);
+  readonly dialogRef = inject(DialogRef);
 
   /** Threshold (in %) above which the post-attrition imbalance warning banner is shown. */
   protected readonly ATTRITION_WARNING_THRESHOLD_PCT = 2;

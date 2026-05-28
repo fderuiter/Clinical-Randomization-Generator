@@ -6,7 +6,6 @@ import { ZeroStateComponent } from './zero-state.component';
 import { SkeletonGridComponent } from './skeleton-grid.component';
 import { ResultsGridComponent } from '../../schema-management/components/results-grid.component';
 import { CodeGeneratorModalComponent } from '../../schema-management/components/code-generator-modal.component';
-import { MonteCarloModalComponent } from '../../randomization-engine/components/monte-carlo-modal.component';
 import { SchemaAnalyticsDashboardComponent } from '../../schema-management/components/schema-analytics-dashboard.component';
 import { BalanceVerificationComponent } from '../../schema-management/components/balance-verification.component';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
@@ -25,7 +24,6 @@ type ResultsTab = 'grid' | 'balance';
     SkeletonGridComponent,
     ResultsGridComponent,
     CodeGeneratorModalComponent,
-    MonteCarloModalComponent,
     SchemaAnalyticsDashboardComponent,
     BalanceVerificationComponent,
   ],
@@ -151,11 +149,6 @@ type ResultsTab = 'grid' | 'balance';
       <!-- Code Generator Modal -->
       @if (state.showCodeGenerator() && state.config()) {
         <app-code-generator-modal></app-code-generator-modal>
-      }
-
-      <!-- Monte Carlo Validation Modal -->
-      @if (state.showMonteCarloModal()) {
-        <app-monte-carlo-modal></app-monte-carlo-modal>
       }
     </div>
   `
