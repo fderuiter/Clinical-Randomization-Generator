@@ -1,3 +1,4 @@
+import Decimal from 'decimal.js';
 import seedrandom from 'seedrandom';
 import { RandomizationConfig, GeneratedSchema, TreatmentArm } from '../../core/models/randomization.model';
 import { generateSubjectId } from './subject-id-engine';
@@ -15,55 +16,55 @@ function sampleLevel(
     throw new Error('Cannot sample a level from an empty levels array.');
   }
 
-  let explicitSum = 0;
+  let explicitSum = new Decimal(0);
   let undefinedCount = 0;
 
   for (const p of expectedProbabilities) {
     if (p !== undefined && p > 0) {
-      explicitSum += p;
+      explicitSum = explicitSum.plus(new Decimal(p));
     } else if (p === undefined) {
       undefinedCount++;
     }
   }
 
-  const probs = new Array<number>(expectedProbabilities.length);
+  const probs = new Array<Decimal>(expectedProbabilities.length);
 
-  if (explicitSum > 1.0) {
+  if (explicitSum.greaterThan(1.0)) {
     for (let i = 0; i < expectedProbabilities.length; i++) {
       const p = expectedProbabilities[i];
-      probs[i] = p !== undefined && p > 0 ? p / explicitSum : 0;
+      probs[i] = p !== undefined && p > 0 ? new Decimal(p).dividedBy(explicitSum) : new Decimal(0);
     }
-  } else if (explicitSum === 1.0) {
+  } else if (explicitSum.equals(1.0)) {
     for (let i = 0; i < expectedProbabilities.length; i++) {
       const p = expectedProbabilities[i];
-      probs[i] = p !== undefined && p > 0 ? p : 0;
+      probs[i] = p !== undefined && p > 0 ? new Decimal(p) : new Decimal(0);
     }
-  } else if (explicitSum > 0 && explicitSum < 1.0) {
+  } else if (explicitSum.greaterThan(0) && explicitSum.lessThan(1.0)) {
     if (undefinedCount > 0) {
-      const remainder = 1.0 - explicitSum;
-      const share = remainder / undefinedCount;
+      const remainder = new Decimal(1.0).minus(explicitSum);
+      const share = remainder.dividedBy(undefinedCount);
       for (let i = 0; i < expectedProbabilities.length; i++) {
         const p = expectedProbabilities[i];
-        probs[i] = p !== undefined && p > 0 ? p : (p === undefined ? share : 0);
+        probs[i] = p !== undefined && p > 0 ? new Decimal(p) : (p === undefined ? share : new Decimal(0));
       }
     } else {
       for (let i = 0; i < expectedProbabilities.length; i++) {
         const p = expectedProbabilities[i];
-        probs[i] = p !== undefined && p > 0 ? p / explicitSum : 0;
+        probs[i] = p !== undefined && p > 0 ? new Decimal(p).dividedBy(explicitSum) : new Decimal(0);
       }
     }
   } else {
-    const share = 1 / levels.length;
+    const share = new Decimal(1).dividedBy(levels.length);
     for (let i = 0; i < levels.length; i++) {
       probs[i] = share;
     }
   }
 
-  const r = rng();
-  let cumulative = 0;
+  const r = new Decimal(rng());
+  let cumulative = new Decimal(0);
   for (let i = 0; i < levels.length; i++) {
-    cumulative += probs[i];
-    if (r < cumulative) return levels[i];
+    cumulative = cumulative.plus(probs[i]);
+    if (r.lessThan(cumulative)) return levels[i];
   }
   return levels[levels.length - 1];
 }
@@ -78,8 +79,8 @@ function computeImbalanceScore(
   subjectProfile: Record<string, string>,
   marginals: Map<string, Map<string, Map<string, number>>>,
   strata: { id: string }[]
-): number {
-  let totalScore = 0;
+): Decimal {
+  let totalScore = new Decimal(0);
   // Performance optimization: Avoid Object.entries(subjectProfile) to prevent
   // intermediate array allocations in this hot loop. Iterating over the strata
   // array directly provides a ~50% speedup for the imbalance calculation.
@@ -93,15 +94,17 @@ function computeImbalanceScore(
     const levelMarginals = factorMarginals.get(levelValue);
     if (!levelMarginals) continue;
 
-    let min = Infinity;
-    let max = -Infinity;
+    let min: Decimal | null = null;
+    let max: Decimal | null = null;
     for (const arm of arms) {
       const count = (levelMarginals.get(arm.id) ?? 0) + (arm.id === candidateArmId ? 1 : 0);
-      const normalizedCount = count / arm.ratio;
-      if (normalizedCount < min) min = normalizedCount;
-      if (normalizedCount > max) max = normalizedCount;
+      const normalizedCount = new Decimal(count).dividedBy(new Decimal(arm.ratio));
+      if (min === null || normalizedCount.lessThan(min)) min = normalizedCount;
+      if (max === null || normalizedCount.greaterThan(max)) max = normalizedCount;
     }
-    totalScore += max - min;
+    if (min !== null && max !== null) {
+      totalScore = totalScore.plus(max.minus(min));
+    }
   }
   return totalScore;
 }
@@ -346,19 +349,19 @@ export function generateMinimization(
     // We have a valid subject profile. Now calculate Imbalance Score per site.
     const marginals = siteMarginals.get(site)!;
 
-    let minScore = Infinity;
-    const armScores: number[] = [];
+    let minScore: Decimal | null = null;
+    const armScores: Decimal[] = [];
     for (const arm of arms) {
       const score = computeImbalanceScore(arm.id, arms, subjectProfile, marginals, strata);
       armScores.push(score);
-      if (score < minScore) minScore = score;
+      if (minScore === null || score.lessThan(minScore)) minScore = score;
     }
 
     const preferred: TreatmentArm[] = [];
     const nonPreferred: TreatmentArm[] = [];
     for (let j = 0; j < arms.length; j++) {
       const arm = arms[j];
-      if (armScores[j] === minScore) {
+      if (armScores[j].equals(minScore!)) {
         preferred.push(arm);
       } else {
         nonPreferred.push(arm);
@@ -368,15 +371,15 @@ export function generateMinimization(
     let assignedArm: TreatmentArm;
 
     const selectWeightedArm = (candidates: TreatmentArm[]): TreatmentArm => {
-      const totalWeight = candidates.reduce((sum, arm) => sum + arm.ratio, 0);
-      if (totalWeight === 0) {
+      const totalWeight = candidates.reduce((sum, arm) => sum.plus(new Decimal(arm.ratio)), new Decimal(0));
+      if (totalWeight.isZero()) {
         throw new Error('Total weight of tied arms is 0. Cannot select an arm.');
       }
 
-      let rVal = rng() * totalWeight;
+      let rVal = new Decimal(rng()).times(totalWeight);
       for (const arm of candidates) {
-        rVal -= arm.ratio;
-        if (rVal <= 0) {
+        rVal = rVal.minus(new Decimal(arm.ratio));
+        if (rVal.lessThanOrEqualTo(0)) {
           return arm;
         }
       }
@@ -386,8 +389,8 @@ export function generateMinimization(
     if (preferred.length === arms.length || nonPreferred.length === 0) {
       assignedArm = selectWeightedArm(preferred);
     } else {
-      const r = rng();
-      if (r < p) {
+      const r = new Decimal(rng());
+      if (r.lessThan(p)) {
         assignedArm = selectWeightedArm(preferred);
       } else {
         assignedArm = selectWeightedArm(nonPreferred);

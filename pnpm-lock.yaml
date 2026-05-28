@@ -47,6 +47,9 @@ importers:
       '@ngrx/signals':
         specifier: ^21.1.0
         version: 21.1.0(@angular/core@21.2.7(@angular/compiler@21.2.7)(rxjs@7.8.2)(zone.js@0.16.1))(rxjs@7.8.2)
+      decimal.js:
+        specifier: ^10.6.0
+        version: 10.6.0
       echarts:
         specifier: ^6.1.0
         version: 6.1.0

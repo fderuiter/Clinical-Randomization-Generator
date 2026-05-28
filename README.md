@@ -32,7 +32,7 @@ Built entirely as a client-side Angular application, it ensures that sensitive t
 * **Variable Block Sizes:** Randomise across multiple block sizes within the same study to resist unblinding.
 * **Math Failsafes:** Built-in validation ensures block sizes are exact multiples of the total allocation ratio.
 * **Code Generation:** Instantly export the exact randomization logic to **R**, **Python (pandas/numpy)**, or **SAS** scripts for integration into your Statistical Analysis Plan (SAP).
-* **Reproducible:** Every schema carries a random seed that can be re-entered to reproduce the exact same allocation.
+* **Reproducible:** Every schema carries a random seed that can be re-entered to reproduce the exact same allocation. The system provides bit-for-bit sequence identity across all supported browsers, not just statistical parity.
 * **Zero-Trust Architecture:** 100% client-side execution. No data is stored on or transmitted to external servers.
 
 ---
@@ -48,7 +48,7 @@ Built entirely as a client-side Angular application, it ensures that sensitive t
 | **PRNG** | `seedrandom` (Alea algorithm) for UI simulation |
 | **PDF export** | `jspdf` + `jspdf-autotable` |
 | **Unit testing** | Vitest 4 + Angular TestBed (jsdom environment) |
-| **E2E testing** | Playwright 1.58 (Chromium) |
+| **E2E testing** | Playwright 1.58 (Chromium, Firefox, WebKit) |
 | **Linting** | ESLint 9 + `angular-eslint` + strict domain boundary rules |
 | **Versioning** | `semantic-release` (Conventional Commits → GitHub Releases) |
 | **Deployment** | GitHub Pages (static SPA) at [equipose.org](https://equipose.org) + optional SSR via `@angular/ssr` |
