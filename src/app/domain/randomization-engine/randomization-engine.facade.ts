@@ -7,6 +7,7 @@ import {
 import { RandomizationService } from './randomization.service';
 import { ToastService } from '../../core/services/toast.service';
 import { computeAuditHash } from './core/crypto-hash';
+import { generateCryptoSeed } from './core/randomization-algorithm';
 import type {
   GenerationCommand,
   MonteCarloCommand,
@@ -113,7 +114,16 @@ export class RandomizationEngineFacade {
   }
 
   openCodeGenerator(config: RandomizationConfig, language: 'R' | 'SAS' | 'Python' | 'STATA'): void {
-    this.config.set(config);
+    let finalConfig = config;
+    if (!config.seed) {
+      const currentResults = this.results();
+      if (currentResults && currentResults.metadata.seed) {
+        finalConfig = { ...config, seed: currentResults.metadata.seed };
+      } else {
+        finalConfig = { ...config, seed: generateCryptoSeed() };
+      }
+    }
+    this.config.set(finalConfig);
     this.codeLanguage.set(language);
     this.showCodeGenerator.set(true);
   }
