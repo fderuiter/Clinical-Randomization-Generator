@@ -94,34 +94,26 @@ test.describe('Results Grid Operations', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // CSV export
+  // Export Compliance Bundle
   // ---------------------------------------------------------------------------
-  test('should trigger a CSV download when the CSV button is clicked', async ({ page }) => {
-    const downloadPromise = page.waitForEvent('download', { timeout: 10000 });
-    const csvButton = page.locator('#results-section').getByRole('button', { name: /CSV/i });
-    // Use evaluate to bypass any CSS pointer-events: none
-    await csvButton.evaluate((node: HTMLElement) => node.click());
-    const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/randomization_.*\.csv$/);
-  });
+  test('should require saving a version before exporting compliance bundle', async ({ page }) => {
+    // Attempting to export directly should fail or be replaced by Save Version
+    const saveVersionBtn = page.locator('#results-section').getByRole('button', { name: /Save Version/i });
+    await expect(saveVersionBtn).toBeVisible();
 
-  test('CSV filename should contain "blinded" when the schema is blinded', async ({ page }) => {
-    const downloadPromise = page.waitForEvent('download', { timeout: 10000 });
-    const csvButton = page.locator('#results-section').getByRole('button', { name: /CSV/i });
-    await csvButton.evaluate((node: HTMLElement) => node.click());
-    const download = await downloadPromise;
-    expect(download.suggestedFilename()).toContain('blinded');
-  });
+    // Click save version to open modal
+    await saveVersionBtn.click();
+    await page.getByPlaceholder('e.g. JDOE').fill('TEST_OP');
+    await page.getByPlaceholder('Describe what changed and why...').fill('Initial setup');
+    await page.getByRole('button', { name: 'Save Version', exact: true }).click();
 
-  // ---------------------------------------------------------------------------
-  // PDF export
-  // ---------------------------------------------------------------------------
-  // [REQ-EXPORT-002]
-  test('should trigger a PDF download when the PDF button is clicked', async ({ page }) => {
+    // Now export bundle should be available
+    const exportBundleBtn = page.locator('#results-section').getByRole('button', { name: /Export Compliance Bundle/i });
+    await expect(exportBundleBtn).toBeVisible();
+
     const downloadPromise = page.waitForEvent('download', { timeout: 10000 });
-    const pdfButton = page.locator('#results-section').getByRole('button', { name: /PDF/i });
-    await pdfButton.evaluate((node: HTMLElement) => node.click());
+    await exportBundleBtn.evaluate((node: HTMLElement) => node.click());
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/randomization_.*\.pdf$/);
+    expect(download.suggestedFilename()).toMatch(/compliance_bundle_.*\.zip$/);
   });
 });

@@ -343,62 +343,26 @@ describe('ResultsGridComponent (domain)', () => {
   // ── Export Spies ──────────────────────────────────────────────────────────
 
   describe('Export Spies', () => {
-    it('should trigger exportCsv when CSV button is clicked', () => {
+    it('should show Save Version button if not saved', () => {
       const mockResult = generateMockData(5);
       (mockFacade as any).results.set(mockResult);
       fixture.detectChanges();
 
-      const spy = vi.spyOn(component, 'exportCsv');
       const buttons = fixture.debugElement.queryAll(By.css('button'));
-      const csvButton = buttons.find(b => b.nativeElement.textContent.trim().includes('CSV'));
-      expect(csvButton).toBeTruthy();
-      csvButton?.triggerEventHandler('click', null);
-      expect(spy).toHaveBeenCalled();
+      const saveButton = buttons.find(b => b.nativeElement.textContent.trim().includes('Save Version'));
+      expect(saveButton).toBeTruthy();
     });
 
-    it('should trigger exportPdf when PDF button is clicked', () => {
+    it('should show Export Compliance Bundle button if saved', () => {
       const mockResult = generateMockData(5);
       (mockFacade as any).results.set(mockResult);
+      // Hack to mock isSaved
+      vi.spyOn(component, 'isSaved').mockReturnValue(true);
       fixture.detectChanges();
 
-      const spy = vi.spyOn(component, 'exportPdf').mockImplementation(() => { /* no-op */ });
       const buttons = fixture.debugElement.queryAll(By.css('button'));
-      const pdfButton = buttons.find(b => b.nativeElement.textContent.trim().includes('PDF'));
-      expect(pdfButton).toBeTruthy();
-      pdfButton?.triggerEventHandler('click', null);
-      expect(spy).toHaveBeenCalled();
-    });
-
-    it('should trigger exportJson when JSON button is clicked', () => {
-      const mockResult = generateMockData(5);
-      (mockFacade as any).results.set(mockResult);
-      component.isUnblinded.set(true);
-      fixture.detectChanges();
-
-      const spy = vi.spyOn(component, 'exportJson').mockImplementation(() => { /* no-op */ });
-      const jsonButton = fixture.debugElement.query(By.css('[data-testid="export-json-btn"]'));
-      expect(jsonButton).toBeTruthy();
-      expect(jsonButton.nativeElement.disabled).toBe(false);
-      jsonButton?.triggerEventHandler('click', null);
-      expect(spy).toHaveBeenCalled();
-    });
-
-    it('should trigger exportXlsx when Excel button is clicked', () => {
-      const mockResult = generateMockData(5);
-      (mockFacade as any).results.set(mockResult);
-      fixture.detectChanges();
-
-      const spy = vi.spyOn(component, 'exportXlsx').mockResolvedValue(undefined);
-      const xlsxButton = fixture.debugElement.query(By.css('[data-testid="export-xlsx-btn"]'));
-      expect(xlsxButton).toBeTruthy();
-      xlsxButton?.triggerEventHandler('click', null);
-      expect(spy).toHaveBeenCalled();
-    });
-
-    it('should not throw when exportXlsx is called with no results', async () => {
-      (mockFacade as any).results.set(null);
-      fixture.detectChanges();
-      await expect(component.exportXlsx()).resolves.toBeUndefined();
+      const exportButton = buttons.find(b => b.nativeElement.textContent.trim().includes('Export Compliance Bundle'));
+      expect(exportButton).toBeTruthy();
     });
 
     it('should download a valid RandomizationResult JSON when exportJson is called', () => {
