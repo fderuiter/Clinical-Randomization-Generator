@@ -45,7 +45,7 @@ Built entirely as a client-side Angular application, it ensures that sensitive t
 | **State management** | NgRx SignalStore 21 |
 | **Concurrency** | Web Workers (off-main-thread schema generation) |
 | **Styling** | Tailwind CSS 4 |
-| **PRNG** | `seedrandom` (Alea algorithm) for UI simulation |
+| **PRNG** | Mersenne Twister (MT19937) for UI simulation |
 | **PDF export** | `jspdf` + `jspdf-autotable` |
 | **Unit testing** | Vitest 4 + Angular TestBed (jsdom environment) |
 | **E2E testing** | Playwright 1.58 (Chromium, Firefox, WebKit) |

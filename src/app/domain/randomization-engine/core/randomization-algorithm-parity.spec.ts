@@ -19,7 +19,7 @@
 
 import { generateRandomizationSchema } from './randomization-algorithm';
 import { RandomizationConfig, RandomizationResult } from '../../core/models/randomization.model';
-import seedrandom from 'seedrandom';
+import { MT19937 } from './mt19937';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Golden-master baselines produced by running the original RandomizationService
@@ -58,8 +58,9 @@ function buildLegacyBaseline(cfg: RandomizationConfig): ReturnType<typeof schema
   // configs supply an explicit seed we skip that branch and work on a clone.
   const config: RandomizationConfig = JSON.parse(JSON.stringify(cfg));
 
-  // Use the same seedrandom import as the production algorithm
-  const rng = seedrandom(config.seed);
+  // Use the same MT19937 PRNG as the production algorithm
+  const mt = new MT19937(MT19937.get31BitSeed(config.seed));
+  const rng = () => mt.random();
 
   let strataCombinations: Record<string, string>[] = [{}];
   for (const factor of config.strata) {

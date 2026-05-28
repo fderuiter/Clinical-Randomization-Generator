@@ -1,4 +1,3 @@
-import seedrandom from 'seedrandom';
 import { RandomizationConfig, GeneratedSchema, TreatmentArm } from '../../core/models/randomization.model';
 import { generateSubjectId } from './subject-id-engine';
 
@@ -17,7 +16,7 @@ function lcm(a: number, b: number): number {
 function sampleLevel(
   levels: string[],
   expectedProbabilities: (number | undefined)[],
-  rng: seedrandom.PRNG
+  rng: () => number
 ): string {
   if (levels.length === 0) {
     throw new Error('Cannot sample a level from an empty levels array.');
@@ -130,7 +129,7 @@ function computeStratumCode(strata: RandomizationConfig['strata'], stratum: Reco
 
 export function generateMinimization(
   config: RandomizationConfig,
-  rng: seedrandom.PRNG
+  rng: () => number
 ): GeneratedSchema[] {
   const { arms, strata, sites, minimizationConfig } = config;
   const p = minimizationConfig?.p ?? 0.8;

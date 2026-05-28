@@ -1,4 +1,4 @@
-import seedrandom from 'seedrandom';
+import { MT19937 } from './mt19937';
 import {
   TreatmentArm,
   RandomizationConfig,
@@ -23,7 +23,7 @@ export function generateCryptoSeed(): string {
 // Shared block-generation helpers
 // ---------------------------------------------------------------------------
 
-function buildBlock(arms: TreatmentArm[], blockSize: number, totalRatio: number, rng: seedrandom.PRNG): TreatmentArm[] {
+function buildBlock(arms: TreatmentArm[], blockSize: number, totalRatio: number, rng: () => number): TreatmentArm[] {
   const block: TreatmentArm[] = [];
   const multiplier = blockSize / totalRatio;
   for (const arm of arms) {
@@ -89,7 +89,7 @@ function resolveBlockRule(config: RandomizationConfig, site: string, stratumCode
  *   then uses the PRNG to pick from the remaining pool. Falls back to the full
  *   sizes array if every size has been exhausted.
  */
-function selectBlockSize(rule: BlockRule, state: BlockState, rng: seedrandom.PRNG): number {
+function selectBlockSize(rule: BlockRule, state: BlockState, rng: () => number): number {
   if (rule.selectionType === 'FIXED_SEQUENCE') {
     const size = rule.sizes[state.sequenceIndex % rule.sizes.length];
     state.sequenceIndex++;
@@ -138,7 +138,7 @@ function collectAllBlockSizes(config: RandomizationConfig): number[] {
 
 function generateStandard(
   resolvedConfig: RandomizationConfig,
-  rng: seedrandom.PRNG,
+  rng: () => number,
   strataCombinations: Record<string, string>[],
   totalRatio: number,
   schema: GeneratedSchema[],
@@ -207,7 +207,7 @@ function generateStandard(
  */
 function generateMarginalOnly(
   resolvedConfig: RandomizationConfig,
-  rng: seedrandom.PRNG,
+  rng: () => number,
   strataCombinations: Record<string, string>[],
   totalRatio: number,
   schema: GeneratedSchema[],
@@ -384,7 +384,8 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
     ? config
     : { ...config, seed: generateCryptoSeed() };
 
-  const rng = seedrandom(resolvedConfig.seed);
+  const mt = new MT19937(MT19937.get31BitSeed(resolvedConfig.seed));
+  const rng = () => mt.random();
 
   // Generate all strata combinations
   let strataCombinations: Record<string, string>[] = [{}];
