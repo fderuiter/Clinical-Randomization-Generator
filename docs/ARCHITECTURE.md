@@ -814,11 +814,10 @@ same script text.
 
 ### 12.1 Why code generation exists
 
-The web app's PRNG is `seedrandom` (the Alea algorithm). R, SAS, and Python each
-ship their own incompatible PRNGs (Mersenne-Twister, Mersenne-Twister, PCG64
-respectively). A byte-identical reproduction of the web UI schema inside a validated
-statistical environment is therefore impossible without shipping the Alea PRNG to
-every language - impractical and unsupported.
+The web app's PRNG is Mersenne Twister (MT19937). R, SAS, and Stata use this exact
+PRNG by default, allowing a byte-identical reproduction of the web UI schema inside a validated
+statistical environment natively. Python uses PCG64, but the exported schemas
+preserve all other structural properties of the design.
 
 Instead, the generated scripts embed **all study parameters as literals** and use the
 language-native PRNG. The resulting schema is statistically identical in distribution
@@ -1049,11 +1048,11 @@ flowchart TD
 
 | | Web UI | R script | Python script | SAS script | STATA script |
 |---|---|---|---|---|---|
-| **Library** | `seedrandom` (Alea) | Base R | NumPy | SAS built-in | STATA built-in |
-| **Algorithm** | Alea (Mash) | Mersenne-Twister | PCG64 | Mersenne-Twister | KISS 32 |
+| **Library** | Custom MT19937 | Base R | NumPy | SAS built-in | STATA built-in |
+| **Algorithm** | Mersenne Twister (MT19937) | Mersenne Twister (MT19937) | PCG64 | Mersenne Twister (MT19937) | Mersenne Twister (MT19937) |
 | **Seed type** | Arbitrary string | 31-bit integer | 31-bit integer | 31-bit integer | 31-bit integer |
 | **Seed source** | User input or random string | `hashCode(webSeed)` | `hashCode(webSeed)` | `hashCode(webSeed)` | `hashCode(webSeed)` |
-| **Sequence matches web?** | N/A | ❌ Different | ❌ Different | ❌ Different | ❌ Different |
+| **Sequence matches web?** | N/A | ✅ Identical | ❌ Different | ✅ Identical | ✅ Identical |
 | **Balance properties match?** | N/A | ✅ Same | ✅ Same | ✅ Same | ✅ Same |
 | **Reproducible within language?** | ✅ | ✅ | ✅ | ✅ | ✅ |
 

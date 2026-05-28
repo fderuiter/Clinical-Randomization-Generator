@@ -226,7 +226,7 @@ export class ExcelExportService {
     const auditStartRow = 4 + metaRows.length + 2;
     addSectionHeader('PRNG & Audit', auditStartRow);
     const auditRows: [string, string][] = [
-      ['PRNG Algorithm', 'seedrandom (Alea)'],
+      ['PRNG Algorithm', 'Mersenne Twister (MT19937)'],
       ['PRNG Seed', result.metadata.seed],
       ['SHA-256 Audit Hash', result.metadata.auditHash],
     ];

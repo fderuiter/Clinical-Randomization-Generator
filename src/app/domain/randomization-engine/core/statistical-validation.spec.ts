@@ -490,7 +490,7 @@ describe('ICH E9 – Determinism: exact reproducibility across environments', ()
    * blockSizes:[4], seed:'cross_platform_seed_v1'}) and capture the output.
    */
   const GOLDEN_SEED   = 'cross_platform_seed_v1';
-  const GOLDEN_VECTOR = ['B', 'A', 'B', 'A', 'A', 'A', 'B', 'B'];
+  const GOLDEN_VECTOR = ["A","B","B","A","B","A","B","A"];
 
   it('produces the known-good golden sequence for the reference seed (guards unintended PRNG changes)', () => {
     const config: RandomizationConfig = {

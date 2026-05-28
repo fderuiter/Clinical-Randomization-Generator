@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { generateMinimization } from './minimization-algorithm';
-import seedrandom from 'seedrandom';
+import { MT19937 } from './mt19937';
 import { RandomizationConfig } from '../../core/models/randomization.model';
+
+const seedRng = (seed: string) => {
+  const mt = new MT19937(MT19937.get31BitSeed(seed));
+  return () => mt.random();
+};
 
 const baseConfig: RandomizationConfig = {
   protocolId: 'TEST-001',
@@ -33,13 +38,13 @@ const baseConfig: RandomizationConfig = {
 
 describe('generateMinimization', () => {
   it('generates the correct number of subjects', () => {
-    const rng = seedrandom('test123');
+    const rng = seedRng('test123');
     const schema = generateMinimization(baseConfig, rng);
     expect(schema.length).toBe(100);
   });
 
   it('assigns valid treatment arms only', () => {
-    const rng = seedrandom('test123');
+    const rng = seedRng('test123');
     const schema = generateMinimization(baseConfig, rng);
     const validArms = new Set(baseConfig.arms.map(a => a.id));
     for (const row of schema) {
@@ -48,14 +53,14 @@ describe('generateMinimization', () => {
   });
 
   it('produces deterministic results with the same seed', () => {
-    const schema1 = generateMinimization(baseConfig, seedrandom('abc'));
-    const schema2 = generateMinimization(baseConfig, seedrandom('abc'));
+    const schema1 = generateMinimization(baseConfig, seedRng('abc'));
+    const schema2 = generateMinimization(baseConfig, seedRng('abc'));
     expect(schema1.map(r => r.treatmentArmId)).toEqual(schema2.map(r => r.treatmentArmId));
   });
 
   it('achieves reasonable balance with p=1.0', () => {
     const config = { ...baseConfig, minimizationConfig: { p: 1.0, totalSampleSize: 200 } };
-    const schema = generateMinimization(config, seedrandom('balance'));
+    const schema = generateMinimization(config, seedRng('balance'));
     const countA = schema.filter(r => r.treatmentArmId === 'A').length;
     const countB = schema.filter(r => r.treatmentArmId === 'B').length;
     expect(Math.abs(countA - countB)).toBeLessThanOrEqual(5);
@@ -67,7 +72,7 @@ describe('generateMinimization', () => {
       sites: ['Site1', 'Site2'],
       minimizationConfig: { p: 0.8, totalSampleSize: 100 }
     };
-    const schema = generateMinimization(config, seedrandom('sites'));
+    const schema = generateMinimization(config, seedRng('sites'));
     const site1Count = schema.filter(r => r.site === 'Site1').length;
     const site2Count = schema.filter(r => r.site === 'Site2').length;
     expect(site1Count).toBeGreaterThan(30);
@@ -75,7 +80,7 @@ describe('generateMinimization', () => {
   });
 
   it('throws when p is outside [0.5, 1.0]', () => {
-    const rng = seedrandom('test');
+    const rng = seedRng('test');
     expect(() => generateMinimization({ ...baseConfig, minimizationConfig: { p: 0.3, totalSampleSize: 100 } }, rng))
       .toThrow('Minimization probability p must be between 0.5 and 1.0');
     expect(() => generateMinimization({ ...baseConfig, minimizationConfig: { p: 1.1, totalSampleSize: 100 } }, rng))
@@ -83,7 +88,7 @@ describe('generateMinimization', () => {
   });
 
   it('throws when totalSampleSize is not a positive integer', () => {
-    const rng = seedrandom('test');
+    const rng = seedRng('test');
     expect(() => generateMinimization({ ...baseConfig, minimizationConfig: { p: 0.8, totalSampleSize: 0 } }, rng))
       .toThrow('Total sample size must be a positive integer');
     expect(() => generateMinimization({ ...baseConfig, minimizationConfig: { p: 0.8, totalSampleSize: -10 } }, rng))
@@ -126,7 +131,7 @@ describe('Minimization Algorithm - Detailed Fixes', () => {
     // To test this we will mock the marginals within computeImbalanceScore or we can run the algorithm
     // and observe the generated balance.
     // Actually, with p=1.0 and 2:1 ratio, the final result should be exactly 100 A and 50 B.
-    const rng = seedrandom('test1234');
+    const rng = seedRng('test1234');
     const schema = generateMinimization(customConfig, rng);
 
     const countA = schema.filter(r => r.treatmentArmId === 'A').length;
@@ -157,7 +162,7 @@ describe('Minimization Algorithm - Detailed Fixes', () => {
         ]
      };
      // Remaining 0.6 should be split 3 ways -> 0.2 each.
-     const rng = seedrandom('probtest');
+     const rng = seedRng('probtest');
      const schema = generateMinimization(configWithUndefinedLevels, rng);
 
      const countA = schema.filter(r => r.stratum['bloodType'] === 'A').length;
@@ -192,7 +197,7 @@ describe('Minimization Algorithm - Detailed Fixes', () => {
           ]
        };
        // Sum = 1.2. A gets 0.8/1.2 = 0.666, B gets 0.4/1.2 = 0.333. O and AB get 0.
-       const rng = seedrandom('probtest_over');
+       const rng = seedRng('probtest_over');
        const schema = generateMinimization(configOverAllocated, rng);
 
        const countA = schema.filter(r => r.stratum['bloodType'] === 'A').length;
@@ -226,7 +231,7 @@ describe('Minimization Algorithm - Detailed Fixes', () => {
           ]
        };
        // A gets 0.7, B gets 0.3. O and AB get 0.
-       const rng = seedrandom('probtest_exact');
+       const rng = seedRng('probtest_exact');
        const schema = generateMinimization(configExactSum, rng);
 
        const countA = schema.filter(r => r.stratum['bloodType'] === 'A').length;
@@ -249,7 +254,7 @@ describe('Minimization Algorithm - Detailed Fixes', () => {
           { id: 'B', name: 'Placebo', ratio: 0 }
         ]
      };
-     const rng = seedrandom('probtest_zero_ratio');
+     const rng = seedRng('probtest_zero_ratio');
      expect(() => generateMinimization(configZeroRatio, rng)).toThrow();
   });
 });
@@ -266,7 +271,7 @@ describe('Minimization Algorithm - Detailed Fixes', () => {
         ]
       };
 
-      const rng = seedrandom('truncationTest');
+      const rng = seedRng('truncationTest');
       const schema = generateMinimization(restrictedConfig, rng);
       expect(schema.length).toBe(40);
     });
@@ -289,7 +294,7 @@ describe('Minimization Algorithm - Detailed Fixes', () => {
         ]
       };
 
-      const rng = seedrandom('marginalTest');
+      const rng = seedRng('marginalTest');
       const start = performance.now();
       const schema = generateMinimization(marginalConfig, rng);
       const end = performance.now();
