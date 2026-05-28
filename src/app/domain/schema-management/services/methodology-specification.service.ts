@@ -25,17 +25,19 @@ export class MethodologySpecificationService {
     const hasStrata = (config.strata || []).length > 0;
     if (hasStrata) {
       paragraphs.push(
-        'This clinical trial randomization schema employs stratified block ' +
-        'randomization utilizing a seeded pseudo-random number generator (PRNG) ' +
-        'to ensure reproducibility. A Fisher-Yates shuffle algorithm is applied ' +
-        'within each block to produce an unpredictable treatment allocation sequence.'
+        'This RTSM (Randomization and Trial Supply Management) randomization plan ' +
+        'employs stratified block randomization utilizing a seeded pseudo-random ' +
+        'number generator (PRNG) to ensure reproducibility for IRT/IWRS implementation systems. ' +
+        'A Fisher-Yates shuffle algorithm is applied within each block to produce ' +
+        'an unpredictable treatment allocation sequence suitable for regulatory submission.'
       );
     } else {
       paragraphs.push(
-        'This clinical trial randomization schema employs block randomization ' +
-        'utilizing a seeded pseudo-random number generator (PRNG) to ensure ' +
-        'reproducibility. A Fisher-Yates shuffle algorithm is applied within each ' +
-        'block to produce an unpredictable treatment allocation sequence.'
+        'This RTSM (Randomization and Trial Supply Management) randomization plan ' +
+        'employs block randomization utilizing a seeded pseudo-random number ' +
+        'generator (PRNG) to ensure reproducibility for IRT/IWRS implementation systems. ' +
+        'A Fisher-Yates shuffle algorithm is applied within each block to produce ' +
+        'an unpredictable treatment allocation sequence suitable for regulatory submission.'
       );
     }
 
@@ -52,7 +54,7 @@ export class MethodologySpecificationService {
     paragraphs.push(
       `Reproducibility: The PRNG seed "${config.seed || ''}" is used to initialize ` +
       'the random number generator. Executing the provided analysis scripts with this ' +
-      'identical seed value will reproduce this exact randomization schema.'
+      'identical seed value will reproduce this exact RTSM randomization plan.'
     );
 
     return paragraphs.join('\n\n');

@@ -26,7 +26,7 @@ import {SeoService} from '../../core/services/seo.service';
           <p class="mt-6 text-lg leading-8 text-muted">
             Equipose is a free, open-source tool designed to help biostatisticians, clinical trial managers, and contract
             research organisations (CROs) rapidly design, simulate, and export stratified block randomization schemas for
-            clinical trials. It runs entirely in your browser - no server, no sign-up, no data ever transmitted externally.
+            RTSM, IRT, and IWRS clinical trials. It runs entirely in your browser - no server, no sign-up, no data ever transmitted externally.
           </p>
 
           <!-- Compliance notice -->
@@ -90,7 +90,7 @@ import {SeoService} from '../../core/services/seo.service';
           <ul class="mt-4 space-y-3 text-base leading-7 text-muted list-disc list-inside">
             <li><strong class="text-gray-800 dark:text-slate-300">Biostatisticians</strong> designing randomization schemas and drafting Statistical Analysis Plans (SAPs).</li>
             <li><strong class="text-gray-800 dark:text-slate-300">Clinical Trial Managers</strong> who need a quick, reproducible simulation of allocation sequences.</li>
-            <li><strong class="text-gray-800 dark:text-slate-300">Contract Research Organisations (CROs)</strong> validating randomization logic before implementation in IRT/IVRS systems.</li>
+            <li><strong class="text-gray-800 dark:text-slate-300">Contract Research Organisations (CROs)</strong> validating randomization logic before implementation in RTSM/IRT/IWRS systems.</li>
             <li><strong class="text-gray-800 dark:text-slate-300">Academic researchers</strong> running investigator-initiated trials with limited budget for specialised software.</li>
           </ul>
         </div>
@@ -159,9 +159,10 @@ export class AboutComponent {
 
   constructor() {
     inject(SeoService).setPage({
-      title: 'About Equipose — Stratified Block Randomization Tool',
-      description: 'Learn about Equipose, the free open-source stratified block randomization tool for clinical trials. Built for biostatisticians, CROs, and academic researchers.',
+      title: 'About Equipose — RTSM & IRT Randomization Design',
+      description: 'Learn about Equipose, the free open-source stratified block randomization tool for RTSM and IRT workflows. Built for biostatisticians, CROs, and clinical trial managers.',
       canonicalPath: '/about',
+      keywords: 'RTSM, IRT, IWRS, Randomization, Clinical Trials, RTSM design utility, IRT randomization tool',
     });
 
     this.bibtex =

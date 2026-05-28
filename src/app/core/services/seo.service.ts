@@ -7,6 +7,7 @@ export interface SeoConfig {
   title: string;
   description: string;
   canonicalPath: string;
+  keywords?: string;
 }
 
 const BASE_URL = 'https://equipose.org';
@@ -29,6 +30,9 @@ export class SeoService {
 
     // Standard meta
     this.meta.updateTag({ name: 'description', content: config.description });
+    if (config.keywords) {
+      this.meta.updateTag({ name: 'keywords', content: config.keywords });
+    }
 
     // Open Graph
     this.meta.updateTag({ property: 'og:title', content: fullTitle });

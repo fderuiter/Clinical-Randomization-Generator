@@ -49,7 +49,7 @@ import { ChangeDetectionStrategy, Component, output } from '@angular/core';
         <p class="text-sm text-muted leading-relaxed">
           Configure your trial parameters in the form above, then click
           <span class="font-medium text-gray-700 dark:text-slate-200">Generate Schema</span>
-          to produce a statistically balanced randomization schema.
+          to produce a statistically balanced RTSM randomization schema.
         </p>
       </div>
 

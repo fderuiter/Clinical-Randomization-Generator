@@ -1,6 +1,6 @@
 <div align="center">
   <h1>Equipose</h1>
-  <p>Free, browser-based stratified block randomization tool for clinical trials - <a href="https://equipose.org">equipose.org</a></p>
+  <p>Free, browser-based stratified block randomization tool for RTSM and IRT workflows - <a href="https://equipose.org">equipose.org</a></p>
 
   ![Angular](https://img.shields.io/badge/Angular-21-DD0031?logo=angular)
   ![NgRx Signals](https://img.shields.io/badge/NgRx_Signals-21-BA2BD2)
@@ -11,7 +11,7 @@
 
 ## Overview
 
-Equipose is a free, open-source web utility designed to help biostatisticians and clinical trial managers rapidly design, simulate, and export stratified block randomization schemas for clinical trials.
+Equipose is a free, open-source web utility designed to help biostatisticians and clinical trial managers rapidly design, simulate, and export stratified block randomization schemas for RTSM, IRT, and IWRS clinical trials.
 
 Built entirely as a client-side Angular application, it ensures that sensitive trial design parameters never leave the user's browser. It supports complex multi-strata designs, variable block sizes, and custom treatment ratios.
 
