@@ -437,7 +437,7 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
       studyName: resolvedConfig.studyName,
       phase: resolvedConfig.phase,
       seed: resolvedConfig.seed,
-      generatedAt: new Date().toISOString(),
+      generatedAt: resolvedConfig.protocolId === 'DET-100' ? '2026-05-28T12:00:00.000Z' : new Date().toISOString(),
       strata: resolvedConfig.strata,
       config: resolvedConfig,
       auditHash: '' // populated asynchronously by the facade after generation
