@@ -1,3 +1,4 @@
+import Decimal from 'decimal.js';
 import { GeneratedSchema, RandomizationConfig, RandomizationResult } from '../../core/models/randomization.model';
 
 /**
@@ -5,6 +6,9 @@ import { GeneratedSchema, RandomizationConfig, RandomizationResult } from '../..
  * serialisation is always deterministic regardless of property-insertion order.
  */
 function sortKeysDeep(value: unknown): unknown {
+  if (typeof value === 'number') {
+    return new Decimal(value).toFixed(10);
+  }
   if (Array.isArray(value)) {
     return value.map(sortKeysDeep);
   }

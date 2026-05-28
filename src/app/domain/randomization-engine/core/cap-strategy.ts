@@ -1,3 +1,4 @@
+import Decimal from 'decimal.js';
 import { StratificationFactor, StratumCap } from '../../core/models/randomization.model';
 
 /**
@@ -15,9 +16,9 @@ export function validateProportionalPercentages(
     const total = factor.levels.reduce((sum, level) => {
       const value = Number(factorPercentages[level] ?? 0);
       if (!Number.isFinite(value)) { hasNonFinite = true; return sum; }
-      return sum + value;
-    }, 0);
-    if (hasNonFinite || Math.abs(total - 100) > 0.001) {
+      return sum.plus(new Decimal(value));
+    }, new Decimal(0));
+    if (hasNonFinite || total.minus(100).abs().greaterThan(0.001)) {
       invalid[factor.id] = true;
     }
   }
@@ -76,13 +77,13 @@ export function computeProportionalCaps(
     const probability = strata.reduce((prod, factor) => {
       const levelName = combo[factor.id];
       const pct = percentages[factor.id]?.[levelName] ?? 0;
-      return prod * (pct / 100);
-    }, 1);
+      return prod.times(new Decimal(pct).dividedBy(100));
+    }, new Decimal(1));
 
-    const theoreticalValue = probability * globalCap;
-    const floored = Math.floor(theoreticalValue);
-    const remainder = theoreticalValue - floored;
-    return { levelIds: combo, theoreticalValue, floored, remainder, finalCap: floored };
+    const theoreticalValue = probability.times(new Decimal(globalCap));
+    const floored = theoreticalValue.floor().toNumber();
+    const remainder = theoreticalValue.minus(floored).toNumber();
+    return { levelIds: combo, theoreticalValue: theoreticalValue.toNumber(), floored, remainder, finalCap: floored };
   });
 
   // Step 2: Distribute remaining seats to the intersections with the largest remainders.
