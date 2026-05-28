@@ -297,6 +297,13 @@ test.describe('Code generation fixtures for script execution checks', () => {
     summary.forEach(entry => expect(entry.files).toHaveLength(4));
     expect(summary.map(entry => entry.scenario)).toEqual(expect.arrayContaining(scenarios.map(scenario => scenario.id)));
 
+    // Verify structural properties against the UI schema configuration
+    // (Requirement: Structural Parity Verification)
+    const blockSas = await readFile(join(artifactRoot, 'block', 'block.sas'), 'utf-8');
+    const blockStata = await readFile(join(artifactRoot, 'block', 'block.do'), 'utf-8');
+    expect(blockSas).toContain('%let block_sizes = 4 6;');
+    expect(blockStata).toContain('local block_sizes "4 6"');
+
     const zeroCapStata = await readFile(join(artifactRoot, 'zero-cap', 'zero-cap.do'), 'utf-8');
     const zeroCapAssignments = [...zeroCapStata.matchAll(/local cap = (\d+)/g)].map(match => Number(match[1]));
     expect(zeroCapAssignments.length).toBeGreaterThan(0);
