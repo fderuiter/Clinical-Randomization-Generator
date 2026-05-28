@@ -67,7 +67,7 @@ const ONE_TO_ONE_CONFIG: RandomizationConfig = {
   // block ensures per-run arm counts are NOT always exactly 50/50, exercising
   // PRNG variance and making the convergence assertion statistically meaningful.
   blockSizes: [4],
-  stratumCaps: [{ levels: [], cap: 101 }],
+  stratumCaps: [{ levelIds: {}, cap: 101 }],
   seed: 'stat_val_seed',
   subjectIdMask: '[SiteID]-[001]',
 };
@@ -85,7 +85,7 @@ const TWO_TO_ONE_CONFIG: RandomizationConfig = {
   // Block size 3, cap 91: 30 complete blocks (90 subjects) + 1-subject partial
   // block, so per-run ratio is not always exactly 2:1.
   blockSizes: [3],
-  stratumCaps: [{ levels: [], cap: 91 }],
+  stratumCaps: [{ levelIds: {}, cap: 91 }],
   seed: 'stat_val_2to1',
   subjectIdMask: '[SiteID]-[001]',
 };
@@ -103,7 +103,7 @@ const THREE_ARM_CONFIG: RandomizationConfig = {
   strata: [],
   // Block size 3, cap 91: 30 complete blocks + 1-subject partial block.
   blockSizes: [3],
-  stratumCaps: [{ levels: [], cap: 91 }],
+  stratumCaps: [{ levelIds: {}, cap: 91 }],
   seed: 'stat_val_3arm',
   subjectIdMask: '[SiteID]-[001]',
 };
@@ -123,10 +123,10 @@ const STRATIFIED_CONFIG: RandomizationConfig = {
   ],
   blockSizes: [4],
   stratumCaps: [
-    { levels: ['M', '<65'], cap: 20 },
-    { levels: ['M', '>=65'], cap: 20 },
-    { levels: ['F', '<65'], cap: 20 },
-    { levels: ['F', '>=65'], cap: 20 },
+    { levelIds: { sex: 'M', age: '<65' }, cap: 20 },
+    { levelIds: { sex: 'M', age: '>=65' }, cap: 20 },
+    { levelIds: { sex: 'F', age: '<65' }, cap: 20 },
+    { levelIds: { sex: 'F', age: '>=65' }, cap: 20 },
   ],
   seed: 'stat_val_strat',
   subjectIdMask: '[SiteID]-[001]',
@@ -247,7 +247,7 @@ describe('ICH E9 – Block Balance: strict intra-block arm balance', () => {
     const config: RandomizationConfig = {
       ...ONE_TO_ONE_CONFIG,
       blockSizes: [4, 6],
-      stratumCaps: [{ levels: [], cap: 60 }],
+      stratumCaps: [{ levelIds: {}, cap: 60 }],
     };
 
     for (let i = 0; i < 30; i++) {
@@ -304,8 +304,8 @@ describe('ICH E9 – Stratum Cap Enforcement: dynamic caps are never exceeded', 
       ...ONE_TO_ONE_CONFIG,
       strata: [{ id: 'grp', name: 'Group', levels: ['G1', 'G2'] }],
       stratumCaps: [
-        { levels: ['G1'], cap: 8 },
-        { levels: ['G2'], cap: 12 },
+        { levelIds: { grp: 'G1' }, cap: 8 },
+        { levelIds: { grp: 'G2' }, cap: 12 },
       ],
       blockSizes: [4],
     };
@@ -326,7 +326,7 @@ describe('ICH E9 – Stratum Cap Enforcement: dynamic caps are never exceeded', 
     const config: RandomizationConfig = {
       ...ONE_TO_ONE_CONFIG,
       sites: ['Site-A', 'Site-B', 'Site-C'],
-      stratumCaps: [{ levels: [], cap: 10 }],
+      stratumCaps: [{ levelIds: {}, cap: 10 }],
       blockSizes: [2],
     };
 
@@ -355,7 +355,7 @@ describe('ICH E9 – Boundary Conditions: structural integrity under edge cases'
     const config: RandomizationConfig = {
       ...ONE_TO_ONE_CONFIG,
       blockSizes: [2],
-      stratumCaps: [{ levels: [], cap: 100 }],
+      stratumCaps: [{ levelIds: {}, cap: 100 }],
     };
 
     for (let i = 0; i < 50; i++) {
@@ -398,7 +398,12 @@ describe('ICH E9 – Boundary Conditions: structural integrity under edge cases'
       stratumCaps: Array.from({ length: 16 }, (_, idx) => {
         const bits = idx.toString(2).padStart(4, '0');
         return {
-          levels: bits.split('').map(b => (b === '0' ? 'L1' : 'L2')),
+          levelIds: {
+            f1: bits[0] === '0' ? 'L1' : 'L2',
+            f2: bits[1] === '0' ? 'L1' : 'L2',
+            f3: bits[2] === '0' ? 'L1' : 'L2',
+            f4: bits[3] === '0' ? 'L1' : 'L2'
+          },
           cap: 4,
         };
       }),
@@ -432,7 +437,7 @@ describe('ICH E9 – Boundary Conditions: structural integrity under edge cases'
         const config: RandomizationConfig = {
           ...ONE_TO_ONE_CONFIG,
           sites: ['Site1'],
-          stratumCaps: [{ levels: [], cap }],
+          stratumCaps: [{ levelIds: {}, cap }],
           blockSizes: [4],
           seed: `cap_${cap}_iter_${i}`,
         };
@@ -491,7 +496,7 @@ describe('ICH E9 – Determinism: exact reproducibility across environments', ()
     const config: RandomizationConfig = {
       ...ONE_TO_ONE_CONFIG,
       sites: ['Site1'],
-      stratumCaps: [{ levels: [], cap: 8 }],
+      stratumCaps: [{ levelIds: {}, cap: 8 }],
       blockSizes: [4],
       seed: GOLDEN_SEED,
     };

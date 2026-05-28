@@ -75,7 +75,10 @@ function buildLegacyBaseline(cfg: RandomizationConfig): ReturnType<typeof schema
   const totalRatio = config.arms.reduce((sum, arm) => sum + arm.ratio, 0);
 
   const capsDict: Record<string, number> = {};
-  (config.stratumCaps ?? []).forEach(c => { capsDict[c.levels.join('|')] = c.cap; });
+  (config.stratumCaps ?? []).forEach(c => {
+    const key = config.strata.map(s => c.levelIds?.[s.id] ?? '').join('|');
+    capsDict[key] = c.cap;
+  });
 
   const schema: ReturnType<typeof schemaOnly> = [];
 
@@ -84,6 +87,7 @@ function buildLegacyBaseline(cfg: RandomizationConfig): ReturnType<typeof schema
     for (const stratum of strataCombinations) {
       const comboKey = config.strata.map(s => stratum[s.id] ?? '').join('|');
       const maxSubjectsPerStratum = capsDict[comboKey] ?? 0;
+      console.log("Legacy combokey:", comboKey, "Dict:", capsDict, "Max:", maxSubjectsPerStratum);
       let stratumSubjectCount = 0;
       let blockNumber = 1;
 
@@ -147,7 +151,7 @@ const CONFIG_1: RandomizationConfig = {
   sites: ['S01', 'S02'],
   strata: [],
   blockSizes: [4],
-  stratumCaps: [{ levels: [], cap: 8 }],
+  stratumCaps: [{ levelIds: {}, cap: 8 }],
   seed: 'CLINICAL_TRIAL_A',
   subjectIdMask: '[SiteID]-[001]'
 };
@@ -161,7 +165,7 @@ const CONFIG_2: RandomizationConfig = {
   sites: ['SITE-A'],
   strata: [{ id: 'age', name: 'Age', levels: ['<65', '>=65'] }],
   blockSizes: [4],
-  stratumCaps: [{ levels: ['<65'], cap: 12 }, { levels: ['>=65'], cap: 8 }],
+  stratumCaps: [{ levelIds: { age: '<65' }, cap: 12 }, { levelIds: { age: '>=65' }, cap: 8 }],
   seed: 'CLINICAL_TRIAL_B',
   subjectIdMask: '[SiteID]-[001]'
 };
@@ -179,10 +183,10 @@ const CONFIG_3: RandomizationConfig = {
   ],
   blockSizes: [3, 6],
   stratumCaps: [
-    { levels: ['M', '<65'],  cap: 6 },
-    { levels: ['M', '>=65'], cap: 6 },
-    { levels: ['F', '<65'],  cap: 6 },
-    { levels: ['F', '>=65'], cap: 6 }
+    { levelIds: { sex: 'M', age: '<65' },  cap: 6 },
+    { levelIds: { sex: 'M', age: '>=65' }, cap: 6 },
+    { levelIds: { sex: 'F', age: '<65' },  cap: 6 },
+    { levelIds: { sex: 'F', age: '>=65' }, cap: 6 }
   ],
   seed: 'CLINICAL_TRIAL_C',
   subjectIdMask: '[SiteID]-[StratumCode]-[001]'
@@ -206,14 +210,14 @@ const CONFIG_4: RandomizationConfig = {
   ],
   blockSizes: [3, 6],
   stratumCaps: [
-    { levels: ['M', '<65',  'NA'], cap: 3 },
-    { levels: ['M', '<65',  'EU'], cap: 3 },
-    { levels: ['M', '>=65', 'NA'], cap: 3 },
-    { levels: ['M', '>=65', 'EU'], cap: 3 },
-    { levels: ['F', '<65',  'NA'], cap: 3 },
-    { levels: ['F', '<65',  'EU'], cap: 3 },
-    { levels: ['F', '>=65', 'NA'], cap: 3 },
-    { levels: ['F', '>=65', 'EU'], cap: 3 }
+    { levelIds: { sex: 'M', age: '<65', region: 'NA' }, cap: 3 },
+    { levelIds: { sex: 'M', age: '<65', region: 'EU' }, cap: 3 },
+    { levelIds: { sex: 'M', age: '>=65', region: 'NA' }, cap: 3 },
+    { levelIds: { sex: 'M', age: '>=65', region: 'EU' }, cap: 3 },
+    { levelIds: { sex: 'F', age: '<65', region: 'NA' }, cap: 3 },
+    { levelIds: { sex: 'F', age: '<65', region: 'EU' }, cap: 3 },
+    { levelIds: { sex: 'F', age: '>=65', region: 'NA' }, cap: 3 },
+    { levelIds: { sex: 'F', age: '>=65', region: 'EU' }, cap: 3 }
   ],
   seed: 'CLINICAL_TRIAL_D',
   subjectIdMask: '[SiteID]-[0001]'
@@ -228,7 +232,7 @@ const CONFIG_5: RandomizationConfig = {
   sites: ['MAIN'],
   strata: [{ id: 'risk', name: 'Risk', levels: ['Low', 'High'] }],
   blockSizes: [4],
-  stratumCaps: [{ levels: ['Low'], cap: 50 }, { levels: ['High'], cap: 50 }],
+  stratumCaps: [{ levelIds: { risk: 'Low' }, cap: 50 }, { levelIds: { risk: 'High' }, cap: 50 }],
   seed: 'CLINICAL_TRIAL_E',
   subjectIdMask: '[SiteID]-[001]'
 };

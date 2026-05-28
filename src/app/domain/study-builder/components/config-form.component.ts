@@ -384,7 +384,7 @@ export class ConfigFormComponent implements OnInit {
     this.stratumCaps.clear({ emitEvent: false });
     for (const cap of caps) {
       this.stratumCaps.push(
-        this.fb.group({ levels: [cap.levels], cap: [cap.cap, [Validators.required, Validators.min(0)]] }),
+        this.fb.group({ levelIds: [cap.levelIds], cap: [cap.cap, [Validators.required, Validators.min(0)]] }),
         { emitEvent: false }
       );
     }
@@ -394,12 +394,18 @@ export class ConfigFormComponent implements OnInit {
   /** Rebuild stratumCaps from the store's reactive `strataCombinations` computed signal. */
   syncStratumCaps(): void {
     const combinations = this.store.strataCombinations();
-    const currentCaps = this.stratumCaps.value as { levels: string[]; cap: number }[];
+    const currentCaps = this.stratumCaps.value as { levelIds: Record<string, string>; cap: number }[];
     this.stratumCaps.clear({ emitEvent: false });
     for (const combo of combinations) {
-      const existing = currentCaps.find(c => c.levels.join('|') === combo.join('|'));
+      const existing = currentCaps.find(c => {
+        if (!c.levelIds) return false;
+        const keys1 = Object.keys(combo);
+        const keys2 = Object.keys(c.levelIds);
+        if (keys1.length !== keys2.length) return false;
+        return keys1.every(k => combo[k] === c.levelIds[k]);
+      });
       this.stratumCaps.push(
-        this.fb.group({ levels: [combo], cap: [existing?.cap ?? 20, [Validators.required, Validators.min(0)]] }),
+        this.fb.group({ levelIds: [combo], cap: [existing?.cap ?? 20, [Validators.required, Validators.min(0)]] }),
         { emitEvent: false }
       );
     }
@@ -798,6 +804,12 @@ export class ConfigFormComponent implements OnInit {
     if (levels.length === 0) return false;
     const total = this.getMinimizationProbabilityTotal(factorId, levels);
     return Math.abs(total - 100) > 0.01;
+  }
+
+  getCapLabel(levelIds: Record<string, string> | null | undefined): string {
+    if (!levelIds) return 'Overall / Default';
+    const values = Object.values(levelIds);
+    return values.length > 0 ? values.join(' | ') : 'Overall / Default';
   }
 
   setMinimizationProbability(factorId: string, level: string, value: number): void {

@@ -33,7 +33,7 @@ export interface StratificationFactor {
 }
 
 export interface StratumCap {
-  levels: string[];
+  levelIds: Record<string, string>;
   cap: number;
 }
 

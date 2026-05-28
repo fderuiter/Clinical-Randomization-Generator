@@ -26,21 +26,21 @@ export function validateProportionalPercentages(
 
 /**
  * Generates the Cartesian product of all strata level combinations.
- * Returns an array of level-name arrays, one entry per combination.
+ * Returns an array of level-name records, one entry per combination.
  */
-function generateIntersections(strata: StratificationFactor[]): string[][] {
-  if (strata.length === 0) return [[]];
-  return strata.reduce<string[][]>(
+function generateIntersections(strata: StratificationFactor[]): Record<string, string>[] {
+  if (strata.length === 0) return [{}];
+  return strata.reduce<Record<string, string>[]>(
     (acc, factor) => {
-      const result: string[][] = [];
+      const result: Record<string, string>[] = [];
       for (const combo of acc) {
         for (const level of factor.levels) {
-          result.push([...combo, level]);
+          result.push({ ...combo, [factor.id]: level });
         }
       }
       return result;
     },
-    [[]]
+    [{}]
   );
 }
 
@@ -61,7 +61,7 @@ function generateIntersections(strata: StratificationFactor[]): string[][] {
  * @param globalCap - Total enrollment target. Should be a positive integer for the exact-sum guarantee.
  * @param percentages - Mapping of factorId → (levelName → percentage, 0–100).
  *   Each factor's level percentages should sum to 100 for the exact-sum guarantee.
- * @returns An array of { levels, cap } objects covering every intersection. The caps sum to
+ * @returns An array of { levelIds, cap } objects covering every intersection. The caps sum to
  *   `globalCap` only when the input preconditions above are satisfied.
  */
 export function computeProportionalCaps(
@@ -73,8 +73,8 @@ export function computeProportionalCaps(
 
   // Step 1: Compute the theoretical (real-valued) target for each intersection.
   const entries = combinations.map(combo => {
-    const probability = strata.reduce((prod, factor, idx) => {
-      const levelName = combo[idx];
+    const probability = strata.reduce((prod, factor) => {
+      const levelName = combo[factor.id];
       const pct = percentages[factor.id]?.[levelName] ?? 0;
       return prod * (pct / 100);
     }, 1);
@@ -82,7 +82,7 @@ export function computeProportionalCaps(
     const theoreticalValue = probability * globalCap;
     const floored = Math.floor(theoreticalValue);
     const remainder = theoreticalValue - floored;
-    return { levels: combo, theoreticalValue, floored, remainder, finalCap: floored };
+    return { levelIds: combo, theoreticalValue, floored, remainder, finalCap: floored };
   });
 
   // Step 2: Distribute remaining seats to the intersections with the largest remainders.
@@ -103,5 +103,5 @@ export function computeProportionalCaps(
     entries[sortedIndices[i].index].finalCap++;
   }
 
-  return entries.map(e => ({ levels: e.levels, cap: e.finalCap }));
+  return entries.map(e => ({ levelIds: e.levelIds, cap: e.finalCap }));
 }

@@ -248,7 +248,10 @@ export class CodeGeneratorService {
       } else {
         const caps = config.stratumCaps || [];
         const capsVector = caps
-          .map(c => `stats::setNames(${c.cap}, "${this.escapeRString(c.levels.join('_'))}")`)
+          .map(c => {
+            const levelsStr = strata.map(s => c.levelIds?.[s.id] ?? '').join('_');
+            return `stats::setNames(${c.cap}, "${this.escapeRString(levelsStr)}")`;
+          })
           .join(',\n  ');
         capsCode = `stratum_caps <- c(\n  ${capsVector}\n)\nintersection_counts <- list()`;
       }
@@ -853,8 +856,8 @@ if (nrow(schema) > 0) {
       } else {
         const caps = config.stratumCaps || [];
         const pyCapsDict = caps.map(c => {
-          const tupleElements = c.levels.map(l => `"${this.escapePythonString(l)}"`).join(', ');
-          const tupleKey = c.levels.length === 1 ? `(${tupleElements},)` : `(${tupleElements})`;
+          const tupleElements = strata.map(s => `"${this.escapePythonString(c.levelIds?.[s.id] ?? '')}"`).join(', ');
+          const tupleKey = strata.length === 1 ? `(${tupleElements},)` : `(${tupleElements})`;
           return `    ${tupleKey}: ${c.cap}`;
         }).join(',\n');
         capsCode = `stratum_caps = {\n${pyCapsDict || '    (): 0'}\n}\nintersection_counts = {}`;
@@ -1339,7 +1342,7 @@ else:
     if (!isMarginal) {
       const capsDict = new Map<string, number>();
       for (const c of config.stratumCaps || []) {
-        capsDict.set(c.levels.join('|'), c.cap);
+        capsDict.set(strata.map(s => c.levelIds?.[s.id] || '').join('|'), c.cap);
       }
       for (let i = 0; i < combos.length; i++) {
         const combo = combos[i];
@@ -2105,7 +2108,10 @@ title;
     let strataLines: string;
     let strataGridArgs: string;
     try {
-      rCapsVector = caps.map(c => `stats::setNames(${c.cap}, "${this.escapeRString(c.levels.join('_'))}")`).join(',\n  ');
+      rCapsVector = caps.map(c => {
+        const joinedLevels = config.strata.map(s => c.levelIds?.[s.id] || '').join('_');
+        return `stats::setNames(${c.cap}, "${this.escapeRString(joinedLevels)}")`;
+      }).join(',\n  ');
       strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + this.escapeRString(l) + '"').join(', ')})`).join('\n');
       strataGridArgs = [...strata.map(s => `${s.id} = ${s.id}_levels`), 'stringsAsFactors = FALSE'].join(',\n  ');
     } catch (e) {
@@ -2292,7 +2298,10 @@ if (nrow(schema) > 0) {
     let strataLevelsList: string;
     let strataNamesArr: string;
     try {
-      pyCapsDict = caps.map(c => `    (${c.levels.map(l => `"${this.escapePythonString(l)}"`).join(', ')}): ${c.cap}`).join(',\n');
+      pyCapsDict = caps.map(c => {
+        const tupleElements = strata.map(s => `"${this.escapePythonString(c.levelIds?.[s.id] ?? '')}"`).join(', ');
+        return `    (${strata.length === 1 ? tupleElements + ',' : tupleElements}): ${c.cap}`;
+      }).join(',\n');
       strataLevelsList = strata.map(s => `[${(s.levels || []).map(l => '"' + this.escapePythonString(l) + '"').join(', ')}]`).join(',\n    ');
       strataNamesArr = strata.map(s => '"' + s.id + '"').join(', ');
     } catch (e) {
@@ -2449,8 +2458,8 @@ else:
       } else {
         capsRows = caps.map(c => {
           let row = '';
-          if (strata.length > 0 && c.levels.length === strata.length) {
-            strata.forEach((s, idx) => { row += `  ${s.id} = "${this.escapeSasString(c.levels[idx])}";`; });
+          if (strata.length > 0) {
+            strata.forEach(s => { row += `  ${s.id} = "${this.escapeSasString(c.levelIds?.[s.id] ?? '')}";`; });
           }
           row += `  max_subjects_per_stratum = ${c.cap};\n  output;\n`;
           return row;
@@ -2764,7 +2773,7 @@ title;
     } else {
       const capsDict = new Map<string, number>();
       for (const c of config.stratumCaps || []) {
-        capsDict.set(c.levels.join('|'), c.cap);
+        capsDict.set(strata.map(s => c.levelIds?.[s.id] || '').join('|'), c.cap);
       }
       for (let i = 0; i < combos.length; i++) {
         const combo = combos[i];
@@ -3649,7 +3658,8 @@ list in 1/20, clean noobs
       // Cap conditions inside the strata loops (using _val suffix loop variables)
       const capLines = caps.map(c => {
         const conds = strata.map((s, si) => {
-          const idx = si < c.levels.length ? s.levels.indexOf(c.levels[si]) + 1 : -1;
+          const levelName = c.levelIds?.[s.id] ?? '';
+          const idx = s.levels.indexOf(levelName) + 1;
           return idx > 0 ? `\`${varNames[si]}_val' == ${idx}` : null;
         }).filter(Boolean);
         const cond = conds.join(' & ');
@@ -3729,7 +3739,7 @@ list in 1/20, clean noobs
       // Cap annotation comments for header
       const capAnnotations = strata.length > 0
         ? caps.map(c => {
-            const lvlParts = strata.map((s, i) => `${varNames[i]}=${i < c.levels.length ? c.levels[i] : '?'}`).join(', ');
+            const lvlParts = strata.map((s, i) => `${varNames[i]}=${c.levelIds?.[s.id] || '?'}`).join(', ');
             return `* (${lvlParts}) → ${c.cap} subjects`;
           }).join('\n')
         : '';

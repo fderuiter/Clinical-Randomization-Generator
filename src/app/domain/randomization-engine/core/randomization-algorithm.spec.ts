@@ -18,7 +18,7 @@ const BASE_CONFIG: RandomizationConfig = {
   sites: ['Site1'],
   strata: [],
   blockSizes: [4],
-  stratumCaps: [{ levels: [], cap: 4 }],
+  stratumCaps: [{ levelIds: {}, cap: 4 }],
   seed: 'alg_seed',
   subjectIdMask: '[SiteID]-[001]'
 };
@@ -55,7 +55,7 @@ describe('generateRandomizationSchema – core behaviour', () => {
     const config: RandomizationConfig = {
       ...BASE_CONFIG,
       sites: ['SiteA', 'SiteB'],
-      stratumCaps: [{ levels: [], cap: 2 }]
+      stratumCaps: [{ levelIds: {}, cap: 2 }]
     };
     const result = generateRandomizationSchema(config);
     const sites = [...new Set(result.schema.map(r => r.site))];
@@ -117,7 +117,7 @@ describe('generateRandomizationSchema – property tests', () => {
           fc.integer({ min: 1, max: 10 }).map(m => m * totalRatio),
           { minLength: 1, maxLength: 3 }
         ),
-        stratumCaps: fc.integer({ min: 1, max: 100 }).map(cap => [{ levels: [] as string[], cap }]),
+        stratumCaps: fc.integer({ min: 1, max: 100 }).map(cap => [{ levelIds: {} as string[], cap }]),
         subjectIdMask: fc.constant('[SiteID]-[001]')
       });
     });
@@ -199,7 +199,7 @@ describe('generateRandomizationSchema – block structure', () => {
   });
 
   it('increments blockNumber across blocks within a stratum', () => {
-    const config: RandomizationConfig = { ...BASE_CONFIG, blockSizes: [2], stratumCaps: [{ levels: [], cap: 6 }] };
+    const config: RandomizationConfig = { ...BASE_CONFIG, blockSizes: [2], stratumCaps: [{ levelIds: {}, cap: 6 }] };
     const result = generateRandomizationSchema(config);
     const blockNumbers = result.schema.map(r => r.blockNumber);
     expect(Math.max(...blockNumbers)).toBeGreaterThan(1);
@@ -215,7 +215,7 @@ describe('generateRandomizationSchema – block structure', () => {
     const config: RandomizationConfig = {
       ...BASE_CONFIG,
       blockSizes: [4],
-      stratumCaps: [{ levels: [], cap: 4 }],
+      stratumCaps: [{ levelIds: {}, cap: 4 }],
       seed: 'balance_seed'
     };
     const result = generateRandomizationSchema(config);
@@ -229,7 +229,7 @@ describe('generateRandomizationSchema – block structure', () => {
       ...BASE_CONFIG,
       arms: [{ id: 'A', name: 'Drug', ratio: 2 }, { id: 'B', name: 'Placebo', ratio: 1 }],
       blockSizes: [3],
-      stratumCaps: [{ levels: [], cap: 6 }]
+      stratumCaps: [{ levelIds: {}, cap: 6 }]
     };
     const result = generateRandomizationSchema(config);
     const drug = result.schema.filter(r => r.treatmentArmId === 'A').length;
@@ -253,10 +253,10 @@ describe('generateRandomizationSchema – stratification', () => {
         { id: 'gender', name: 'Gender', levels: ['M', 'F'] }
       ],
       stratumCaps: [
-        { levels: ['<65', 'M'], cap: 4 },
-        { levels: ['<65', 'F'], cap: 4 },
-        { levels: ['>=65', 'M'], cap: 4 },
-        { levels: ['>=65', 'F'], cap: 4 }
+        { levelIds: { age: '<65', gender: 'M' }, cap: 4 },
+        { levelIds: { age: '<65', gender: 'F' }, cap: 4 },
+        { levelIds: { age: '>=65', gender: 'M' }, cap: 4 },
+        { levelIds: { age: '>=65', gender: 'F' }, cap: 4 }
       ]
     };
     const result = generateRandomizationSchema(config);
@@ -267,7 +267,7 @@ describe('generateRandomizationSchema – stratification', () => {
     const config: RandomizationConfig = {
       ...BASE_CONFIG,
       strata: [{ id: 'age', name: 'Age', levels: ['<65', '>=65'] }],
-      stratumCaps: [{ levels: ['<65'], cap: 2 }, { levels: ['>=65'], cap: 2 }]
+      stratumCaps: [{ levelIds: { age: '<65' }, cap: 2 }, { levelIds: { age: '>=65' }, cap: 2 }]
     };
     const result = generateRandomizationSchema(config);
     result.schema.forEach(row => {
@@ -284,7 +284,7 @@ describe('generateRandomizationSchema – stratification', () => {
         { id: 'age', name: 'Age', levels: ['under65'] },
         { id: 'gender', name: 'Gender', levels: ['male'] }
       ],
-      stratumCaps: [{ levels: ['under65', 'male'], cap: 2 }]
+      stratumCaps: [{ levelIds: { age: 'under65', gender: 'male' }, cap: 2 }]
     };
     const result = generateRandomizationSchema(config);
     expect(result.schema[0].stratumCode).toBe('UND-MAL');
@@ -306,8 +306,8 @@ describe('generateRandomizationSchema – stratification', () => {
       ...BASE_CONFIG,
       strata: [{ id: 'sex', name: 'Sex', levels: ['M', 'F'] }],
       stratumCaps: [
-        { levels: ['M'], cap: 6 },
-        { levels: ['F'], cap: 2 }
+        { levelIds: { sex: 'M' }, cap: 6 },
+        { levelIds: { sex: 'F' }, cap: 2 }
       ],
       blockSizes: [2]
     };
@@ -346,7 +346,7 @@ describe('generateRandomizationSchema – subject ID mask', () => {
     const config: RandomizationConfig = {
       ...BASE_CONFIG,
       strata: [{ id: 'age', name: 'Age', levels: ['<65'] }],
-      stratumCaps: [{ levels: ['<65'], cap: 2 }],
+      stratumCaps: [{ levelIds: { age: '<65' }, cap: 2 }],
       subjectIdMask: '[SiteID]-[StratumCode]-[001]'
     };
     const result = generateRandomizationSchema(config);
@@ -358,7 +358,7 @@ describe('generateRandomizationSchema – subject ID mask', () => {
     const config: RandomizationConfig = {
       ...BASE_CONFIG,
       sites: ['SiteA', 'SiteB'],
-      stratumCaps: [{ levels: [], cap: 2 }]
+      stratumCaps: [{ levelIds: {}, cap: 2 }]
     };
     const result = generateRandomizationSchema(config);
     // SiteA subjects: 001, 002; SiteB subjects: 001, 002
@@ -378,7 +378,7 @@ describe('generateRandomizationSchema – multi-site', () => {
     const config: RandomizationConfig = {
       ...BASE_CONFIG,
       sites: ['S1', 'S2', 'S3'],
-      stratumCaps: [{ levels: [], cap: 4 }]
+      stratumCaps: [{ levelIds: {}, cap: 4 }]
     };
     const result = generateRandomizationSchema(config);
     expect(result.schema.length).toBe(12); // 3 sites × 4 subjects
@@ -388,7 +388,7 @@ describe('generateRandomizationSchema – multi-site', () => {
     const config: RandomizationConfig = {
       ...BASE_CONFIG,
       sites: ['Alpha', 'Beta'],
-      stratumCaps: [{ levels: [], cap: 2 }]
+      stratumCaps: [{ levelIds: {}, cap: 2 }]
     };
     const result = generateRandomizationSchema(config);
     const alphaRows = result.schema.filter(r => r.site === 'Alpha');
@@ -427,7 +427,7 @@ describe('generateRandomizationSchema – new token syntax', () => {
     const config: RandomizationConfig = {
       ...BASE_CONFIG,
       strata: [{ id: 'age', name: 'Age', levels: ['<65'] }],
-      stratumCaps: [{ levels: ['<65'], cap: 2 }],
+      stratumCaps: [{ levelIds: { age: '<65' }, cap: 2 }],
       subjectIdMask: '{SITE}-{STRATUM}-{SEQ:3}'
     };
     const result = generateRandomizationSchema(config);
@@ -447,7 +447,7 @@ describe('generateRandomizationSchema – new token syntax', () => {
     const config: RandomizationConfig = {
       ...BASE_CONFIG,
       sites: ['S1', 'S2'],
-      stratumCaps: [{ levels: [], cap: 4 }],
+      stratumCaps: [{ levelIds: {}, cap: 4 }],
       subjectIdMask: '{SITE}-{RND:8}'
     };
     const result = generateRandomizationSchema(config);
@@ -549,7 +549,7 @@ describe('generateRandomizationSchema – hierarchical block strategy', () => {
     sites: ['Site1'],
     strata: [],
     blockSizes: [4],
-    stratumCaps: [{ levels: [], cap: 12 }],
+    stratumCaps: [{ levelIds: {}, cap: 12 }],
     seed: 'hbs_seed',
     subjectIdMask: '[SiteID]-[001]'
   };
@@ -591,7 +591,7 @@ describe('generateRandomizationSchema – hierarchical block strategy', () => {
       // Only allow size-4 blocks twice; size-6 is unlimited
       const config: RandomizationConfig = {
         ...BASE_2_ARM,
-        stratumCaps: [{ levels: [], cap: 16 }],
+        stratumCaps: [{ levelIds: {}, cap: 16 }],
         globalBlockStrategy: {
           selectionType: 'RANDOM_POOL',
           sizes: [4, 6],
@@ -631,7 +631,7 @@ describe('generateRandomizationSchema – hierarchical block strategy', () => {
       const config: RandomizationConfig = {
         ...BASE_2_ARM,
         sites: ['Site1', 'Site2'],
-        stratumCaps: [{ levels: [], cap: 4 }],
+        stratumCaps: [{ levelIds: {}, cap: 4 }],
         globalBlockStrategy: { selectionType: 'RANDOM_POOL', sizes: [4] },
         siteBlockOverrides: {
           'Site2': { selectionType: 'FIXED_SEQUENCE', sizes: [6] }
@@ -669,8 +669,8 @@ describe('generateRandomizationSchema – hierarchical block strategy', () => {
         strata: [{ id: 'age', name: 'Age', levels: ['<65', '>=65'] }],
         blockSizes: [4],
         stratumCaps: [
-          { levels: ['<65'], cap: 8 },
-          { levels: ['>=65'], cap: 8 }
+          { levelIds: { age: '<65' }, cap: 8 },
+          { levelIds: { age: '>=65' }, cap: 8 }
         ],
         seed: 'strat_override',
         subjectIdMask: '[SiteID]-[001]',

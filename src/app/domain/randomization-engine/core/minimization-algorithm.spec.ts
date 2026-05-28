@@ -261,8 +261,8 @@ describe('Minimization Algorithm - Detailed Fixes', () => {
         minimizationConfig: { p: 0.8, totalSampleSize: 100 },
         capStrategy: 'MANUAL_MATRIX' as const,
         stratumCaps: [
-          { levels: ['Male'], cap: 20 },
-          { levels: ['Female'], cap: 20 }
+          { levelIds: { sex: 'Male' }, cap: 20 },
+          { levelIds: { sex: 'Female' }, cap: 20 }
         ]
       };
 

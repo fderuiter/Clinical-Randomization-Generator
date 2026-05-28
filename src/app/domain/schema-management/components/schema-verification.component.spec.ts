@@ -30,7 +30,7 @@ function buildMockResult(overrides: Partial<RandomizationResult> = {}): Randomiz
         sites: ['Site 01'],
         strata: [],
         blockSizes: [2],
-        stratumCaps: [{ levels: [''], cap: 4 }],
+        stratumCaps: [{ levelIds: { }, cap: 4 }],
         seed: 'test-seed-42',
         subjectIdMask: '{SEQ:3}',
       },

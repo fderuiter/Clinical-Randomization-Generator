@@ -17,7 +17,7 @@ describe('RandomizationService (domain)', () => {
     sites: ['Site1'],
     strata: [],
     blockSizes: [4],
-    stratumCaps: [{ levels: [], cap: 4 }],
+    stratumCaps: [{ levelIds: {}, cap: 4 }],
     seed: 'test_seed',
     subjectIdMask: '[SiteID]-[001]'
   };
@@ -72,8 +72,8 @@ describe('RandomizationService (domain)', () => {
       ...baseConfig,
       strata: [{ id: 'age', name: 'Age', levels: ['<65', '>=65'] }],
       stratumCaps: [
-        { levels: ['<65'], cap: 4 },
-        { levels: ['>=65'], cap: 4 }
+        { levelIds: { age: '<65' }, cap: 4 },
+        { levelIds: { age: '>=65' }, cap: 4 }
       ]
     };
     const result = await firstValueFrom(service.generateSchema(strataConfig));

@@ -24,7 +24,7 @@ const mockConfig: RandomizationConfig = {
   sites: ['Site1'],
   strata: [],
   blockSizes: [2],
-  stratumCaps: [{ levels: [], cap: 10 }],
+  stratumCaps: [{ levelIds: {}, cap: 10 }],
   seed: 'test_seed',
   subjectIdMask: '[SiteID]-[001]'
 };

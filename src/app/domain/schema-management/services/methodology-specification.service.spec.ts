@@ -35,7 +35,7 @@ describe('MethodologySpecificationService', () => {
     ],
     blockSizes: [3, 6],
     stratumCaps: [
-      { levels: ['Male', 'Young'], cap: 12 },
+      { levelIds: { sex: 'Male', age: 'Young' }, cap: 12 },
       { levels: ['Male', 'Old'], cap: 9 },
       { levels: ['Female', 'Young'], cap: 15 },
       { levels: ['Female', 'Old'], cap: 6 },
@@ -222,7 +222,7 @@ describe('MethodologySpecificationService', () => {
     it('should handle singular "cap" for exactly 1 cap', () => {
       const cfg: RandomizationConfig = {
         ...stratifiedConfig,
-        stratumCaps: [{ levels: ['Male', 'Young'], cap: 10 }],
+        stratumCaps: [{ levelIds: { sex: 'Male', age: 'Young' }, cap: 10 }],
       };
       const text = service.generateNarrative(cfg);
       expect(text).toContain('1 intersection cap configured');
