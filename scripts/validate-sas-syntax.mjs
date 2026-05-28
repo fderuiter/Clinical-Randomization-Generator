@@ -213,6 +213,22 @@ function checkMacroBalance(tokens) {
   return errors;
 }
 
+/**
+ * Validate Null-Safety violations in variable assignments.
+ * Returns array of error strings.
+ */
+function checkNullSafety(tokens) {
+  const errors = [];
+  for (const tok of tokens) {
+    // Flag unquoted macro variable assignments which cause syntax errors if the macro variable is null/empty.
+    // e.g. "x = &val" instead of "x = '&val'"
+    if (/^[a-zA-Z_]\w*\s*=\s*&[a-zA-Z_]\w*$/i.test(tok)) {
+      errors.push(`Potential null-safety violation in variable assignment: unquoted macro variable ${tok}`);
+    }
+  }
+  return errors;
+}
+
 // ---------------------------------------------------------------------------
 // Per-file validator
 // ---------------------------------------------------------------------------
@@ -261,6 +277,10 @@ async function validateFile(filePath) {
   // 7. %MACRO / %MEND balance
   const macroErrors = checkMacroBalance(tokens);
   errors.push(...macroErrors);
+
+  // 8. Null-Safety Linting
+  const nullSafetyErrors = checkNullSafety(tokens);
+  errors.push(...nullSafetyErrors);
 
   return errors;
 }

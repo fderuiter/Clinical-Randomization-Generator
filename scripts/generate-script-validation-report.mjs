@@ -34,6 +34,7 @@ const getArg = (flag) => {
 const pythonResult  = getArg('--python-result') ?? 'skipped';
 const rResult       = getArg('--r-result')      ?? 'skipped';
 const sasResult     = getArg('--sas-result')    ?? 'skipped';
+const stataResult   = getArg('--stata-result')  ?? 'skipped';
 
 const __filename    = fileURLToPath(import.meta.url);
 const repoRoot      = resolve(__filename, '..', '..');
@@ -77,10 +78,10 @@ const LANGUAGES = [
   {
     name:     'Stata',
     ext:      'do',
-    ciResult: 'not-checked',
-    ciJobName: null,
-    checkKind: 'Not checked in CI',
-    note:     'Stata execution deferred to end-user environment — see `docs/SAS_Stata_Exception_Report.md`.',
+    ciResult: stataResult,
+    ciJobName: 'stata_static_validation',
+    checkKind: 'Static syntax validation (no Stata runtime required)',
+    note:     'Full execution deferred to end-user environment — see `docs/SAS_Stata_Exception_Report.md`.',
   },
 ];
 
