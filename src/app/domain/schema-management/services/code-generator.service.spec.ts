@@ -501,7 +501,7 @@ describe('CodeGeneratorService', () => {
     it('R: should embed PROPORTIONAL strategy header with global cap', () => {
       const code = service.generateR(proportionalConfig);
       expect(code).toContain('Cap Strategy: PROPORTIONAL');
-      expect(code).toContain('Global Enrollment Cap (per site): 100');
+      expect(code).toContain('Total Study Enrollment: 100');
       expect(code).toContain('LRM-computed');
     });
 
@@ -519,7 +519,7 @@ describe('CodeGeneratorService', () => {
     it('Python: should embed PROPORTIONAL strategy header', () => {
       const code = service.generatePython(proportionalConfig);
       expect(code).toContain('Cap Strategy: PROPORTIONAL');
-      expect(code).toContain('Global Enrollment Cap (per site): 100');
+      expect(code).toContain('Total Study Enrollment: 100');
     });
 
     it('SAS: should embed PROPORTIONAL strategy comment', () => {

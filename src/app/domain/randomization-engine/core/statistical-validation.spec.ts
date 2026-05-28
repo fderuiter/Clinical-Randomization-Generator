@@ -317,8 +317,8 @@ describe('ICH E9 – Stratum Cap Enforcement: dynamic caps are never exceeded', 
       const g2Count = result.schema.filter(r => r.stratum['grp'] === 'G2').length;
 
       // Sites: 2. Each site enrolls cap subjects per stratum.
-      expect(g1Count).toBe(2 * 8);
-      expect(g2Count).toBe(2 * 12);
+      expect(g1Count).toBe(8);
+      expect(g2Count).toBe(12);
     }
   });
 
@@ -493,7 +493,7 @@ describe('ICH E9 – Determinism: exact reproducibility across environments', ()
       sites: ['Site1'],
       stratumCaps: [{ levels: [], cap: 8 }],
       blockSizes: [4],
-      seed: GOLDEN_SEED,
+      legacyMultiplicativeBehavior: true, seed: GOLDEN_SEED,
     };
 
     const result = generateRandomizationSchema(config);

@@ -174,7 +174,7 @@ export class MethodologySpecificationService {
 
     if (strategy === 'PROPORTIONAL') {
       const globalCapPart = config.globalCap !== undefined
-        ? ` The global enrollment cap per site is set to ${config.globalCap} subjects.`
+        ? ` The total study enrollment is set to ${config.globalCap} subjects.`
         : '';
       const pctLines = strata.map(s => {
         const detailByName = new Map((s.levelDetails ?? []).map(d => [d.name, d]));

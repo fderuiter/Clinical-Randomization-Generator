@@ -282,6 +282,9 @@ arms <- c(${arms.map(a => '"' + a.id + '"').join(', ')})
 arm_names <- c(${arms.map(a => '"' + a.name + '"').join(', ')})
 ratios <- c(${arms.map(a => a.ratio).join(', ')})
 total_ratio <- sum(ratios)
+legacy_multiplicative <- ${config.legacyMultiplicativeBehavior ? 'TRUE' : 'FALSE'}
+global_cap <- ${config.globalCap ?? 0}
+
 names(ratios) <- arms
 names(arm_names) <- arms
 
@@ -510,6 +513,11 @@ ${!isMarginal ? `
 }
 
 schema <- do.call(rbind, schema_list)
+
+if (!legacy_multiplicative && nrow(schema) > global_cap) {
+  schema <- head(schema, global_cap)
+}
+
 if (is.null(schema) || nrow(schema) == 0) {
   base_schema <- data.frame(
     SubjectID = character(0),
@@ -583,7 +591,7 @@ if (nrow(schema) > 0) {
     if (strategy === 'PROPORTIONAL') {
       lines.push(`${prefix} Cap Strategy: PROPORTIONAL (Largest Remainder Method)`);
       if (config.globalCap !== undefined) {
-        lines.push(`${prefix} Global Enrollment Cap (per site): ${config.globalCap}`);
+        lines.push(`${prefix} Total Study Enrollment: ${config.globalCap}`);
       }
       for (const s of (config.strata || [])) {
         const detailByName = new Map((s.levelDetails ?? []).map(d => [d.name, d]));
@@ -682,6 +690,9 @@ block_sizes <- c(${blockSizes.join(', ')})
 arms <- c(${arms.map(a => '"' + a.name + '"').join(', ')})
 ratios <- c(${arms.map(a => a.ratio).join(', ')})
 total_ratio <- sum(ratios)
+legacy_multiplicative <- ${config.legacyMultiplicativeBehavior ? 'TRUE' : 'FALSE'}
+global_cap <- ${config.globalCap ?? 0}
+
 
 # Block Math Failsafe
 if (any(block_sizes %% total_ratio != 0)) {
@@ -785,6 +796,11 @@ for (site in sites) {
 }
 
 schema <- do.call(rbind, schema_list)
+
+if (!legacy_multiplicative && nrow(schema) > global_cap) {
+  schema <- head(schema, global_cap)
+}
+
 if (is.null(schema) || nrow(schema) == 0) {
   base_schema <- data.frame(
     SubjectID   = character(0),
@@ -887,6 +903,9 @@ ${capsCode}
 arms = [${arms.map(a => `{"id": "${a.id}", "name": "${a.name}", "ratio": ${a.ratio}}`).join(', ')}]
 arm_ratios = {arm["id"]: arm["ratio"] for arm in arms}
 total_ratio = sum(arm["ratio"] for arm in arms)
+legacy_multiplicative = ${config.legacyMultiplicativeBehavior ? 'True' : 'False'}
+global_cap = ${config.globalCap ?? 0}
+
 
 # Imbalance Tracking (Global)
 marginal_imbalance = {
@@ -1097,6 +1116,9 @@ ${!isMarginal ? `
     schema.append(row)
 
 df = pd.DataFrame(schema)
+if not legacy_multiplicative and len(df) > global_cap:
+    df = df.head(global_cap)
+
 print("\\n--- Generated Randomization Schema (First 5 Rows) ---")
 print(df.head() if not df.empty else "No rows generated.")
 
@@ -1179,6 +1201,9 @@ ${pyMarginalCaps || '    # No marginal caps defined'}
 # Treatment Arms
 arms = [${arms.map(a => `{"name": "${a.name}", "ratio": ${a.ratio}}`).join(', ')}]
 total_ratio = sum(arm["ratio"] for arm in arms)
+legacy_multiplicative = ${config.legacyMultiplicativeBehavior ? 'True' : 'False'}
+global_cap = ${config.globalCap ?? 0}
+
 
 # Block Math Failsafe
 if any(bs % total_ratio != 0 for bs in block_sizes):
@@ -1262,6 +1287,9 @@ for site in sites:
         ]
 
 df = pd.DataFrame(schema)
+if not legacy_multiplicative and len(df) > global_cap:
+    df = df.head(global_cap)
+
 print("\\n--- Generated Randomization Schema (First 5 Rows) ---")
 print(df.head())
 
@@ -1407,6 +1435,9 @@ typescript web application, but the statistical properties and parameters are id
 
 %let seed = ${this.hashCode(config.seed)};
 %let total_ratio = ${totalRatio};
+%let global_cap = ${config.globalCap ?? 0};
+%let legacy_multiplicative = ${config.legacyMultiplicativeBehavior ? 1 : 0};
+
 
 /* User-defined Parameters */
 %let arms_ids = ${sasArmsIds};
@@ -1899,6 +1930,9 @@ ${sasMethodologyBlock}
 
 %let seed = ${this.hashCode(config.seed)};
 %let total_ratio = ${totalRatio};
+%let global_cap = ${config.globalCap ?? 0};
+%let legacy_multiplicative = ${config.legacyMultiplicativeBehavior ? 1 : 0};
+
 
 /* User-defined Parameters */
 %let arms = ${sasArms};
@@ -2146,6 +2180,9 @@ stratum_caps <- c(
 arms <- c(${arms.map(a => '"' + a.name + '"').join(', ')})
 ratios <- c(${arms.map(a => a.ratio).join(', ')})
 total_ratio <- sum(ratios)
+legacy_multiplicative <- ${config.legacyMultiplicativeBehavior ? 'TRUE' : 'FALSE'}
+global_cap <- ${config.globalCap ?? 0}
+
 
 # Block Math Failsafe
 if (any(block_sizes %% total_ratio != 0)) {
@@ -2234,6 +2271,11 @@ for (site in sites) {
 }
 
 schema <- do.call(rbind, schema_list)
+
+if (!legacy_multiplicative && nrow(schema) > global_cap) {
+  schema <- head(schema, global_cap)
+}
+
 
 # Guard: when no subjects were generated (e.g. all caps are 0 or sites is empty),
 # do.call(rbind, list()) returns NULL. Create an empty typed data.frame so that
@@ -2333,6 +2375,9 @@ ${pyCapsDict || '    (): 0'}
 # Treatment Arms
 arms = [${arms.map(a => `{"name": "${a.name}", "ratio": ${a.ratio}}`).join(', ')}]
 total_ratio = sum(arm["ratio"] for arm in arms)
+legacy_multiplicative = ${config.legacyMultiplicativeBehavior ? 'True' : 'False'}
+global_cap = ${config.globalCap ?? 0}
+
 
 # Strata
 strata_levels = [
@@ -2394,6 +2439,9 @@ for site in sites:
             block_number += 1
 
 df = pd.DataFrame(schema)
+if not legacy_multiplicative and len(df) > global_cap:
+    df = df.head(global_cap)
+
 print("\\n--- Generated Randomization Schema (First 5 Rows) ---")
 print(df.head() if not df.empty else "No rows generated.")
 
@@ -2491,6 +2539,9 @@ ${sasMethodologyBlock}
 
 %let seed = ${this.hashCode(config.seed)};
 %let total_ratio = ${totalRatio};
+%let global_cap = ${config.globalCap ?? 0};
+%let legacy_multiplicative = ${config.legacyMultiplicativeBehavior ? 1 : 0};
+
 
 /* User-defined Parameters */
 %let arms = ${arms.map(a => `"${a.name}"`).join(' ')};
@@ -3395,6 +3446,9 @@ set seed ${this.hashCode(config.seed)}
 
 * ─── User-defined Parameters ────────────────────────────────────────────────
 local total_ratio = ${totalRatio}
+local global_cap = ${config.globalCap ?? 0}
+local legacy_multiplicative = ${config.legacyMultiplicativeBehavior ? 1 : 0}
+
 local block_sizes "${blockSizes.join(' ')}"
 local n_bs : word count \`block_sizes'
 local n_arms = ${n_arms}
@@ -3749,6 +3803,9 @@ set seed ${this.hashCode(config.seed)}
 
 * ─── User-defined Parameters ────────────────────────────────────────────────
 local total_ratio = ${totalRatio}
+local global_cap = ${config.globalCap ?? 0}
+local legacy_multiplicative = ${config.legacyMultiplicativeBehavior ? 1 : 0}
+
 local block_sizes "${blockSizes.join(' ')}"
 local n_bs : word count \`block_sizes'
 local n_arms = ${arms.length}

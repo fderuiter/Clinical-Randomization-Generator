@@ -148,7 +148,7 @@ const CONFIG_1: RandomizationConfig = {
   strata: [],
   blockSizes: [4],
   stratumCaps: [{ levels: [], cap: 8 }],
-  seed: 'CLINICAL_TRIAL_A',
+  legacyMultiplicativeBehavior: true, seed: 'CLINICAL_TRIAL_A',
   subjectIdMask: '[SiteID]-[001]'
 };
 
@@ -162,7 +162,7 @@ const CONFIG_2: RandomizationConfig = {
   strata: [{ id: 'age', name: 'Age', levels: ['<65', '>=65'] }],
   blockSizes: [4],
   stratumCaps: [{ levels: ['<65'], cap: 12 }, { levels: ['>=65'], cap: 8 }],
-  seed: 'CLINICAL_TRIAL_B',
+  legacyMultiplicativeBehavior: true, seed: 'CLINICAL_TRIAL_B',
   subjectIdMask: '[SiteID]-[001]'
 };
 
@@ -184,7 +184,7 @@ const CONFIG_3: RandomizationConfig = {
     { levels: ['F', '<65'],  cap: 6 },
     { levels: ['F', '>=65'], cap: 6 }
   ],
-  seed: 'CLINICAL_TRIAL_C',
+  legacyMultiplicativeBehavior: true, seed: 'CLINICAL_TRIAL_C',
   subjectIdMask: '[SiteID]-[StratumCode]-[001]'
 };
 
@@ -215,7 +215,7 @@ const CONFIG_4: RandomizationConfig = {
     { levels: ['F', '>=65', 'NA'], cap: 3 },
     { levels: ['F', '>=65', 'EU'], cap: 3 }
   ],
-  seed: 'CLINICAL_TRIAL_D',
+  legacyMultiplicativeBehavior: true, seed: 'CLINICAL_TRIAL_D',
   subjectIdMask: '[SiteID]-[0001]'
 };
 
@@ -229,7 +229,7 @@ const CONFIG_5: RandomizationConfig = {
   strata: [{ id: 'risk', name: 'Risk', levels: ['Low', 'High'] }],
   blockSizes: [4],
   stratumCaps: [{ levels: ['Low'], cap: 50 }, { levels: ['High'], cap: 50 }],
-  seed: 'CLINICAL_TRIAL_E',
+  legacyMultiplicativeBehavior: true, seed: 'CLINICAL_TRIAL_E',
   subjectIdMask: '[SiteID]-[001]'
 };
 

@@ -92,6 +92,11 @@ export interface RandomizationConfig {
    * Key = Stratum Code computed by `computeStratumCode()` (e.g. `"MAL-U65-USA"`).
    */
   stratumBlockOverrides?: Record<string, BlockRule>;
+  /** 
+   * If true, subjects are generated per-site using independent loops (legacy behaviour).
+   * If false or undefined, subjects are drawn from a shared global pool to enforce a strict study-wide ceiling.
+   */
+  legacyMultiplicativeBehavior?: boolean;
   /** Randomization method. Defaults to 'BLOCK' when absent. */
   randomizationMethod?: RandomizationMethod;
   /** Minimization algorithm configuration (used when randomizationMethod === 'MINIMIZATION'). */

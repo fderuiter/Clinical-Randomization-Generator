@@ -32,7 +32,8 @@
       ],
       "seed": "GOLDEN_SEED_1",
       "subjectIdMask": "{SITE}-{SEQ:3}",
-      "randomizationMethod": "PERMUTED_BLOCK"
+      "randomizationMethod": "PERMUTED_BLOCK",
+      "legacyMultiplicativeBehavior": true
     },
     "schema": [
       {
@@ -237,7 +238,8 @@
       "minimizationConfig": {
         "p": 0.8,
         "totalSampleSize": 10
-      }
+      },
+      "legacyMultiplicativeBehavior": true
     },
     "schema": [
       {
@@ -409,7 +411,8 @@
       "capStrategy": "MARGINAL_ONLY",
       "seed": "GOLDEN_SEED_3",
       "subjectIdMask": "{SITE}-{SEQ:3}",
-      "randomizationMethod": "PERMUTED_BLOCK"
+      "randomizationMethod": "PERMUTED_BLOCK",
+      "legacyMultiplicativeBehavior": true
     },
     "schema": [
       {
@@ -566,7 +569,8 @@
       ],
       "seed": "GOLDEN_SEED_4",
       "subjectIdMask": "{SITE}-{SEQ:5}",
-      "randomizationMethod": "PERMUTED_BLOCK"
+      "randomizationMethod": "PERMUTED_BLOCK",
+      "legacyMultiplicativeBehavior": true
     },
     "schema": [
       {
@@ -686,7 +690,8 @@
       ],
       "seed": "GOLDEN_SEED_5",
       "subjectIdMask": "{SITE}-{SEQ:3}",
-      "randomizationMethod": "PERMUTED_BLOCK"
+      "randomizationMethod": "PERMUTED_BLOCK",
+      "legacyMultiplicativeBehavior": true
     },
     "schema": [
       {

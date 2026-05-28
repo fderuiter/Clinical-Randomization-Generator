@@ -145,45 +145,126 @@ function generateStandard(
   usedSubjectIds: Set<string>
 ): void {
   const capsDict: Record<string, number> = {};
+  let totalCap = 0;
   if (resolvedConfig.stratumCaps) {
     resolvedConfig.stratumCaps.forEach(c => {
       capsDict[c.levels.join('|')] = c.cap;
+      totalCap += c.cap;
     });
   }
 
-  for (const site of resolvedConfig.sites) {
-    let siteSubjectCount = 0;
-    for (const stratum of strataCombinations) {
+  if (resolvedConfig.legacyMultiplicativeBehavior) {
+    for (const site of resolvedConfig.sites) {
+      let siteSubjectCount = 0;
+      for (const stratum of strataCombinations) {
+        const comboKey = resolvedConfig.strata.map(s => stratum[s.id] || '').join('|');
+        const maxSubjectsPerStratum = capsDict[comboKey] || 0;
+        const stratumCode = computeStratumCode(resolvedConfig.strata, stratum);
+
+        let stratumSubjectCount = 0;
+        let blockNumber = 1;
+
+        const rule = resolveBlockRule(resolvedConfig, site, stratumCode);
+        const blockState = newBlockState();
+
+        while (stratumSubjectCount < maxSubjectsPerStratum) {
+          const blockSize = selectBlockSize(rule, blockState, rng);
+          const block = buildBlock(resolvedConfig.arms, blockSize, totalRatio, rng);
+
+          for (const arm of block) {
+            siteSubjectCount++;
+            stratumSubjectCount++;
+
+            const subjectId = generateSubjectId(
+              resolvedConfig.subjectIdMask,
+              { site, stratumCode, sequence: siteSubjectCount },
+              usedSubjectIds
+            );
+
+            schema.push({ subjectId, site, stratum, stratumCode, blockNumber, blockSize, treatmentArm: arm.name, treatmentArmId: arm.id });
+
+            if (stratumSubjectCount >= maxSubjectsPerStratum) break;
+          }
+          blockNumber++;
+        }
+      }
+    }
+  } else {
+    // New coordinated global logic
+    const globalCap = resolvedConfig.globalCap ?? totalCap;
+    
+    let activePool: Array<{site: string, stratum: Record<string, string>}> = [];
+    for (const site of resolvedConfig.sites) {
+      for (const stratum of strataCombinations) {
+        const comboKey = resolvedConfig.strata.map(s => stratum[s.id] || '').join('|');
+        if ((capsDict[comboKey] || 0) > 0) {
+          activePool.push({ site, stratum });
+        }
+      }
+    }
+
+    const stratumCounts: Record<string, number> = {};
+    const siteSubjectCounts: Record<string, number> = {};
+    const siteBlockStates = new Map<string, BlockState>();
+    const siteBlockNumbers = new Map<string, number>();
+
+    let globalSubjectCount = 0;
+    let poolNeedsFilter = false;
+
+    while (activePool.length > 0 && globalSubjectCount < globalCap) {
+      const poolIdx = Math.floor(rng() * activePool.length);
+      const { site, stratum } = activePool[poolIdx];
+
       const comboKey = resolvedConfig.strata.map(s => stratum[s.id] || '').join('|');
       const maxSubjectsPerStratum = capsDict[comboKey] || 0;
+
       const stratumCode = computeStratumCode(resolvedConfig.strata, stratum);
-
-      let stratumSubjectCount = 0;
-      let blockNumber = 1;
-
-      // Resolve which block rule to apply and create a fresh tracking state.
       const rule = resolveBlockRule(resolvedConfig, site, stratumCode);
-      const blockState = newBlockState();
 
-      while (stratumSubjectCount < maxSubjectsPerStratum) {
-        const blockSize = selectBlockSize(rule, blockState, rng);
-        const block = buildBlock(resolvedConfig.arms, blockSize, totalRatio, rng);
+      const stateKey = `${site}|${stratumCode}`;
+      if (!siteBlockStates.has(stateKey)) siteBlockStates.set(stateKey, newBlockState());
+      const blockState = siteBlockStates.get(stateKey)!;
 
-        for (const arm of block) {
-          siteSubjectCount++;
-          stratumSubjectCount++;
+      const blockSize = selectBlockSize(rule, blockState, rng);
+      const block = buildBlock(resolvedConfig.arms, blockSize, totalRatio, rng);
 
-          const subjectId = generateSubjectId(
-            resolvedConfig.subjectIdMask,
-            { site, stratumCode, sequence: siteSubjectCount },
-            usedSubjectIds
-          );
+      const blockNumber = (siteBlockNumbers.get(stateKey) || 0) + 1;
+      siteBlockNumbers.set(stateKey, blockNumber);
 
-          schema.push({ subjectId, site, stratum, stratumCode, blockNumber, blockSize, treatmentArm: arm.name, treatmentArmId: arm.id });
+      for (const arm of block) {
+        if (globalSubjectCount >= globalCap) break;
 
-          if (stratumSubjectCount >= maxSubjectsPerStratum) break;
+        const currentStratumCount = stratumCounts[comboKey] || 0;
+        if (currentStratumCount >= maxSubjectsPerStratum) {
+          poolNeedsFilter = true;
+          break;
         }
-        blockNumber++;
+
+        stratumCounts[comboKey] = currentStratumCount + 1;
+        globalSubjectCount++;
+
+        const currentSiteCount = siteSubjectCounts[site] || 0;
+        siteSubjectCounts[site] = currentSiteCount + 1;
+
+        const subjectId = generateSubjectId(
+          resolvedConfig.subjectIdMask,
+          { site, stratumCode, sequence: currentSiteCount + 1 },
+          usedSubjectIds
+        );
+
+        schema.push({ subjectId, site, stratum, stratumCode, blockNumber, blockSize, treatmentArm: arm.name, treatmentArmId: arm.id });
+        
+        if (stratumCounts[comboKey] >= maxSubjectsPerStratum) {
+          poolNeedsFilter = true;
+        }
+      }
+
+      if (poolNeedsFilter) {
+        activePool = activePool.filter(combo => {
+          const k = resolvedConfig.strata.map(s => combo.stratum[s.id] || '').join('|');
+          return (stratumCounts[k] || 0) < (capsDict[k] || 0);
+        });
+        poolNeedsFilter = false;
       }
     }
   }
@@ -211,8 +292,6 @@ function generateMarginalOnly(
   schema: GeneratedSchema[],
   usedSubjectIds: Set<string>
 ): void {
-  // Use Map to avoid prototype-pollution risks when level names are user-controlled.
-  // Lookup: factorId → (levelName → marginalCap); undefined = uncapped.
   const marginalCapMap = new Map<string, Map<string, number | undefined>>();
   let hasFullyCappedFactor = false;
   for (const factor of resolvedConfig.strata) {
@@ -224,8 +303,6 @@ function generateMarginalOnly(
     }
     marginalCapMap.set(factor.id, levelMap);
 
-    // A fully-capped factor has a finite, non-negative cap on every one of its levels.
-    // This guarantees every stratum combination containing this factor is eventually pruned.
     const allLevelsCapped =
       factor.levels.length > 0 &&
       factor.levels.every(lvl => {
@@ -237,9 +314,6 @@ function generateMarginalOnly(
     }
   }
 
-  // Guard: MARGINAL_ONLY terminates only if every possible stratum combination contains
-  // at least one capped level. Requiring one factor where ALL levels have a finite cap
-  // guarantees this: every combination that includes that factor is eventually pruned.
   if (!hasFullyCappedFactor) {
     throw new Error(
       'MARGINAL_ONLY randomization requires at least one stratification factor with a finite ' +
@@ -248,14 +322,120 @@ function generateMarginalOnly(
     );
   }
 
-  for (const site of resolvedConfig.sites) {
-    let siteSubjectCount = 0;
-    let blockNumber = 0;
+  if (resolvedConfig.legacyMultiplicativeBehavior) {
+    for (const site of resolvedConfig.sites) {
+      let siteSubjectCount = 0;
+      let blockNumber = 0;
 
-    // Per-stratum block-selection state (FIXED_SEQUENCE index / RANDOM_POOL usage counts).
+      const siteBlockStates = new Map<string, BlockState>();
+
+      const marginalCounts = new Map<string, Map<string, number>>();
+      for (const factor of resolvedConfig.strata) {
+        const countMap = new Map<string, number>();
+        for (const level of factor.levels) {
+          countMap.set(level, 0);
+        }
+        marginalCounts.set(factor.id, countMap);
+      }
+
+      let activePool = [...strataCombinations];
+      let poolNeedsFilter = true;
+
+      while (activePool.length > 0) {
+        const poolIdx = Math.floor(rng() * activePool.length);
+        const stratum = activePool[poolIdx];
+
+        const stratumCode = computeStratumCode(resolvedConfig.strata, stratum);
+        const rule = resolveBlockRule(resolvedConfig, site, stratumCode);
+        if (!siteBlockStates.has(stratumCode)) {
+          siteBlockStates.set(stratumCode, newBlockState());
+        }
+        const blockSize = selectBlockSize(rule, siteBlockStates.get(stratumCode)!, rng);
+        const block = buildBlock(resolvedConfig.arms, blockSize, totalRatio, rng);
+        blockNumber++;
+
+        for (const arm of block) {
+          let canAdd = true;
+          for (const factor of resolvedConfig.strata) {
+            const levelValue = stratum[factor.id] || '';
+            if (!levelValue) continue;
+            const cap = marginalCapMap.get(factor.id)?.get(levelValue);
+            const currentCount = marginalCounts.get(factor.id)?.get(levelValue) ?? 0;
+            if (cap !== undefined && currentCount >= cap) {
+              canAdd = false;
+              break;
+            }
+          }
+          if (!canAdd) break; 
+
+          siteSubjectCount++;
+
+          const subjectId = generateSubjectId(
+            resolvedConfig.subjectIdMask,
+            { site, stratumCode, sequence: siteSubjectCount },
+            usedSubjectIds
+          );
+
+          schema.push({
+            subjectId, site, stratum, stratumCode,
+            blockNumber,
+            blockSize,
+            treatmentArm: arm.name,
+            treatmentArmId: arm.id
+          });
+
+          for (const factor of resolvedConfig.strata) {
+            const levelValue = stratum[factor.id] || '';
+            if (levelValue) {
+              const countMap = marginalCounts.get(factor.id);
+              if (countMap) {
+                const newCount = (countMap.get(levelValue) ?? 0) + 1;
+                countMap.set(levelValue, newCount);
+                const cap = marginalCapMap.get(factor.id)?.get(levelValue);
+                if (cap !== undefined && newCount >= cap) {
+                  poolNeedsFilter = true;
+                }
+              }
+            }
+          }
+        }
+
+        if (poolNeedsFilter) {
+          const newPool: Record<string, string>[] = [];
+          for (const combo of activePool) {
+            let valid = true;
+            for (const factor of resolvedConfig.strata) {
+              const factorId = factor.id;
+              const levelValue = combo[factorId] || '';
+              if (!levelValue) continue;
+
+              const factorCaps = marginalCapMap.get(factorId);
+              const cap = factorCaps ? factorCaps.get(levelValue) : undefined;
+
+              if (cap !== undefined) {
+                const count = marginalCounts.get(factorId)?.get(levelValue) ?? 0;
+                if (count >= cap) {
+                  valid = false;
+                  break;
+                }
+              }
+            }
+            if (valid) {
+              newPool.push(combo);
+            }
+          }
+          activePool = newPool;
+          poolNeedsFilter = false;
+        }
+      }
+    }
+  } else {
+    // New coordinated global logic for MARGINAL_ONLY
     const siteBlockStates = new Map<string, BlockState>();
-
-    // Marginal enrollment counts are tracked per-site (each site is independent).
+    const siteSubjectCounts = new Map<string, number>();
+    const siteBlockNumbers = new Map<string, number>();
+    
+    // Marginal enrollment counts are tracked globally across ALL sites.
     const marginalCounts = new Map<string, Map<string, number>>();
     for (const factor of resolvedConfig.strata) {
       const countMap = new Map<string, number>();
@@ -265,29 +445,33 @@ function generateMarginalOnly(
       marginalCounts.set(factor.id, countMap);
     }
 
-    // Active pool of valid stratum combinations (those that haven't hit any marginal cap).
-    let activePool = [...strataCombinations];
+    let activePool: Array<{site: string, stratum: Record<string, string>}> = [];
+    for (const site of resolvedConfig.sites) {
+      siteSubjectCounts.set(site, 0);
+      for (const stratum of strataCombinations) {
+        activePool.push({ site, stratum });
+      }
+    }
+    
     let poolNeedsFilter = true;
 
     while (activePool.length > 0) {
-      // Randomly select a combination from the active pool.
       const poolIdx = Math.floor(rng() * activePool.length);
-      const stratum = activePool[poolIdx];
+      const { site, stratum } = activePool[poolIdx];
 
-      // Resolve block rule and pick a block size using the hierarchical strategy.
       const stratumCode = computeStratumCode(resolvedConfig.strata, stratum);
       const rule = resolveBlockRule(resolvedConfig, site, stratumCode);
-      if (!siteBlockStates.has(stratumCode)) {
-        siteBlockStates.set(stratumCode, newBlockState());
-      }
-      const blockSize = selectBlockSize(rule, siteBlockStates.get(stratumCode)!, rng);
+      
+      const stateKey = `${site}|${stratumCode}`;
+      if (!siteBlockStates.has(stateKey)) siteBlockStates.set(stateKey, newBlockState());
+      
+      const blockSize = selectBlockSize(rule, siteBlockStates.get(stateKey)!, rng);
       const block = buildBlock(resolvedConfig.arms, blockSize, totalRatio, rng);
-      // Increment per generated block so downstream grouping/sorting (which uses
-      // site|stratumCode|blockNumber) remains meaningful in MARGINAL_ONLY mode.
-      blockNumber++;
+      
+      const blockNumber = (siteBlockNumbers.get(stateKey) || 0) + 1;
+      siteBlockNumbers.set(stateKey, blockNumber);
 
       for (const arm of block) {
-        // Check if adding this subject would breach any marginal cap.
         let canAdd = true;
         for (const factor of resolvedConfig.strata) {
           const levelValue = stratum[factor.id] || '';
@@ -299,13 +483,14 @@ function generateMarginalOnly(
             break;
           }
         }
-        if (!canAdd) break; // Stop the block early when a cap is reached.
+        if (!canAdd) break; 
 
-        siteSubjectCount++;
+        const siteCount = (siteSubjectCounts.get(site) ?? 0) + 1;
+        siteSubjectCounts.set(site, siteCount);
 
         const subjectId = generateSubjectId(
           resolvedConfig.subjectIdMask,
-          { site, stratumCode, sequence: siteSubjectCount },
+          { site, stratumCode, sequence: siteCount },
           usedSubjectIds
         );
 
@@ -317,7 +502,6 @@ function generateMarginalOnly(
           treatmentArmId: arm.id
         });
 
-        // Update marginal counts for every factor level in this stratum.
         for (const factor of resolvedConfig.strata) {
           const levelValue = stratum[factor.id] || '';
           if (levelValue) {
@@ -334,15 +518,13 @@ function generateMarginalOnly(
         }
       }
 
-      // Remove combinations from the pool that would now breach a marginal cap.
       if (poolNeedsFilter) {
-        const newPool: Record<string, string>[] = [];
+        const newPool: Array<{site: string, stratum: Record<string, string>}> = [];
         for (const combo of activePool) {
-
           let valid = true;
           for (const factor of resolvedConfig.strata) {
             const factorId = factor.id;
-            const levelValue = combo[factorId] || '';
+            const levelValue = combo.stratum[factorId] || '';
             if (!levelValue) continue;
 
             const factorCaps = marginalCapMap.get(factorId);
