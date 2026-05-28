@@ -12,7 +12,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npm run start',
+    command: process.env.CI ? 'npx wrangler dev --port 4200' : 'npm run start',
     url: 'http://localhost:4200',
     reuseExistingServer: true,
     timeout: 120_000,
