@@ -1,5 +1,6 @@
 import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { Dialog } from '@angular/cdk/dialog';
 import {
   RandomizationConfig,
   RandomizationResult
@@ -8,6 +9,7 @@ import { RandomizationService } from './randomization.service';
 import { ToastService } from '../../core/services/toast.service';
 import { computeAuditHash } from './core/crypto-hash';
 import { generateCryptoSeed } from './core/randomization-algorithm';
+import { MonteCarloModalComponent } from './components/monte-carlo-modal.component';
 import type {
   GenerationCommand,
   MonteCarloCommand,
@@ -32,6 +34,7 @@ export class RandomizationEngineFacade {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly randomizationService = inject(RandomizationService);
   private readonly toastService = inject(ToastService);
+  private readonly dialog = inject(Dialog);
 
   private worker: Worker | null = null;
   private pendingCallbacks = new Map<
@@ -65,7 +68,8 @@ export class RandomizationEngineFacade {
   readonly isMonteCarloRunning = signal(false);
   readonly monteCarloProgress = signal(0);
   readonly monteCarloResults = signal<MonteCarloSuccessPayload | null>(null);
-  readonly showMonteCarloModal = signal(false);
+  
+  private monteCarloDialogRef: any = null;
 
   constructor() {
     if (this.isBrowser) {
@@ -136,11 +140,24 @@ export class RandomizationEngineFacade {
     this.isMonteCarloRunning.set(true);
     this.monteCarloProgress.set(0);
     this.monteCarloResults.set(null);
-    this.showMonteCarloModal.set(true);
+    
+    // Open standardized dialog
+    this.monteCarloDialogRef = this.dialog.open(MonteCarloModalComponent, {
+      panelClass: 'mc-dialog-panel',
+      hasBackdrop: true,
+      disableClose: false,
+      autoFocus: true,
+      restoreFocus: true
+    });
+    
+    this.monteCarloDialogRef.closed.subscribe(() => {
+       // Stop the run if the modal was closed mid-flight or reset state
+       this.closeMonteCarloModal();
+    });
 
     if (!this.worker) {
       this.isMonteCarloRunning.set(false);
-      this.showMonteCarloModal.set(false);
+      this.closeMonteCarloModal();
       return;
     }
 
@@ -159,7 +176,7 @@ export class RandomizationEngineFacade {
       },
       onError: () => {
         this.isMonteCarloRunning.set(false);
-        this.showMonteCarloModal.set(false);
+        this.closeMonteCarloModal();
       }
     });
 
@@ -168,9 +185,13 @@ export class RandomizationEngineFacade {
   }
 
   closeMonteCarloModal(): void {
-    this.showMonteCarloModal.set(false);
+    if (this.monteCarloDialogRef) {
+      this.monteCarloDialogRef.close();
+      this.monteCarloDialogRef = null;
+    }
     this.monteCarloResults.set(null);
     this.monteCarloProgress.set(0);
+    this.isMonteCarloRunning.set(false);
   }
 
   // -------------------------------------------------------------------------

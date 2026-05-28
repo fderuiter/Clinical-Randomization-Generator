@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID } from '@angular/core';
+import { Dialog, DialogModule } from '@angular/cdk/dialog';
 import { RandomizationEngineFacade } from './randomization-engine.facade';
 import { RandomizationService } from './randomization.service';
 import { RandomizationConfig } from '../core/models/randomization.model';
@@ -72,16 +73,23 @@ class FakeWorker {
 describe('RandomizationEngineFacade – Monte Carlo', () => {
   let facade: RandomizationEngineFacade;
   let fakeWorker: FakeWorker;
+  let dialogMock: any;
 
   beforeEach(() => {
     fakeWorker = new FakeWorker();
     // Mock crypto.subtle.digest to avoid relative-import vi.mock restrictions in Angular's test system
     vi.spyOn(crypto.subtle, 'digest').mockResolvedValue(new Uint8Array(32).buffer);
 
+    dialogMock = {
+      open: vi.fn().mockReturnValue({ closed: { subscribe: vi.fn() }, close: vi.fn() })
+    };
+
     TestBed.configureTestingModule({
+      imports: [DialogModule],
       providers: [
         { provide: PLATFORM_ID, useValue: 'server' },
-        { provide: RandomizationService, useValue: { generateSchema: vi.fn() } }
+        { provide: RandomizationService, useValue: { generateSchema: vi.fn() } },
+        { provide: Dialog, useValue: dialogMock }
       ]
     });
 
@@ -100,12 +108,11 @@ describe('RandomizationEngineFacade – Monte Carlo', () => {
     expect(facade.isMonteCarloRunning()).toBe(false);
     expect(facade.monteCarloProgress()).toBe(0);
     expect(facade.monteCarloResults()).toBeNull();
-    expect(facade.showMonteCarloModal()).toBe(false);
   });
 
   it('should open the modal and set running=true when runMonteCarlo is called', () => {
     facade.runMonteCarlo(mockConfig);
-    expect(facade.showMonteCarloModal()).toBe(true);
+    expect(dialogMock.open).toHaveBeenCalled();
     expect(facade.isMonteCarloRunning()).toBe(true);
     expect(facade.monteCarloProgress()).toBe(0);
   });
@@ -149,7 +156,6 @@ describe('RandomizationEngineFacade – Monte Carlo', () => {
     expect(facade.monteCarloResults()).toEqual(mockMonteCarloSuccess);
     expect(facade.isMonteCarloRunning()).toBe(false);
     expect(facade.monteCarloProgress()).toBe(100);
-    expect(facade.showMonteCarloModal()).toBe(true); // modal stays open to show results
   });
 
   it('should set attrition results including retainedCount when attrition > 0', () => {
@@ -172,7 +178,6 @@ describe('RandomizationEngineFacade – Monte Carlo', () => {
 
     facade.closeMonteCarloModal();
 
-    expect(facade.showMonteCarloModal()).toBe(false);
     expect(facade.monteCarloResults()).toBeNull();
     expect(facade.monteCarloProgress()).toBe(0);
   });
