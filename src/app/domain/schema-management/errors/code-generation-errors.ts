@@ -63,3 +63,12 @@ export class ConfigurationValidationError extends CodeGenerationError {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+/** Thrown when static mapping guard detects a mismatch between schema variables and generated logic parameters. */
+export class MappingMismatchError extends CodeGenerationError {
+  constructor(language: string, detail: string, context: Partial<RandomizationConfig> | null = null) {
+    super(`Mapping Mismatch in ${language} template: ${detail}`, context);
+    this.name = 'MappingMismatchError';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}

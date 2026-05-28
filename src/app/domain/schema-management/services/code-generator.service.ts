@@ -4,6 +4,7 @@ import { RandomizationConfig, StratificationFactor } from '../../core/models/ran
 import { APP_VERSION } from '../../../../environments/version';
 import {
   ConfigurationValidationError,
+  MappingMismatchError,
   StrataParsingError,
   TemplateCompilationError,
   UnsupportedLanguageError,
@@ -24,22 +25,27 @@ export class CodeGeneratorService {
    */
   generate(language: 'R' | 'SAS' | 'Python' | 'STATA', config: RandomizationConfig): string {
     this.validateConfig(config);
+    let output: string;
     if (config.randomizationMethod === 'MINIMIZATION') {
       switch (language) {
-        case 'R':      return this.buildRMinimization(config);
-        case 'SAS':    return this.buildSasMinimization(config);
-        case 'Python': return this.buildPythonMinimization(config);
-        case 'STATA':  return this.buildStataMinimization(config);
+        case 'R':      output = this.buildRMinimization(config); break;
+        case 'SAS':    output = this.buildSasMinimization(config); break;
+        case 'Python': output = this.buildPythonMinimization(config); break;
+        case 'STATA':  output = this.buildStataMinimization(config); break;
+        default:       throw new UnsupportedLanguageError(language as string, config);
+      }
+    } else {
+      switch (language) {
+        case 'R':      output = this.generateR(config); break;
+        case 'SAS':    output = this.generateSas(config); break;
+        case 'Python': output = this.generatePython(config); break;
+        case 'STATA':  output = this.generateStata(config); break;
         default:       throw new UnsupportedLanguageError(language as string, config);
       }
     }
-    switch (language) {
-      case 'R':      return this.generateR(config);
-      case 'SAS':    return this.generateSas(config);
-      case 'Python': return this.generatePython(config);
-      case 'STATA':  return this.generateStata(config);
-      default:       throw new UnsupportedLanguageError(language as string, config);
-    }
+
+    this.verifyStaticMappingGuard(language, config, output);
+    return output;
   }
 
   /**
@@ -264,10 +270,10 @@ export class CodeGeneratorService {
 
     const header = this.generateMinimizationHeader('R', config);
 
-    let setupCode = '';
-    let capsCode = '';
-    let strataLines = '';
-    let baseProbsCode = '';
+    let setupCode: string;
+    let capsCode: string;
+    let strataLines: string;
+    let baseProbsCode: string;
 
     try {
       strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + this.escapeRString(l) + '"').join(', ')})`).join('\n');
@@ -873,9 +879,9 @@ if (nrow(schema) > 0) {
 
     const header = this.generateMinimizationHeader('Python', config);
 
-    let setupCode = '';
-    let capsCode = '';
-    let baseProbsCode = '';
+    let setupCode: string;
+    let capsCode: string;
+    let baseProbsCode: string;
 
     try {
       const strataLevelsList = strata.map(s => `    "${s.id}": [${s.levels.map(l => '"' + this.escapePythonString(l) + '"').join(', ')}]`).join(',\n');
@@ -3929,6 +3935,107 @@ list in 1/20, clean noobs
     } catch (e) {
       if (this.isKnownError(e)) throw e;
       throw new TemplateCompilationError('STATA', e, config);
+    }
+  }
+
+  private verifyStaticMappingGuard(language: 'R' | 'SAS' | 'Python' | 'STATA', config: RandomizationConfig, output: string): void {
+    // 1. Verify Seed
+    const expectedSeed = this.hashCode(config.seed).toString();
+    if (!output.includes(expectedSeed)) {
+      throw new MappingMismatchError(language, `Seed hash ${expectedSeed} not found in logic.`, config);
+    }
+
+    // 2. Verify Arms
+    for (const arm of config.arms || []) {
+      let armNameStr = arm.name;
+      if (language === 'R') armNameStr = this.escapeRString(arm.name);
+      else if (language === 'Python') armNameStr = this.escapePythonString(arm.name);
+      else if (language === 'SAS') armNameStr = this.escapeSasString(arm.name);
+      else if (language === 'STATA') armNameStr = this.stataLabelQuote(arm.name);
+
+      if (!output.includes(armNameStr) && !output.includes(arm.name) && !output.includes(this.escapeSasString(arm.name))) {
+        throw new MappingMismatchError(language, `Treatment arm "${arm.name}" not found in logic.`, config);
+      }
+      
+      // Ratios
+      if (!output.includes(arm.ratio.toString())) {
+        throw new MappingMismatchError(language, `Treatment ratio ${arm.ratio} not found in logic.`, config);
+      }
+    }
+
+    // 3. Verify Strata
+    for (const stratum of config.strata || []) {
+      let stratumId = stratum.id;
+      if (language === 'STATA') stratumId = this.sanitizeStataVarName(stratum.id);
+
+      if (!output.includes(stratumId)) {
+        throw new MappingMismatchError(language, `Stratum factor "${stratum.id}" not found in logic.`, config);
+      }
+
+      for (const level of stratum.levels || []) {
+        let levelStr = level;
+        if (language === 'R') levelStr = this.escapeRString(level);
+        else if (language === 'Python') levelStr = this.escapePythonString(level);
+        else if (language === 'SAS') levelStr = this.escapeSasString(level);
+        else if (language === 'STATA') levelStr = this.stataLabelQuote(level);
+
+        if (!output.includes(levelStr) && !output.includes(level)) {
+          throw new MappingMismatchError(language, `Stratum level "${level}" not found in logic.`, config);
+        }
+      }
+    }
+
+    // 4. Identify orphaned variables (variables in script that do not exist in schema)
+    if (language === 'SAS') {
+      const armsMatch = output.match(/%let arms\s*=\s*(.*?);/i);
+      if (armsMatch) {
+        const definedArms = armsMatch[1].match(/"([^"]+)"/g)?.map(s => s.replace(/(^"|"$)/g, '').replace(/""/g, '"')) || [];
+        const schemaArms = config.arms.map(a => a.name);
+        for (const da of definedArms) {
+          if (!schemaArms.includes(da)) {
+            throw new MappingMismatchError(language, `Orphaned variable: Treatment arm "${da}" found in script but not in schema.`, config);
+          }
+        }
+      }
+      const armsNamesMatch = output.match(/%let arms_names\s*=\s*(.*?);/i);
+      if (armsNamesMatch) {
+        const definedArms = armsNamesMatch[1].match(/"([^"]+)"/g)?.map(s => s.replace(/(^"|"$)/g, '').replace(/""/g, '"')) || [];
+        const schemaArms = config.arms.map(a => a.name);
+        for (const da of definedArms) {
+          if (!schemaArms.includes(da)) {
+            throw new MappingMismatchError(language, `Orphaned variable: Treatment arm "${da}" found in script but not in schema.`, config);
+          }
+        }
+      }
+      
+      const strataFactorsMatch = output.match(/%let strata_factors\s*=\s*(.*?);/i);
+      if (strataFactorsMatch) {
+        const definedStrata = strataFactorsMatch[1].match(/"([^"]+)"/g)?.map(s => s.replace(/(^"|"$)/g, '').replace(/""/g, '"')) || [];
+        const schemaStrata = (config.strata || []).map(s => s.id);
+        for (const ds of definedStrata) {
+          if (!schemaStrata.includes(ds)) {
+             throw new MappingMismatchError(language, `Orphaned variable: Stratum "${ds}" found in script but not in schema.`, config);
+          }
+        }
+      }
+    } else if (language === 'STATA') {
+      const armDefs = [...output.matchAll(/local arm_name_\d+\s+`?"([^"]+)"?'?/g)].map(m => m[1]);
+      const schemaArms = config.arms.map(a => a.name);
+      for (const da of armDefs) {
+        if (!schemaArms.includes(da)) {
+          throw new MappingMismatchError(language, `Orphaned variable: Treatment arm "${da}" found in script but not in schema.`, config);
+        }
+      }
+
+      const strataDefs = [...output.matchAll(/local strata_\d+\s+`?"([^"]+)"?'?/g)].map(m => m[1]);
+      const schemaStrata = (config.strata || []).map(s => s.id);
+      for (const ds of strataDefs) {
+        // Stata ID may be sanitized in the generated output, so we need to sanitize schemaStrata to compare
+        const sanitizedSchemaStrata = schemaStrata.map(id => this.sanitizeStataVarName(id));
+        if (!schemaStrata.includes(ds) && !sanitizedSchemaStrata.includes(ds)) {
+          throw new MappingMismatchError(language, `Orphaned variable: Stratum "${ds}" found in script but not in schema.`, config);
+        }
+      }
     }
   }
 }
