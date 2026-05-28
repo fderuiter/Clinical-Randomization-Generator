@@ -46,7 +46,11 @@ export class CodeGeneratorModalComponent implements OnInit {
       return;
     }
     try {
-      const code = this.codeGenService.generate(this.activeTab(), config);
+      const results = this.state.results();
+      const validationSample = results?.schema
+        ? results.schema.slice(0, 10).map(s => ({ subjectId: s.subjectId, treatment: s.treatmentArm }))
+        : [];
+      const code = this.codeGenService.generate(this.activeTab(), config, validationSample);
       this.generatedCode.set(code);
     } catch (e) {
       console.error('Error generating code:', e);

@@ -82,7 +82,7 @@ describe('CodeGeneratorModalComponent (domain)', () => {
       (mockCodeGeneratorService as any).generate.mockReturnValue('Mock R Code');
       component.setActiveTab('R');
       const code = component.currentCode;
-      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('R', mockConfig);
+      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('R', mockConfig, []);
       expect(code).toBe('Mock R Code');
     });
 
@@ -90,7 +90,7 @@ describe('CodeGeneratorModalComponent (domain)', () => {
       (mockCodeGeneratorService as any).generate.mockReturnValue('Mock Python Code');
       component.setActiveTab('Python');
       const code = component.currentCode;
-      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('Python', mockConfig);
+      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('Python', mockConfig, []);
       expect(code).toBe('Mock Python Code');
     });
 
@@ -98,7 +98,7 @@ describe('CodeGeneratorModalComponent (domain)', () => {
       (mockCodeGeneratorService as any).generate.mockReturnValue('Mock SAS Code');
       component.setActiveTab('SAS');
       const code = component.currentCode;
-      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('SAS', mockConfig);
+      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('SAS', mockConfig, []);
       expect(code).toBe('Mock SAS Code');
     });
   });
