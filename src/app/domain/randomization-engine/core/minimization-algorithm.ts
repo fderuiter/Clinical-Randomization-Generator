@@ -178,7 +178,10 @@ export function generateMinimization(
     }
   } else {
     (config.stratumCaps || []).forEach(c => {
-      capsDict[c.levels.join('|')] = c.cap;
+      if (c.levelIds) {
+        const key = Object.keys(c.levelIds).sort().map(k => `${k}:${c.levelIds[k]}`).join('|');
+        capsDict[key] = c.cap;
+      }
     });
   }
 
@@ -200,11 +203,7 @@ export function generateMinimization(
     // Precalculate invariant key for filtering and sampling arrays and filter immediately
     const validPool: PoolCombination[] = [];
     for (const combo of activePool) {
-      let key = "";
-      for (let j = 0; j < strata.length; j++) {
-        if (j > 0) key += "|";
-        key += combo[strata[j].id] || "";
-      }
+      const key = Object.keys(combo).filter(k => k !== '_key').sort().map(k => `${k}:${combo[k]}`).join('|');
       combo._key = key;
       const cap = capsDict[key];
       if (cap === undefined || cap > 0) {
@@ -416,11 +415,7 @@ export function generateMinimization(
         }
       }
     } else {
-      let key = "";
-      for (let j = 0; j < strata.length; j++) {
-        if (j > 0) key += "|";
-        key += subjectProfile[strata[j].id] || "";
-      }
+      const key = Object.keys(subjectProfile).sort().map(k => `${k}:${subjectProfile[k]}`).join('|');
       const newCount = (intersectionCounts[key] ?? 0) + 1;
       intersectionCounts[key] = newCount;
       const cap = capsDict[key];

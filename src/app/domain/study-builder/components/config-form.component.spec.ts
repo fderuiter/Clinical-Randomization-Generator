@@ -59,10 +59,10 @@ describe('ConfigFormComponent (domain)', () => {
     expect(capsArray.length).toBe(4);
 
     const values = capsArray.value;
-    expect(values[0].levels).toEqual(['<65', 'M']);
-    expect(values[1].levels).toEqual(['<65', 'F']);
-    expect(values[2].levels).toEqual(['>=65', 'M']);
-    expect(values[3].levels).toEqual(['>=65', 'F']);
+    expect(values[0].levelIds).toEqual({ age: '<65', gender: 'M' });
+    expect(values[1].levelIds).toEqual({ age: '<65', gender: 'F' });
+    expect(values[2].levelIds).toEqual({ age: '>=65', gender: 'M' });
+    expect(values[3].levelIds).toEqual({ age: '>=65', gender: 'F' });
   });
 
   it('should load simple preset', () => {

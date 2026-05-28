@@ -21,14 +21,14 @@ describe('StudyBuilderStore', () => {
 
   // ── strataCombinations (withComputed) ─────────────────────────────────────
 
-  it('should compute [[]] when strata array is empty', () => {
+  it('should compute [{}] when strata array is empty', () => {
     store.setStrata([]);
-    expect(store.strataCombinations()).toEqual([[]]);
+    expect(store.strataCombinations()).toEqual([{}]);
   });
 
   it('should compute 2 combinations for one stratum with 2 levels', () => {
     store.setStrata([{ id: 'age', name: 'Age', levelsStr: '<65, >=65' }]);
-    expect(store.strataCombinations()).toEqual([['<65'], ['>=65']]);
+    expect(store.strataCombinations()).toEqual([{ age: '<65' }, { age: '>=65' }]);
   });
 
   it('should compute 4 combinations for two strata with 2 levels each', () => {
@@ -38,10 +38,10 @@ describe('StudyBuilderStore', () => {
     ]);
     const combos = store.strataCombinations();
     expect(combos.length).toBe(4);
-    expect(combos[0]).toEqual(['<65', 'M']);
-    expect(combos[1]).toEqual(['<65', 'F']);
-    expect(combos[2]).toEqual(['>=65', 'M']);
-    expect(combos[3]).toEqual(['>=65', 'F']);
+    expect(combos[0]).toEqual({ age: '<65', gender: 'M' });
+    expect(combos[1]).toEqual({ age: '<65', gender: 'F' });
+    expect(combos[2]).toEqual({ age: '>=65', gender: 'M' });
+    expect(combos[3]).toEqual({ age: '>=65', gender: 'F' });
   });
 
   it('should compute 8 combinations for three strata with 2 levels each', () => {
@@ -58,7 +58,7 @@ describe('StudyBuilderStore', () => {
       { id: 'age', name: 'Age', levelsStr: '<65, >=65' },
       { id: 'empty', name: 'Empty', levelsStr: '' }
     ]);
-    expect(store.strataCombinations()).toEqual([['<65'], ['>=65']]);
+    expect(store.strataCombinations()).toEqual([{ age: '<65' }, { age: '>=65' }]);
   });
 
   it('should ignore strata whose levelsStr contains only whitespace', () => {
@@ -66,12 +66,12 @@ describe('StudyBuilderStore', () => {
       { id: 'age', name: 'Age', levelsStr: '<65, >=65' },
       { id: 'blank', name: 'Blank', levelsStr: '   ' }
     ]);
-    expect(store.strataCombinations()).toEqual([['<65'], ['>=65']]);
+    expect(store.strataCombinations()).toEqual([{ age: '<65' }, { age: '>=65' }]);
   });
 
   it('should trim whitespace from individual levels', () => {
     store.setStrata([{ id: 'sex', name: 'Sex', levelsStr: ' M , F ' }]);
-    expect(store.strataCombinations()).toEqual([['M'], ['F']]);
+    expect(store.strataCombinations()).toEqual([{ sex: 'M' }, { sex: 'F' }]);
   });
 
   it('should update strataCombinations reactively when setStrata is called again', () => {
@@ -130,7 +130,7 @@ describe('StudyBuilderStore', () => {
       strata: [{ id: 'age', name: 'Age', levelsStr: '<65, >=65' }],
       sitesStr: '101, 102',
       blockSizesStr: '4, 6',
-      stratumCaps: [{ levels: ['<65'], cap: 10 }, { levels: ['>=65'], cap: 10 }],
+      stratumCaps: [{ levelIds: { age: '<65' }, cap: 10 }, { levelIds: { age: '>=65' }, cap: 10 }],
       seed: 'abc',
       subjectIdMask: '[SiteID]-[001]',
       capStrategy: 'MANUAL_MATRIX',

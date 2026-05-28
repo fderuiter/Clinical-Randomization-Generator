@@ -33,7 +33,7 @@ export interface StudyBuilderFormValue {
   strata: StratumFormValue[];
   sitesStr: string;
   blockSizesStr?: string;
-  stratumCaps: { levels: string[]; cap: number }[];
+  stratumCaps: { levelIds: Record<string, string>; cap: number }[];
   seed: string;
   subjectIdMask: string;
   capStrategy?: CapStrategy;
@@ -158,12 +158,12 @@ export const StudyBuilderStore = signalStore(
      * the `strata` signal changes, replacing the manual `updateStratumCaps()`
      * call that previously lived inside `ConfigFormComponent`.
      */
-    strataCombinations: computed<string[][]>(() => {
+    strataCombinations: computed<Record<string, string>[]>(() => {
       const strataVals = strata();
       const validStrata = strataVals.filter(s => s.levelsStr && s.levelsStr.trim() !== '');
 
       if (validStrata.length === 0) {
-        return [[]]; // single "overall / default" combination
+        return [{}]; // single "overall / default" combination
       }
 
       const levelsList = validStrata.map(s =>
@@ -171,17 +171,18 @@ export const StudyBuilderStore = signalStore(
           .split(',')
           .map(l => l.trim())
           .filter(l => l)
+          .map(l => ({ factorId: s.id, level: l }))
       );
 
-      return levelsList.reduce<string[][]>((acc, curr) => {
-        const result: string[][] = [];
+      return levelsList.reduce<Record<string, string>[]>((acc, curr) => {
+        const result: Record<string, string>[] = [];
         for (const a of acc) {
           for (const c of curr) {
-            result.push([...a, c]);
+            result.push({ ...a, [c.factorId]: c.level });
           }
         }
         return result;
-      }, [[]]);
+      }, [{}]);
     })
   })),
 

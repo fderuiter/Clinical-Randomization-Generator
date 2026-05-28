@@ -95,8 +95,8 @@ describe('computeProportionalCaps – basic behaviour', () => {
       100,
       { gender: { Male: 60, Female: 40 } }
     );
-    const maleCap = caps.find(c => c.levels.includes('Male'))!.cap;
-    const femaleCap = caps.find(c => c.levels.includes('Female'))!.cap;
+    const maleCap = caps.find(c => Object.values(c.levelIds || {}).includes('Male'))!.cap;
+    const femaleCap = caps.find(c => Object.values(c.levelIds || {}).includes('Female'))!.cap;
     expect(maleCap).toBe(60);
     expect(femaleCap).toBe(40);
   });
@@ -146,7 +146,7 @@ describe('computeProportionalCaps – Largest Remainder Method', () => {
       }
     );
     const maleDiabeticCap = caps.find(
-      c => c.levels.includes('Male') && c.levels.includes('Diabetic')
+      c => Object.values(c.levelIds || {}).includes('Male') && Object.values(c.levelIds || {}).includes('Diabetic')
     )!.cap;
     expect(maleDiabeticCap).toBe(18);
   });

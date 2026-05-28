@@ -26,8 +26,8 @@
       ],
       "stratumCaps": [
         {
-          "levels": [],
-          "cap": 8
+          "cap": 8,
+          "levelIds": {}
         }
       ],
       "seed": "GOLDEN_SEED_1",
@@ -560,8 +560,8 @@
       ],
       "stratumCaps": [
         {
-          "levels": [],
-          "cap": 4
+          "cap": 4,
+          "levelIds": {}
         }
       ],
       "seed": "GOLDEN_SEED_4",
@@ -656,32 +656,32 @@
       ],
       "stratumCaps": [
         {
-          "levels": [
-            "Low",
-            "NA"
-          ],
-          "cap": 4
+          "cap": 4,
+          "levelIds": {
+            "risk": "Low",
+            "region": "NA"
+          }
         },
         {
-          "levels": [
-            "Low",
-            "EU"
-          ],
-          "cap": 4
+          "cap": 4,
+          "levelIds": {
+            "risk": "Low",
+            "region": "EU"
+          }
         },
         {
-          "levels": [
-            "High",
-            "NA"
-          ],
-          "cap": 4
+          "cap": 4,
+          "levelIds": {
+            "risk": "High",
+            "region": "NA"
+          }
         },
         {
-          "levels": [
-            "High",
-            "EU"
-          ],
-          "cap": 4
+          "cap": 4,
+          "levelIds": {
+            "risk": "High",
+            "region": "EU"
+          }
         }
       ],
       "seed": "GOLDEN_SEED_5",

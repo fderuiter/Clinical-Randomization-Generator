@@ -46,10 +46,10 @@ describe('CodeGeneratorService', () => {
       ],
       blockSizes: [3, 6],
       stratumCaps: [
-        { levels: ['Male', 'Young'], cap: 12 },
-        { levels: ['Male', 'Old'], cap: 9 },
-        { levels: ['Female', 'Young'], cap: 15 },
-        { levels: ['Female', 'Old'], cap: 6 }
+        { levelIds: { sex: 'Male', age: 'Young' }, cap: 12 },
+        { levelIds: { sex: 'Male', age: 'Old' }, cap: 9 },
+        { levelIds: { sex: 'Female', age: 'Young' }, cap: 15 },
+        { levelIds: { sex: 'Female', age: 'Old' }, cap: 6 }
       ],
       seed: 'full_seed',
       subjectIdMask: '[SiteID]-[001]'
@@ -135,7 +135,7 @@ describe('CodeGeneratorService', () => {
       it('should encode unstratified caps with setNames to avoid invalid empty-key syntax', () => {
         const code = service.generateR({
           ...minimalConfig,
-          stratumCaps: [{ levels: [], cap: 20 }],
+          stratumCaps: [{ levelIds: {}, cap: 20 }],
         });
         expect(code).toContain('stats::setNames(20, "")');
       });
@@ -490,10 +490,10 @@ describe('CodeGeneratorService', () => {
         ],
         // LRM-computed caps already embedded in stratumCaps
         stratumCaps: [
-          { levels: ['Male', 'Young'], cap: 36 },
-          { levels: ['Male', 'Old'], cap: 24 },
-          { levels: ['Female', 'Young'], cap: 24 },
-          { levels: ['Female', 'Old'], cap: 16 }
+          { levelIds: { sex: 'Male', age: 'Young' }, cap: 36 },
+          { levelIds: { sex: 'Male', age: 'Old' }, cap: 24 },
+          { levelIds: { sex: 'Female', age: 'Young' }, cap: 24 },
+          { levelIds: { sex: 'Female', age: 'Old' }, cap: 16 }
         ]
       };
     });
@@ -983,8 +983,8 @@ describe('CodeGeneratorService', () => {
             { id: 'age group', name: 'Age Group', levels: ['Young', 'Old'] }
           ],
           stratumCaps: [
-            { levels: ['Young'], cap: 10 },
-            { levels: ['Old'], cap: 10 }
+            { levelIds: { 'age group': 'Young' }, cap: 10 },
+            { levelIds: { 'age group': 'Old' }, cap: 10 }
           ]
         };
         const code = service.generateStata(configWithSpecialChars);
@@ -999,8 +999,8 @@ describe('CodeGeneratorService', () => {
             { id: '2grp', name: 'Two Group', levels: ['A', 'B'] }
           ],
           stratumCaps: [
-            { levels: ['A'], cap: 10 },
-            { levels: ['B'], cap: 10 }
+            { levelIds: { '2grp': 'A' }, cap: 10 },
+            { levelIds: { '2grp': 'B' }, cap: 10 }
           ]
         };
         const code = service.generateStata(configWithNumericId);
@@ -1015,8 +1015,8 @@ describe('CodeGeneratorService', () => {
             { id: longId, name: 'Long ID Factor', levels: ['X', 'Y'] }
           ],
           stratumCaps: [
-            { levels: ['X'], cap: 10 },
-            { levels: ['Y'], cap: 10 }
+            { levelIds: { longId: 'X' }, cap: 10 },
+            { levelIds: { longId: 'Y' }, cap: 10 }
           ]
         };
         const code = service.generateStata(configWithLongId);
@@ -1034,10 +1034,10 @@ describe('CodeGeneratorService', () => {
           capStrategy: 'PROPORTIONAL',
           globalCap: 100,
           stratumCaps: [
-            { levels: ['Male', 'Young'], cap: 36 },
-            { levels: ['Male', 'Old'], cap: 24 },
-            { levels: ['Female', 'Young'], cap: 24 },
-            { levels: ['Female', 'Old'], cap: 16 }
+            { levelIds: { sex: 'Male', age: 'Young' }, cap: 36 },
+            { levelIds: { sex: 'Male', age: 'Old' }, cap: 24 },
+            { levelIds: { sex: 'Female', age: 'Young' }, cap: 24 },
+            { levelIds: { sex: 'Female', age: 'Old' }, cap: 16 }
           ]
         };
         const code = service.generateStata(proportionalConfig);
@@ -1050,10 +1050,10 @@ describe('CodeGeneratorService', () => {
           capStrategy: 'PROPORTIONAL',
           globalCap: 100,
           stratumCaps: [
-            { levels: ['Male', 'Young'], cap: 36 },
-            { levels: ['Male', 'Old'], cap: 24 },
-            { levels: ['Female', 'Young'], cap: 24 },
-            { levels: ['Female', 'Old'], cap: 16 }
+            { levelIds: { sex: 'Male', age: 'Young' }, cap: 36 },
+            { levelIds: { sex: 'Male', age: 'Old' }, cap: 24 },
+            { levelIds: { sex: 'Female', age: 'Young' }, cap: 24 },
+            { levelIds: { sex: 'Female', age: 'Old' }, cap: 16 }
           ]
         };
         const code = service.generateStata(proportionalConfig);
@@ -1189,7 +1189,7 @@ describe('CodeGeneratorService', () => {
         const code = service.generate('R', {
           ...minimizationConfig,
           strata: [],
-          stratumCaps: [{ levels: [], cap: 20 }],
+          stratumCaps: [{ levelIds: {}, cap: 20 }],
           capStrategy: 'MANUAL_MATRIX',
         });
         expect(code).toContain('stats::setNames(20, "")');
@@ -1218,7 +1218,7 @@ describe('CodeGeneratorService', () => {
         const code = service.generate('Python', {
           ...minimizationConfig,
           strata: [{ id: 'sex', name: 'Sex', levels: ['Male', 'Female'] }],
-          stratumCaps: [{ levels: ['Male'], cap: 5 }],
+          stratumCaps: [{ levelIds: { sex: 'Male' }, cap: 5 }],
           capStrategy: 'MANUAL_MATRIX',
         });
         expect(code).toContain('("Male",): 5');
@@ -1413,11 +1413,11 @@ describe('CodeGeneratorService', () => {
       ],
       blockSizes: [6],
       stratumCaps: [
-        { levels: ["O'Brien"], cap: 10 },
-        { levels: ['Type "A"'], cap: 10 },
-        { levels: ['C:\\path'], cap: 10 },
-        { levels: ['α-Ω group'], cap: 10 },
-        { levels: ['line1\nline2'], cap: 10 },
+        { levelIds: { s: "O'Brien" }, cap: 10 },
+        { levelIds: { s: 'Type "A"' }, cap: 10 },
+        { levelIds: { s: 'C:\\path' }, cap: 10 },
+        { levelIds: { s: 'α-Ω group' }, cap: 10 },
+        { levelIds: { s: 'line1\nline2' }, cap: 10 },
       ],
       seed: 'weird_seed',
       subjectIdMask: '[SiteID]-[001]',

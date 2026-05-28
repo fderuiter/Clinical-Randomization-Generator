@@ -147,14 +147,16 @@ function generateStandard(
   const capsDict: Record<string, number> = {};
   if (resolvedConfig.stratumCaps) {
     resolvedConfig.stratumCaps.forEach(c => {
-      capsDict[c.levels.join('|')] = c.cap;
+      const comboKey = Object.keys(c.levelIds || {}).sort().map(k => `${k}:${c.levelIds![k]}`).join('|');
+      capsDict[comboKey] = c.cap;
     });
   }
 
   for (const site of resolvedConfig.sites) {
     let siteSubjectCount = 0;
     for (const stratum of strataCombinations) {
-      const comboKey = resolvedConfig.strata.map(s => stratum[s.id] || '').join('|');
+      const sortedKeys = Object.keys(stratum).sort();
+      const comboKey = sortedKeys.map(k => `${k}:${stratum[k]}`).join('|');
       const maxSubjectsPerStratum = capsDict[comboKey] || 0;
       const stratumCode = computeStratumCode(resolvedConfig.strata, stratum);
 

@@ -1,4 +1,4 @@
-import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, Input, ChangeDetectionStrategy, signal } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 /** One arm's data passed from the parent. */
@@ -134,9 +134,9 @@ export function buildPreviews(arms: ArmInput[], blockSizes: number[]): BlockPrev
       </h3>
 
       <!-- Arm colour legend -->
-      @if (arms().length > 0) {
+      @if (arms.length > 0) {
         <div class="flex flex-wrap gap-2">
-          @for (arm of arms(); track arm.id; let i = $index) {
+          @for (arm of arms; track arm.id; let i = $index) {
             <span class="inline-flex items-center gap-1 text-xs text-muted">
               <span class="inline-block h-3 w-3 rounded-sm {{ armColor(i) }}"></span>
               {{ arm.name || arm.id }}
@@ -216,15 +216,28 @@ export function buildPreviews(arms: ArmInput[], blockSizes: number[]): BlockPrev
 })
 export class BlockPreviewComponent {
   /** Treatment arms with id, name, ratio. */
-  readonly arms = input<ArmInput[]>([]);
+  @Input() set arms(val: ArmInput[]) {
+    this._arms.set(val);
+  }
+  get arms(): ArmInput[] {
+    return this._arms();
+  }
+  private _arms = signal<ArmInput[]>([]);
+
   /** Parsed block sizes (integers). */
-  readonly blockSizes = input<number[]>([]);
+  @Input() set blockSizes(val: number[]) {
+    this._blockSizes.set(val);
+  }
+  get blockSizes(): number[] {
+    return this._blockSizes();
+  }
+  private _blockSizes = signal<number[]>([]);
 
   /** Skeleton placeholder squares for empty state. */
   readonly skeleton = Array.from({ length: 6 });
 
   /** Sum of all arm ratios. */
-  readonly totalRatio = computed(() => calcTotalRatio(this.arms()));
+  readonly totalRatio = computed(() => calcTotalRatio(this._arms()));
 
   /** Return the Tailwind bg class for an arm by index. */
   armColor(index: number): string {
@@ -238,6 +251,6 @@ export class BlockPreviewComponent {
 
   /** Computed per-block-size preview data. */
   readonly previews = computed<BlockPreview[]>(() =>
-    buildPreviews(this.arms(), this.blockSizes())
+    buildPreviews(this._arms(), this._blockSizes())
   );
 }
