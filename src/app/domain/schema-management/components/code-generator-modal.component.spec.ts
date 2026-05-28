@@ -9,16 +9,6 @@ import { signal } from '@angular/core';
 import { vi } from 'vitest';
 import { RandomizationConfig } from '../../core/models/randomization.model';
 
-vi.mock('jszip', () => {
-  return {
-    default: class MockJSZip {
-      folder() { return this; }
-      file() { return this; }
-      generateAsync() { return Promise.resolve(new Blob()); }
-    }
-  };
-});
-
 describe('CodeGeneratorModalComponent (domain)', () => {
   let component: CodeGeneratorModalComponent;
   let mockFacade: unknown;
@@ -154,31 +144,31 @@ describe('CodeGeneratorModalComponent (domain)', () => {
       vi.restoreAllMocks();
     });
 
-    const verifyDownloadFilename = async (language: 'R' | 'SAS' | 'Python' | 'STATA', expectedFilename: string) => {
+    const verifyDownloadFilename = (language: 'R' | 'SAS' | 'Python' | 'STATA', expectedFilename: string) => {
       const appendSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n as Node);
       vi.spyOn(document.body, 'removeChild').mockImplementation((n) => n as Node);
 
       component.setActiveTab(language);
-      await component.downloadCode();
+      component.downloadCode();
 
       const anchorEl = appendSpy.mock.calls[0][0] as HTMLAnchorElement;
       expect(anchorEl.getAttribute('download')).toBe(expectedFilename);
     };
 
-    it('should use randomization_schema.R as the filename for R code', async () => {
-      await verifyDownloadFilename('R', 'randomization_schema.R');
+    it('should use randomization_schema.R as the filename for R code', () => {
+      verifyDownloadFilename('R', 'randomization_schema.R');
     });
 
-    it('should use export_sas.zip as the filename for SAS code', async () => {
-      await verifyDownloadFilename('SAS', 'export_sas.zip');
+    it('should use randomization_schema.sas as the filename for SAS code', () => {
+      verifyDownloadFilename('SAS', 'randomization_schema.sas');
     });
 
-    it('should use randomization_schema.py as the filename for Python code', async () => {
-      await verifyDownloadFilename('Python', 'randomization_schema.py');
+    it('should use randomization_schema.py as the filename for Python code', () => {
+      verifyDownloadFilename('Python', 'randomization_schema.py');
     });
 
-    it('should use export_stata.zip as the filename for STATA code', async () => {
-      await verifyDownloadFilename('STATA', 'export_stata.zip');
+    it('should use randomization_schema.do as the filename for STATA code', () => {
+      verifyDownloadFilename('STATA', 'randomization_schema.do');
     });
 
     it('should call URL.createObjectURL with a Blob', () => {

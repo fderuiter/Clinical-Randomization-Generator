@@ -229,10 +229,10 @@ export class CodeGeneratorService {
 
     const header = this.generateMinimizationHeader('R', config);
 
-    let setupCode;
-    let capsCode;
-    let strataLines;
-    let baseProbsCode;
+    let setupCode = '';
+    let capsCode = '';
+    let strataLines = '';
+    let baseProbsCode = '';
 
     try {
       strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + this.escapeRString(l) + '"').join(', ')})`).join('\n');
@@ -838,9 +838,9 @@ if (nrow(schema) > 0) {
 
     const header = this.generateMinimizationHeader('Python', config);
 
-    let setupCode;
-    let capsCode;
-    let baseProbsCode;
+    let setupCode = '';
+    let capsCode = '';
+    let baseProbsCode = '';
 
     try {
       const strataLevelsList = strata.map(s => `    "${s.id}": [${s.levels.map(l => '"' + this.escapePythonString(l) + '"').join(', ')}]`).join(',\n');
@@ -1117,8 +1117,6 @@ if not df.empty:
 else:
     print("\\n--- QC Check ---")
     print("No rows generated; skipping QC tables.")
-
-# df.to_csv("randomization_schema.csv", index=False)
 `;
     } catch (e) {
       if (this.isKnownError(e)) throw e;
