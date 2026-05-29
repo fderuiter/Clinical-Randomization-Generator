@@ -3,27 +3,34 @@ name: CI Workflow
 on:
   push:
     branches:
-      - main
+    - main
   pull_request:
-
-permissions:
-  contents: read
-
 jobs:
   setup:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
       with:
         run_install: false
 
     - name: Set up Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
       with:
         node-version: '22'
         cache: 'pnpm'
@@ -46,12 +53,14 @@ jobs:
       run: tar -cf shared-env.tar node_modules pw-browsers dist
 
     - name: Upload shared environment
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
       with:
         name: shared-env
         path: shared-env.tar
         retention-days: 1
 
+    permissions:
+      contents: read
   e2e:
     runs-on: ubuntu-latest
     needs: setup
@@ -65,16 +74,27 @@ jobs:
         shardTotal: [4]
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Set up Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
       with:
         node-version: '22'
 
     - name: Download shared environment
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: shared-env
         path: .
@@ -82,14 +102,16 @@ jobs:
     - name: Extract shared environment
       run: tar -xf shared-env.tar
 
-    - name: Run E2E Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
-      run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+    - name: Run E2E Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal 
+        }})
+      run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ 
+        matrix.shardTotal }}
       env:
         CI: true
         PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/pw-browsers
 
     - name: Upload blob report
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
       if: always()
       with:
         name: blob-report-${{ matrix.shardIndex }}
@@ -103,21 +125,32 @@ jobs:
       contents: read
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Set up Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
       with:
         node-version: '22'
 
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d
       with:
         python-version: '3.11'
 
     - name: Set up R
-      uses: r-lib/actions/setup-r@v2
+      uses: r-lib/actions/setup-r@5b78b0a0e5b721e06f2df6ce8eeb793efeb3ed11
       with:
         r-version: 'release'
 
@@ -125,7 +158,7 @@ jobs:
       run: pip install numpy pandas --quiet
 
     - name: Download shared environment
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: shared-env
         path: .
@@ -142,7 +175,7 @@ jobs:
         PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/pw-browsers
 
     - name: Upload code-generation fixture scripts
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
       if: always()
       with:
         name: code-generation-fixtures
@@ -156,11 +189,22 @@ jobs:
       contents: read
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d
       with:
         python-version: '3.11'
 
@@ -168,7 +212,7 @@ jobs:
       run: pip install numpy pandas --quiet
 
     - name: Download code-generation fixture scripts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: code-generation-fixtures
         path: artifacts/code-generation-fixtures/
@@ -215,16 +259,27 @@ jobs:
       contents: read
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Set up Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
       with:
         node-version: '22'
 
     - name: Download shared environment
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: shared-env
         path: .
@@ -233,7 +288,7 @@ jobs:
       run: tar -xf shared-env.tar
 
     - name: Download code-generation fixture scripts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: code-generation-fixtures
         path: artifacts/code-generation-fixtures/
@@ -248,17 +303,28 @@ jobs:
       contents: read
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Set up Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
       with:
         node-version: '22'
         cache: 'pnpm'
 
     - name: Download code-generation fixture scripts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: code-generation-fixtures
         path: artifacts/code-generation-fixtures/
@@ -274,16 +340,27 @@ jobs:
       contents: read
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Set up Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
       with:
         node-version: '22'
 
     - name: Download shared environment
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: shared-env
         path: .
@@ -292,7 +369,7 @@ jobs:
       run: tar -xf shared-env.tar
 
     - name: Download all blob reports
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         path: all-blob-reports
         pattern: blob-report-*
@@ -305,7 +382,7 @@ jobs:
         npx playwright merge-reports --reporter json ./all-blob-reports > playwright-report/report.json
 
     - name: Upload merged HTML report
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
       with:
         name: playwright-report
         path: playwright-report/
@@ -319,16 +396,27 @@ jobs:
       contents: read
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Set up Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
       with:
         node-version: '22'
 
     - name: Download shared environment
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: shared-env
         path: .
@@ -345,7 +433,7 @@ jobs:
           --outputFile=vitest-results.json || true
 
     - name: Download Playwright JSON report
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: playwright-report
         path: playwright-report/
@@ -367,7 +455,7 @@ jobs:
         head -50 Validation_Traceability_Matrix.md
 
     - name: Upload Validation Traceability Matrix
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
       with:
         name: validation-traceability-matrix
         path: Validation_Traceability_Matrix.md
@@ -375,22 +463,34 @@ jobs:
 
   script_validation_report:
     runs-on: ubuntu-latest
-    needs: [python_script_execution_check, sas_static_validation, stata_static_validation, cross_env_equivalence]
+    needs: [python_script_execution_check, sas_static_validation, 
+        stata_static_validation, cross_env_equivalence]
     if: always()
     permissions:
       contents: read
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Set up Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
       with:
         node-version: '22'
 
     - name: Download shared environment
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: shared-env
         path: .
@@ -399,7 +499,7 @@ jobs:
       run: tar -xf shared-env.tar
 
     - name: Download code-generation fixture scripts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: code-generation-fixtures
         path: artifacts/code-generation-fixtures/
@@ -418,7 +518,7 @@ jobs:
         head -40 script-validation-report.md
 
     - name: Upload script validation report
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
       if: always()
       with:
         name: script-validation-report
@@ -432,16 +532,27 @@ jobs:
       contents: read
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d
       with:
         python-version: '3.11'
 
     - name: Set up R
-      uses: r-lib/actions/setup-r@v2
+      uses: r-lib/actions/setup-r@5b78b0a0e5b721e06f2df6ce8eeb793efeb3ed11
       with:
         r-version: 'release'
 
@@ -449,7 +560,7 @@ jobs:
       run: pip install numpy --quiet
 
     - name: Download code-generation fixture scripts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: code-generation-fixtures
         path: artifacts/code-generation-fixtures/
@@ -473,16 +584,27 @@ jobs:
       contents: read
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Set up Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
       with:
         node-version: '22'
 
     - name: Download shared environment
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: shared-env
         path: .
@@ -494,13 +616,12 @@ jobs:
       run: |
         echo "Generating CycloneDX SBOM for supply chain audit..."
         npx --yes @cyclonedx/cdxgen \
-          -t nodejs \
-          -o sbom.json
+                    -o sbom.json
         echo "SBOM generated successfully."
         echo "Total components: $(cat sbom.json | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d.get(\"components\", [])))')"
 
     - name: Upload SBOM artifact
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
       with:
         name: sbom
         path: sbom.json
@@ -512,8 +633,19 @@ jobs:
       contents: read
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Check for insecure Math.random() in randomization domain
       run: |
@@ -533,16 +665,27 @@ jobs:
       pull-requests: write
       deployments: write
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Set up Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
       with:
         node-version: '22'
 
     - name: Download shared environment
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: shared-env
         path: .
@@ -563,7 +706,7 @@ jobs:
         echo "url=$URL" >> $GITHUB_OUTPUT
 
     - name: Comment on PR
-      uses: actions/github-script@v7
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
       with:
         script: |
           const body = `🚀 PR Preview deployed!\n\n🌐 View here: ${{ steps.deploy.outputs.url }}`;
@@ -588,3 +731,30 @@ jobs:
               body: body
             });
           }
+  lint_actions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          raw.githubusercontent.com:443
+    - name: Checkout repository
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - name: Run actionlint
+      run: |
+        bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+        ./actionlint -color
+    - name: Check for mutable tags
+      run: |
+        if grep -rnE 'uses: .*@[vV][0-9]' .github/workflows/; then
+          echo "ERROR: Mutable action tags detected. Use SHA-256 hashes instead of tags (e.g., @v1)."
+          exit 1
+        fi
+        echo "All actions are pinned to SHAs."
