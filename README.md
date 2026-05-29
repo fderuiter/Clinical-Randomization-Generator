@@ -83,14 +83,14 @@ For the full architectural breakdown including Mermaid diagrams, see
 
 2. **Install dependencies:**
    ```bash
-   npm ci
+   pnpm install
    ```
 
 3. **Run the development server:**
    ```bash
-   npm start
+   pnpm start
    # or on port 3000:
-   npm run dev
+   pnpm run dev
    ```
    Navigate to `http://localhost:4200/`. The application hot-reloads on file changes.
 
@@ -101,7 +101,7 @@ For the full architectural breakdown including Mermaid diagrams, see
 ### Unit tests (Vitest)
 
 ```bash
-npm test -- --watch=false
+pnpm test -- --watch=false
 ```
 
 Runs all 216 unit tests across 11 spec files using Vitest in a jsdom environment.
@@ -110,10 +110,10 @@ Runs all 216 unit tests across 11 spec files using Vitest in a jsdom environment
 
 ```bash
 # Terminal 1 - start the dev server
-npm start
+pnpm start
 
 # Terminal 2 - run all e2e specs
-npx playwright test
+pnpm exec playwright test
 ```
 
 Playwright tests live in `tests_e2e/` and cover five areas:
@@ -151,7 +151,7 @@ To enable this on a fork:
 The build also produces a Node.js SSR server:
 
 ```bash
-npm run build
+pnpm run build
 node dist/app/server/server.mjs
 ```
 
