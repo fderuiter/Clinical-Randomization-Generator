@@ -2,6 +2,7 @@
   "name": "equipose",
   "version": "1.32.0",
   "scripts": {
+    "preinstall": "node scripts/check-node-version.js",
     "ng": "ng",
     "start": "ng serve",
     "start:pwa": "ng serve --configuration pwa",

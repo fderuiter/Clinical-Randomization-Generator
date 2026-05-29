@@ -73,7 +73,9 @@ For the full architectural breakdown including Mermaid diagrams, see
 
 ## Local Development
 
-**Prerequisites:** Node.js v20 or newer.
+We highly recommend using the provided **Dev Container** to ensure parity with our CI environment. This eliminates version drift and provides a fully pre-configured workspace.
+
+**Prerequisites:** Docker and VS Code with the Dev Containers extension (or compatible IDE).
 
 1. **Clone the repository:**
    ```bash
@@ -81,18 +83,27 @@ For the full architectural breakdown including Mermaid diagrams, see
    cd Clinical-Randomization-Generator
    ```
 
-2. **Install dependencies:**
-   ```bash
-   npm ci
-   ```
+2. **Open in Dev Container:**
+   - Open the folder in VS Code.
+   - When prompted, click **Reopen in Container** (or use the Command Palette: `Dev Containers: Reopen in Container`).
+   - The container will automatically install Node.js v22, `pnpm`, all project dependencies, and recommended extensions.
 
 3. **Run the development server:**
    ```bash
-   npm start
+   pnpm start
    # or on port 3000:
-   npm run dev
+   pnpm run dev
    ```
    Navigate to `http://localhost:4200/`. The application hot-reloads on file changes.
+
+### Local Installation (Fallback)
+
+If you cannot use the Dev Container, you must strictly use **Node.js v22** (enforced via an active pre-install check) and `pnpm`.
+
+```bash
+pnpm install
+pnpm start
+```
 
 ---
 
