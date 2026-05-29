@@ -1,7 +1,7 @@
 import { Injectable } from "@angular/core";
 import { RandomizationConfig } from '../../../core/models/randomization.model';
 import { CodeGenerationStrategy } from './base.strategy';
-import { FormattingUtil } from './formatting.util';
+import { FormattingUtil, EscapedString } from './formatting.util';
 import { ReproducibilityUtil } from './reproducibility.util';
 import { APP_VERSION } from '../../../../../environments/version';
 import { MethodologySpecificationService } from '../methodology-specification.service';
@@ -10,6 +10,11 @@ import { StrataParsingError, TemplateCompilationError, ConfigurationValidationEr
 @Injectable()
 export class SasStrategy implements CodeGenerationStrategy {
   readonly language = 'SAS';
+
+  @EscapedString('SAS')
+  escapeString(s: string): string {
+    return s;
+  }
 
   constructor(private methodologySpec: MethodologySpecificationService) {}
 
@@ -38,7 +43,7 @@ const generatedAt = new Date().toISOString();
       strataFactorsLine = strata.length > 0
         ? `%let strata_factors = ${strata.map(s => `"${s.id}"`).join(' ')};\n`
         : '';
-      strataLevelLines = strata.map(s => `%let ${s.id}_levels = ${(s.levels || []).map(l => `"${FormattingUtil.escapeSasString(l)}"`).join(' ')};`).join('\n');
+      strataLevelLines = strata.map(s => `%let ${s.id}_levels = ${(s.levels || []).map(l => `"${this.escapeString(l)}"`).join(' ')};`).join('\n');
       capsLengthDecl = strata.length > 0 ? strata.map(s => ` ${s.id} $50`).join('') : '';
       if (caps.length === 0) {
         capsRows = `  max_subjects_per_stratum = 0; output;\n`;
@@ -46,7 +51,7 @@ const generatedAt = new Date().toISOString();
         capsRows = caps.map(c => {
           let row = '';
           if (strata.length > 0) {
-            strata.forEach(s => { row += `  ${s.id} = "${FormattingUtil.escapeSasString(c.levelIds?.[s.id] ?? '')}";`; });
+            strata.forEach(s => { row += `  ${s.id} = "${this.escapeString(c.levelIds?.[s.id] ?? '')}";`; });
           }
           row += `  max_subjects_per_stratum = ${c.cap};\n  output;\n`;
           return row;
@@ -886,7 +891,7 @@ const generatedAt = new Date().toISOString();
     // Strata variable declarations and level-dataset building
     const strataLenDecl = nFactors > 0 ? ' ' + strata.map(s => `${s.id} $50`).join(' ') : '';
     const strataLevelMacros = nFactors > 0
-      ? strata.map(s => `%let ${s.id}_levels = ${s.levels.map(l => `"${FormattingUtil.escapeSasString(l)}"`).join(' ')};`).join('\n') + '\n'
+      ? strata.map(s => `%let ${s.id}_levels = ${s.levels.map(l => `"${this.escapeString(l)}"`).join(' ')};`).join('\n') + '\n'
       : '';
     const charArrayDecls = factorLevelArrays.map(f =>
       `  array _cvl_${f.id}[${nCombos}] $50 _temporary_ (${f.values.map(v => `'${v}'`).join(' ')});`

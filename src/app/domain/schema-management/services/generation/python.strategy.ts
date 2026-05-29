@@ -1,7 +1,7 @@
 import { Injectable } from "@angular/core";
 import { RandomizationConfig } from '../../../core/models/randomization.model';
 import { CodeGenerationStrategy } from './base.strategy';
-import { FormattingUtil } from './formatting.util';
+import { FormattingUtil, EscapedString } from './formatting.util';
 import { ReproducibilityUtil } from './reproducibility.util';
 import { APP_VERSION } from '../../../../../environments/version';
 import { MethodologySpecificationService } from '../methodology-specification.service';
@@ -10,6 +10,11 @@ import { StrataParsingError, TemplateCompilationError, ConfigurationValidationEr
 @Injectable()
 export class PythonStrategy implements CodeGenerationStrategy {
   readonly language = 'Python';
+
+  @EscapedString('Python')
+  escapeString(s: string): string {
+    return s;
+  }
 
   constructor(private methodologySpec: MethodologySpecificationService) {}
 
@@ -34,10 +39,10 @@ const generatedAt = new Date().toISOString();
     let strataNamesArr: string;
     try {
       pyCapsDict = caps.map(c => {
-        const tupleElements = strata.map(s => `"${FormattingUtil.escapePythonString(c.levelIds?.[s.id] ?? '')}"`).join(', ');
+        const tupleElements = strata.map(s => `"${this.escapeString(c.levelIds?.[s.id] ?? '')}"`).join(', ');
         return `    (${strata.length === 1 ? tupleElements + ',' : tupleElements}): ${c.cap}`;
       }).join(',\n');
-      strataLevelsList = strata.map(s => `[${(s.levels || []).map(l => '"' + FormattingUtil.escapePythonString(l) + '"').join(', ')}]`).join(',\n    ');
+      strataLevelsList = strata.map(s => `[${(s.levels || []).map(l => '"' + this.escapeString(l) + '"').join(', ')}]`).join(',\n    ');
       strataNamesArr = strata.map(s => '"' + s.id + '"').join(', ');
     } catch (e) {
       throw new StrataParsingError('Python', e, config);
@@ -178,13 +183,13 @@ const sites = config.sites || [];
     let baseProbsCode: string;
 
     try {
-      const strataLevelsList = strata.map(s => `    "${s.id}": [${s.levels.map(l => '"' + FormattingUtil.escapePythonString(l) + '"').join(', ')}]`).join(',\n');
+      const strataLevelsList = strata.map(s => `    "${s.id}": [${s.levels.map(l => '"' + this.escapeString(l) + '"').join(', ')}]`).join(',\n');
 
       if (isMarginal) {
         const pyMarginalCaps = strata.map(s => {
           const entries = s.levels.map((lvl, i) => {
             const cap = s.levelDetails?.[i]?.marginalCap;
-            return cap !== undefined ? `        "${FormattingUtil.escapePythonString(lvl)}": ${cap}` : `        "${FormattingUtil.escapePythonString(lvl)}": float("inf")`;
+            return cap !== undefined ? `        "${this.escapeString(lvl)}": ${cap}` : `        "${this.escapeString(lvl)}": float("inf")`;
           });
           return `    "${s.id}": {\n${entries.join(',\n')}\n    }`;
         }).join(',\n');
@@ -196,7 +201,7 @@ const sites = config.sites || [];
       } else {
         const caps = config.stratumCaps || [];
         const pyCapsDict = caps.map(c => {
-          const tupleElements = strata.map(s => `"${FormattingUtil.escapePythonString(c.levelIds?.[s.id] ?? '')}"`).join(', ');
+          const tupleElements = strata.map(s => `"${this.escapeString(c.levelIds?.[s.id] ?? '')}"`).join(', ');
           const tupleKey = strata.length === 1 ? `(${tupleElements},)` : `(${tupleElements})`;
           return `    ${tupleKey}: ${c.cap}`;
         }).join(',\n');
@@ -478,11 +483,11 @@ const generatedAt = new Date().toISOString();
       pyMarginalCaps = strata.map(s => {
         const entries = s.levels.map((lvl, i) => {
           const cap = s.levelDetails?.[i]?.marginalCap;
-          return cap !== undefined ? `        "${FormattingUtil.escapePythonString(lvl)}": ${cap}` : null;
+          return cap !== undefined ? `        "${this.escapeString(lvl)}": ${cap}` : null;
         }).filter(Boolean);
         return `    "${s.id}": {\n${entries.join(',\n')}\n    }`;
       }).join(',\n');
-      strataLevelsList = strata.map(s => `[${s.levels.map(l => '"' + FormattingUtil.escapePythonString(l) + '"').join(', ')}]`).join(',\n    ');
+      strataLevelsList = strata.map(s => `[${s.levels.map(l => '"' + this.escapeString(l) + '"').join(', ')}]`).join(',\n    ');
       strataNamesArr = strata.map(s => '"' + s.id + '"').join(', ');
     } catch (e) {
       throw new StrataParsingError('Python', e, config);

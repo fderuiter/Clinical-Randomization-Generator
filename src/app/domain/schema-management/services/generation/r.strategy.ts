@@ -1,7 +1,7 @@
 import { Injectable } from "@angular/core";
 import { RandomizationConfig } from '../../../core/models/randomization.model';
 import { CodeGenerationStrategy } from './base.strategy';
-import { FormattingUtil } from './formatting.util';
+import { FormattingUtil, EscapedString } from './formatting.util';
 import { ReproducibilityUtil } from './reproducibility.util';
 import { APP_VERSION } from '../../../../../environments/version';
 import { MethodologySpecificationService } from '../methodology-specification.service';
@@ -10,6 +10,11 @@ import { StrataParsingError, TemplateCompilationError, ConfigurationValidationEr
 @Injectable()
 export class RStrategy implements CodeGenerationStrategy {
   readonly language = 'R';
+
+  @EscapedString('R')
+  escapeString(s: string): string {
+    return s;
+  }
 
   constructor(private methodologySpec: MethodologySpecificationService) {}
 
@@ -35,9 +40,9 @@ const generatedAt = new Date().toISOString();
     try {
       rCapsVector = caps.map(c => {
         const joinedLevels = config.strata.map(s => c.levelIds?.[s.id] || '').join('_');
-        return `stats::setNames(${c.cap}, "${FormattingUtil.escapeRString(joinedLevels)}")`;
+        return `stats::setNames(${c.cap}, "${this.escapeString(joinedLevels)}")`;
       }).join(',\n  ');
-      strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + FormattingUtil.escapeRString(l) + '"').join(', ')})`).join('\n');
+      strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + this.escapeString(l) + '"').join(', ')})`).join('\n');
       strataGridArgs = [...strata.map(s => `${s.id} = ${s.id}_levels`), 'stringsAsFactors = FALSE'].join(',\n  ');
     } catch (e) {
       throw new StrataParsingError('R', e, config);
@@ -221,13 +226,13 @@ const sites = config.sites || [];
     let baseProbsCode: string;
 
     try {
-      strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + FormattingUtil.escapeRString(l) + '"').join(', ')})`).join('\n');
+      strataLines = strata.map(s => `${s.id}_levels <- c(${(s.levels || []).map(l => '"' + this.escapeString(l) + '"').join(', ')})`).join('\n');
 
       if (isMarginal) {
         const marginalCaps = strata.map(s => {
           const entries = s.levels.map((lvl, i) => {
             const cap = s.levelDetails?.[i]?.marginalCap;
-            return cap !== undefined ? `"${FormattingUtil.escapeRString(lvl)}" = ${cap}` : `"${FormattingUtil.escapeRString(lvl)}" = Inf`;
+            return cap !== undefined ? `"${this.escapeString(lvl)}" = ${cap}` : `"${this.escapeString(lvl)}" = Inf`;
           });
           return `  ${s.id} = c(${entries.join(', ')})`;
         }).join(',\n');
@@ -240,7 +245,7 @@ const sites = config.sites || [];
         const capsVector = caps
           .map(c => {
             const levelsStr = strata.map(s => c.levelIds?.[s.id] ?? '').join('_');
-            return `stats::setNames(${c.cap}, "${FormattingUtil.escapeRString(levelsStr)}")`;
+            return `stats::setNames(${c.cap}, "${this.escapeString(levelsStr)}")`;
           })
           .join(',\n  ');
         capsCode = `stratum_caps <- c(\n  ${capsVector}\n)\nintersection_counts <- list()`;
@@ -553,12 +558,12 @@ const generatedAt = new Date().toISOString();
       rMarginalCaps = strata.map(s => {
         const entries = s.levels.map((lvl, i) => {
           const cap = s.levelDetails?.[i]?.marginalCap;
-          return cap !== undefined ? `"${FormattingUtil.escapeRString(lvl)}" = ${cap}` : null;
+          return cap !== undefined ? `"${this.escapeString(lvl)}" = ${cap}` : null;
         }).filter(Boolean);
         return `  ${s.id} = list(${entries.join(', ')})`;
       }).join(',\n');
       strataLines = strata.map(s =>
-        `${s.id}_levels <- c(${s.levels.map(l => '"' + FormattingUtil.escapeRString(l) + '"').join(', ')})`
+        `${s.id}_levels <- c(${s.levels.map(l => '"' + this.escapeString(l) + '"').join(', ')})`
       ).join('\n');
       strataGridArgs = [...strata.map(s => `${s.id} = ${s.id}_levels`), 'stringsAsFactors = FALSE'].join(',\n  ');
     } catch (e) {
