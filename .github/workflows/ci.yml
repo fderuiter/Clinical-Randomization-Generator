@@ -627,12 +627,19 @@ jobs:
         path: sbom.json
         retention-days: 90
 
-  security_scan:
+  codeql_scan:
+    name: CodeQL Analysis
     runs-on: ubuntu-latest
     needs: code_generation_fixtures
     permissions:
+      actions: read
       contents: read
       security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript', 'python' ]
 
     steps:
     - name: Harden Runner
@@ -646,39 +653,74 @@ jobs:
           registry.npmjs.org:443
           registry.yarnpkg.com:443
           nodejs.org:443
+          uploads.github.com:443
+
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
     - name: Download code-generation fixture scripts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
       with:
         name: code-generation-fixtures
         path: artifacts/code-generation-fixtures/
 
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
       with:
-        python-version: '3.11'
+        languages: ${{ matrix.language }}
+        queries: security-extended,security-and-quality,./.github/codeql/custom-queries/${{ matrix.language == 'javascript' && 'typescript' || 'python' }}
 
-    - name: Install Semgrep
-      run: pip install semgrep
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
 
-    - name: Run Polyglot Security Scan
-      run: |
-        mkdir -p artifacts/
-        semgrep scan --config p/default \
-                     --config .semgrep/rules.yml \
-                     --exclude="*.html" \
-                     --error \
-                     --sarif --output=semgrep.sarif \
-                     src/ artifacts/
-
-    - name: Upload SARIF report
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
       with:
-        sarif_file: semgrep.sarif
-        category: semgrep
+        category: "/language:${{matrix.language}}"
+
+  lint:
+    runs-on: ubuntu-latest
+    needs: setup
+    permissions:
+      contents: read
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
+
+    - name: Checkout repository
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+
+    - name: Set up Node.js
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
+      with:
+        node-version: '22'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
+      with:
+        run_install: false
+
+    - name: Download shared environment
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
+      with:
+        name: shared-env
+        path: .
+
+    - name: Extract shared environment
+      run: tar -xf shared-env.tar
+
+    - name: Run Linter
+      run: pnpm run lint
+
   deploy_preview:
     runs-on: ubuntu-latest
     needs: setup

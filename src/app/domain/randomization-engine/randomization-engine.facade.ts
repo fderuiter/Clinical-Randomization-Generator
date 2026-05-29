@@ -69,7 +69,7 @@ export class RandomizationEngineFacade {
   readonly monteCarloProgress = signal(0);
   readonly monteCarloResults = signal<MonteCarloSuccessPayload | null>(null);
   
-  private monteCarloDialogRef: any = null;
+  private monteCarloDialogRef: unknown = null;
 
   constructor() {
     if (this.isBrowser) {
