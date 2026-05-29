@@ -1,4 +1,5 @@
 import { MT19937 } from './mt19937';
+import { DeterminismProvider } from './determinism.provider';
 import {
   TreatmentArm,
   RandomizationConfig,
@@ -178,7 +179,8 @@ function generateStandard(
           const subjectId = generateSubjectId(
             resolvedConfig.subjectIdMask,
             { site, stratumCode, sequence: siteSubjectCount },
-            usedSubjectIds
+            usedSubjectIds,
+            rng
           );
 
           schema.push({ subjectId, site, stratum, stratumCode, blockNumber, blockSize, treatmentArm: arm.name, treatmentArmId: arm.id });
@@ -308,7 +310,8 @@ function generateMarginalOnly(
         const subjectId = generateSubjectId(
           resolvedConfig.subjectIdMask,
           { site, stratumCode, sequence: siteSubjectCount },
-          usedSubjectIds
+          usedSubjectIds,
+          rng
         );
 
         schema.push({
@@ -438,7 +441,7 @@ export function generateRandomizationSchema(config: RandomizationConfig): Random
       studyName: resolvedConfig.studyName,
       phase: resolvedConfig.phase,
       seed: resolvedConfig.seed,
-      generatedAt: resolvedConfig.protocolId === 'DET-100' ? '2026-05-28T12:00:00.000Z' : new Date().toISOString(),
+      generatedAt: DeterminismProvider.getNow(resolvedConfig.protocolId).toISOString(),
       strata: resolvedConfig.strata,
       config: resolvedConfig,
       auditHash: '' // populated asynchronously by the facade after generation

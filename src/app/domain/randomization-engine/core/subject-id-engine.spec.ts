@@ -150,45 +150,45 @@ describe('generateSubjectId – deterministic tokens', () => {
   beforeEach(() => { usedIds = new Set(); });
 
   it('resolves {SITE} correctly', () => {
-    const id = generateSubjectId('{SITE}-001', { site: 'SiteA', stratumCode: '', sequence: 1 }, usedIds);
+    const id = generateSubjectId('{SITE}-001', { site: 'SiteA', stratumCode: '', sequence: 1 }, usedIds, () => 0.5);
     expect(id).toBe('SiteA-001');
   });
 
   it('resolves {STRATUM} correctly', () => {
-    const id = generateSubjectId('{STRATUM}-001', { site: '', stratumCode: 'AGE', sequence: 1 }, usedIds);
+    const id = generateSubjectId('{STRATUM}-001', { site: '', stratumCode: 'AGE', sequence: 1 }, usedIds, () => 0.5);
     expect(id).toBe('AGE-001');
   });
 
   it('resolves {SEQ:4} with 4-digit padding', () => {
-    const id = generateSubjectId('{SEQ:4}', { site: '', stratumCode: '', sequence: 7 }, usedIds);
+    const id = generateSubjectId('{SEQ:4}', { site: '', stratumCode: '', sequence: 7 }, usedIds, () => 0.5);
     expect(id).toBe('0007');
   });
 
   it('resolves {CHECKSUM} as a trailing check digit', () => {
-    const id = generateSubjectId('{SITE}-{SEQ:3}-{CHECKSUM}', { site: '101', stratumCode: '', sequence: 1 }, usedIds);
+    const id = generateSubjectId('{SITE}-{SEQ:3}-{CHECKSUM}', { site: '101', stratumCode: '', sequence: 1 }, usedIds, () => 0.5);
     expect(id).toMatch(/^101-001-\d$/);
     // Checksum digit must be reproducible
-    const id2 = generateSubjectId('{SITE}-{SEQ:3}-{CHECKSUM}', { site: '101', stratumCode: '', sequence: 1 }, new Set());
+    const id2 = generateSubjectId('{SITE}-{SEQ:3}-{CHECKSUM}', { site: '101', stratumCode: '', sequence: 1 }, new Set(), () => 0.5);
     expect(id).toBe(id2);
   });
 
   it('registers each generated ID in the usedIds Set', () => {
-    generateSubjectId('{SITE}-{SEQ:3}', { site: '101', stratumCode: '', sequence: 1 }, usedIds);
+    generateSubjectId('{SITE}-{SEQ:3}', { site: '101', stratumCode: '', sequence: 1 }, usedIds, () => 0.5);
     expect(usedIds.has('101-001')).toBe(true);
   });
 
   it('supports the legacy [SiteID]-[001] mask', () => {
-    const id = generateSubjectId('[SiteID]-[001]', { site: 'Site1', stratumCode: '', sequence: 3 }, usedIds);
+    const id = generateSubjectId('[SiteID]-[001]', { site: 'Site1', stratumCode: '', sequence: 3 }, usedIds, () => 0.5);
     expect(id).toBe('Site1-003');
   });
 
   it('supports the legacy [SiteID]-[0001] mask (4-digit padding)', () => {
-    const id = generateSubjectId('[SiteID]-[0001]', { site: 'Site1', stratumCode: '', sequence: 3 }, usedIds);
+    const id = generateSubjectId('[SiteID]-[0001]', { site: 'Site1', stratumCode: '', sequence: 3 }, usedIds, () => 0.5);
     expect(id).toBe('Site1-0003');
   });
 
   it('supports legacy [StratumCode] token', () => {
-    const id = generateSubjectId('[SiteID]-[StratumCode]-[001]', { site: 'S1', stratumCode: 'AGE', sequence: 2 }, usedIds);
+    const id = generateSubjectId('[SiteID]-[StratumCode]-[001]', { site: 'S1', stratumCode: 'AGE', sequence: 2 }, usedIds, () => 0.5);
     expect(id).toBe('S1-AGE-002');
   });
 });
@@ -200,7 +200,7 @@ describe('generateSubjectId – deterministic tokens', () => {
 describe('generateSubjectId – {RND:n} and collision detection', () => {
   it('generates an alphanumeric string of the requested length', () => {
     const usedIds = new Set<string>();
-    const id = generateSubjectId('{RND:6}', { site: '', stratumCode: '', sequence: 1 }, usedIds);
+    const id = generateSubjectId('{RND:6}', { site: '', stratumCode: '', sequence: 1 }, usedIds, () => 0.5);
     expect(id).toHaveLength(6);
     expect(id).toMatch(/^[A-Z0-9]{6}$/);
   });
@@ -211,14 +211,14 @@ describe('generateSubjectId – {RND:n} and collision detection', () => {
     // Generate 50 IDs with a small (4-char) random segment – collisions are possible
     // but the engine should re-roll to guarantee uniqueness
     for (let i = 0; i < 50; i++) {
-      ids.add(generateSubjectId('{RND:4}', { site: '', stratumCode: '', sequence: i }, usedIds));
+      ids.add(generateSubjectId('{RND:4}', { site: '', stratumCode: '', sequence: i }, usedIds, () => Math.random()));
     }
     expect(ids.size).toBe(50);
   });
 
   it('adds the generated ID to the usedIds Set', () => {
     const usedIds = new Set<string>();
-    const id = generateSubjectId('{SITE}-{RND:4}', { site: 'X', stratumCode: '', sequence: 1 }, usedIds);
+    const id = generateSubjectId('{SITE}-{RND:4}', { site: 'X', stratumCode: '', sequence: 1 }, usedIds, () => 0.5);
     expect(usedIds.has(id)).toBe(true);
   });
 });

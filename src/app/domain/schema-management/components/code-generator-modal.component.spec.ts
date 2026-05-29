@@ -67,10 +67,10 @@ describe('CodeGeneratorModalComponent (domain)', () => {
         ],
         blockSizes: [3, 6],
         stratumCaps: [
-          { levels: ['Low', 'Yes'], cap: 10 },
-          { levels: ['Low', 'No'], cap: 15 },
-          { levels: ['High', 'Yes'], cap: 5 },
-          { levels: ['High', 'No'], cap: 20 }
+          { levelIds: {}, cap: 10 },
+          { levelIds: {}, cap: 15 },
+          { levelIds: {}, cap: 5 },
+          { levelIds: {}, cap: 20 }
         ],
         seed: 'test_seed',
         subjectIdMask: '[SiteID]-[StratumCode]-[001]'

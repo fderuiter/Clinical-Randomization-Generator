@@ -465,7 +465,8 @@ export function generateMinimization(
     const subjectId = generateSubjectId(
       config.subjectIdMask,
       { site, stratumCode, sequence: siteSeq },
-      usedSubjectIds
+      usedSubjectIds,
+      rng
     );
 
     schema.push({
