@@ -14,9 +14,6 @@ import autoTable from 'jspdf-autotable';
 import { APP_VERSION } from '../../../../environments/version';
 import { ExcelExportService } from '../services/excel-export.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { VersionHistoryService } from '../../version-history/version-history.service';
-import { SaveVersionModalComponent } from '../../version-history/components/save-version-modal.component';
-import JSZip from 'jszip';
 
 export type SortDirection = 'asc' | 'desc' | 'none';
 
@@ -63,7 +60,7 @@ export type GridRow = BlockHeader | DataRow | BlockSummary;
   selector: 'app-results-grid',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CdkMenuModule, ScrollingModule, KeyValuePipe, SaveVersionModalComponent],
+  imports: [CdkMenuModule, ScrollingModule, KeyValuePipe],
   templateUrl: './results-grid.component.html',
   styles: [`
     .dot { transition: transform 0.2s ease-in-out; }
@@ -73,7 +70,6 @@ export class ResultsGridComponent {
   public state = inject(RandomizationEngineFacade);
   public viewState = inject(SchemaViewStateService);
   public readonly viewport = inject(ViewportService);
-  public readonly versionHistory = inject(VersionHistoryService);
   private readonly toast = inject(ToastService);
   private readonly methodologySpec = inject(MethodologySpecificationService);
   private readonly excelExport = inject(ExcelExportService);
@@ -90,16 +86,6 @@ export class ResultsGridComponent {
 
   /** Signals that the audit hash was just copied; drives the ✓ icon. */
   hashCopied = signal(false);
-
-  showSaveVersionModal = signal(false);
-
-  isSaved = computed(() => {
-    const results = this.state.results();
-    if (!results) return false;
-    const currentHash = results.metadata.auditHash;
-    const versions = this.versionHistory.versions();
-    return versions.some(v => v.schemaHash === currentHash);
-  });
 
   /**
    * Expose the shared `isUnblinded` signal directly so existing template
@@ -411,213 +397,6 @@ export class ResultsGridComponent {
     }).catch(() => {
       // Clipboard write failed (e.g. permissions denied) – nothing to do visually
     });
-  }
-
-  async handleSaveVersion(payload: { operatorId: string, reasonForChange: string }) {
-    const results = this.state.results();
-    if (!results) return;
-
-    try {
-      await this.versionHistory.saveVersion(
-        payload.operatorId,
-        payload.reasonForChange,
-        results.metadata.config,
-        results.metadata.auditHash,
-        ['Generated schema'] // Simplified diff for now
-      );
-      this.showSaveVersionModal.set(false);
-      this.toast.showSuccess('Version saved successfully.');
-    } catch (e) {
-      this.toast.showError('Failed to save version.');
-    }
-  }
-
-  async exportComplianceBundle() {
-    if (!this.isSaved()) {
-      this.toast.showError('Export blocked: Please save the current version first.');
-      return;
-    }
-    const data = this.state.results();
-    if (!data) return;
-
-    try {
-      const zip = new JSZip();
-
-      // 1. Generate PDF Compliance Log
-      const pdfBlob = await this.generatePdfBlob();
-      zip.file(`compliance_log_${data.metadata.auditHash.substring(0, 8)}.pdf`, pdfBlob);
-
-      // 2. Generate CSV Randomization Artifact
-      const csvContent = this.generateCsvContent();
-      zip.file(`randomization_${this.sanitizeFilename(data.metadata.protocolId)}_${this.isUnblinded() ? 'unblinded' : 'blinded'}.csv`, csvContent);
-
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(zipBlob);
-      const safeProtocol = this.sanitizeFilename(data.metadata.protocolId);
-      const dateStamp = this.formatDateStamp();
-      link.setAttribute('href', url);
-      link.setAttribute('download', `compliance_bundle_${dateStamp}_${safeProtocol}.zip`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 100);
-
-      this.toast.showSuccess('Compliance bundle exported.');
-    } catch (e) {
-      console.error(e);
-      this.toast.showError('Failed to export compliance bundle.');
-    }
-  }
-
-  private generateCsvContent(): string {
-    const data = this.state.results();
-    if (!data) return '';
-
-    const strataHeaders = data.metadata.strata?.map(s => s.name || s.id) || [];
-    const headers = ['Subject ID', 'Site', ...strataHeaders, 'Block Number', 'Block Size', 'Treatment Arm']
-      .map(h => this.sanitizeCsvValue(h));
-
-    const rows = data.schema.map(r => {
-      const strataValues = data.metadata.strata?.map(s => r.stratum[s.id] || '') || [];
-      return [
-        r.subjectId,
-        r.site,
-        ...strataValues,
-        r.blockNumber.toString(),
-        r.blockSize.toString(),
-        this.isUnblinded() ? r.treatmentArm : '*** BLINDED ***'
-      ].map(val => this.sanitizeCsvValue(val));
-    });
-
-    const watermark = "DRAFT SCHEMA - DO NOT USE FOR ENROLLMENT. Execute the generated R/SAS/Python script to generate the official trial schema for RTSM/IRT implementation.";
-    const timestamp = new Date(data.metadata.generatedAt).toISOString();
-    const methodologyComments = this.methodologySpec.formatForCsv(
-      this.methodologySpec.generateNarrative(data.metadata.config)
-    );
-    return [
-      `"${watermark}"`,
-      `# Protocol ID: ${data.metadata.protocolId}`,
-      `# Study Name: ${data.metadata.studyName}`,
-      `# App Version: ${APP_VERSION}`,
-      `# Generated At: ${timestamp}`,
-      `# PRNG Algorithm: seedrandom (Alea)`,
-      `# PRNG Seed: ${data.metadata.seed}`,
-      `# SHA-256 Audit Hash: ${data.metadata.auditHash}`,
-      methodologyComments,
-      headers.join(','),
-      ...rows.map(e => e.join(','))
-    ].join('\n');
-  }
-
-  private async generatePdfBlob(): Promise<Blob> {
-    const data = this.state.results();
-    if (!data) throw new Error('No data');
-
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const timestamp = new Date(data.metadata.generatedAt).toISOString();
-    const auditHash = data.metadata.auditHash;
-    const truncatedHash = auditHash ? `${auditHash.substring(0, 16)}…${auditHash.substring(48, 64)}` : 'N/A';
-
-    // ── Certificate Header ──────────────────────────────────────────────────
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    doc.text('RTSM/IRT COMPLIANCE LOG & SCHEMA CERTIFICATE', pageWidth / 2, 18, { align: 'center' });
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 80);
-    const statement =
-      'This document certifies the algorithmic generation of the RTSM/IRT randomization schema detailed ' +
-      'below. The integrity of this dataset is mathematically verified by the attached cryptographic hash. ' +
-      'This version is securely logged in the compliance ledger.';
-    const splitStatement = doc.splitTextToSize(statement, pageWidth - 28);
-    doc.text(splitStatement, 14, 26);
-
-    // ── Metadata Block ─────────────────────────────────────────────────────
-    const metaStartY = 26 + splitStatement.length * 5 + 4;
-    const metaRows: [string, string][] = [
-      ['Protocol ID', data.metadata.protocolId],
-      ['Study Name', data.metadata.studyName],
-      ['Phase', data.metadata.phase],
-      ['App Version', APP_VERSION],
-      ['PRNG Algorithm', 'seedrandom (Alea)'],
-      ['PRNG Seed', data.metadata.seed],
-      ['Generated At (ISO 8601)', timestamp],
-      ['SHA-256 Audit Hash', auditHash],
-    ];
-
-    autoTable(doc, {
-      startY: metaStartY,
-      head: [['Field', 'Value']],
-      body: metaRows,
-      theme: 'grid',
-      headStyles: { fillColor: [79, 70, 229], fontSize: 9 },
-      styles: { fontSize: 8, cellPadding: 2 },
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55 }, 1: { cellWidth: 'auto', font: 'courier' } },
-      didParseCell: (hookData) => {
-        if (hookData.row.index === metaRows.length - 1 && hookData.section === 'body') {
-          hookData.cell.styles.fillColor = [235, 232, 255];
-          hookData.cell.styles.fontStyle = 'bold';
-        }
-      }
-    });
-
-    const planStartY = (doc as any).lastAutoTable?.finalY + 8 || metaStartY + 60;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    doc.text('Randomization Plan & Specifications', 14, planStartY);
-
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
-
-    const narrative = this.methodologySpec.generateNarrative(data.metadata.config);
-    const narrativeLines = doc.splitTextToSize(narrative, pageWidth - 28);
-    doc.text(narrativeLines, 14, planStartY + 6);
-    
-    // Add ALL versions info
-    const allVersions = this.versionHistory.versions();
-    const versionStartY = planStartY + 6 + narrativeLines.length * 4.5 + 4;
-    
-    if (allVersions.length > 0) {
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(40, 40, 40);
-      doc.text('Version Record History', 14, versionStartY);
-      
-      const versionRows = allVersions.map(v => [
-        v.versionNumber,
-        new Date(v.timestamp).toLocaleString(),
-        v.operatorId,
-        v.reasonForChange,
-        v.schemaHash
-      ]);
-
-      autoTable(doc, {
-        startY: versionStartY + 4,
-        head: [['Version', 'Timestamp', 'Operator ID', 'Reason', 'Hash']],
-        body: versionRows,
-        theme: 'grid',
-        headStyles: { fillColor: [100, 116, 139], fontSize: 8 },
-        styles: { fontSize: 7, cellPadding: 2 },
-        columnStyles: { 
-          0: { cellWidth: 15 },
-          1: { cellWidth: 30 },
-          2: { cellWidth: 20 },
-          3: { cellWidth: 50 },
-          4: { cellWidth: 'auto', font: 'courier' }
-        }
-      });
-    }
-    
-    return doc.output('blob');
   }
 
   exportCsv() {
