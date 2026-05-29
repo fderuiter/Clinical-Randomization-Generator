@@ -1,7 +1,7 @@
 import { Injectable } from "@angular/core";
 import { RandomizationConfig } from '../../../core/models/randomization.model';
 import { CodeGenerationStrategy } from './base.strategy';
-import { FormattingUtil } from './formatting.util';
+import { FormattingUtil, EscapedString } from './formatting.util';
 import { ReproducibilityUtil } from './reproducibility.util';
 import { APP_VERSION } from '../../../../../environments/version';
 import { MethodologySpecificationService } from '../methodology-specification.service';
@@ -10,6 +10,11 @@ import { StrataParsingError, TemplateCompilationError, ConfigurationValidationEr
 @Injectable()
 export class StataStrategy implements CodeGenerationStrategy {
   readonly language = 'STATA';
+
+  @EscapedString('STATA')
+  escapeString(s: string): string {
+    return s;
+  }
 
   constructor(private methodologySpec: MethodologySpecificationService) {}
 
@@ -42,7 +47,7 @@ const generatedAt = new Date().toISOString();
 
       // Value label definitions (strata factors as 1-based integers)
       labelDefs = strata.map((s, si) => {
-        const lvlDefs = s.levels.map((lvl, j) => `${j + 1} ${FormattingUtil.stataLabelQuote(lvl)}`).join(' ');
+        const lvlDefs = s.levels.map((lvl, j) => `${j + 1} ${this.escapeString(lvl)}`).join(' ');
         return `label define lbl_${varNames[si]} ${lvlDefs}, replace`;
       }).join('\n');
 
@@ -363,7 +368,7 @@ const sites = config.sites || [];
     // Value label definitions
     const labelDefs = strata.length > 0
       ? strata.map((s, si) => {
-          const lvlDefs = s.levels.map((lvl, j) => `${j + 1} ${FormattingUtil.stataLabelQuote(lvl)}`).join(' ');
+          const lvlDefs = s.levels.map((lvl, j) => `${j + 1} ${this.escapeString(lvl)}`).join(' ');
           return `label define lbl_${varNames[si]} ${lvlDefs}, replace`;
         }).join('\n')
       : '';
@@ -796,7 +801,7 @@ const generatedAt = new Date().toISOString();
     // Value label definitions
     const labelDefs = strata.length > 0
       ? strata.map((s, si) => {
-          const lvlDefs = s.levels.map((lvl, j) => `${j + 1} ${FormattingUtil.stataLabelQuote(lvl)}`).join(' ');
+          const lvlDefs = s.levels.map((lvl, j) => `${j + 1} ${this.escapeString(lvl)}`).join(' ');
           return `label define lbl_${varNames[si]} ${lvlDefs}, replace`;
         }).join('\n')
       : '';
