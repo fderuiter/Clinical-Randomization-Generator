@@ -17,17 +17,22 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v6
 
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        run_install: false
+
     - name: Set up Node.js
       uses: actions/setup-node@v6
       with:
         node-version: '22'
-        cache: 'npm'
+        cache: 'pnpm'
 
     - name: Install Dependencies
-      run: npm ci
+      run: pnpm install --frozen-lockfile
 
     - name: Build Project
-      run: npm run build
+      run: pnpm run build
 
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
@@ -35,7 +40,7 @@ jobs:
         PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/pw-browsers
 
     - name: Run Unit Tests
-      run: npm test -- --watch=false
+      run: pnpm test -- --watch=false
 
     - name: Archive environment
       run: tar -cf shared-env.tar node_modules pw-browsers dist
@@ -250,7 +255,7 @@ jobs:
       uses: actions/setup-node@v6
       with:
         node-version: '22'
-        cache: 'npm'
+        cache: 'pnpm'
 
     - name: Download code-generation fixture scripts
       uses: actions/download-artifact@v8
@@ -488,11 +493,9 @@ jobs:
     - name: Generate Software Bill of Materials (SBOM)
       run: |
         echo "Generating CycloneDX SBOM for supply chain audit..."
-        npx --yes @cyclonedx/cyclonedx-npm \
-          --output-format json \
-          --output-file sbom.json \
-          --short-PURLs \
-          --omit dev
+        npx --yes @cyclonedx/cdxgen \
+          -t nodejs \
+          -o sbom.json
         echo "SBOM generated successfully."
         echo "Total components: $(cat sbom.json | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d.get(\"components\", [])))')"
 

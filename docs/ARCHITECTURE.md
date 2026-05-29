@@ -1240,14 +1240,14 @@ graph BT
 
 ```bash
 # Unit tests (Vitest via Angular CLI)
-npm test -- --watch=false
+pnpm test -- --watch=false
 
 # Or directly with the vitest binary:
 ./node_modules/.bin/vitest run
 
 # E2E tests (requires dev server running first)
 ng serve --port 4200 &
-npx playwright test
+pnpm exec playwright test
 ```
 
 ---
@@ -1302,10 +1302,10 @@ produced by the application.
 
 | Command | Description |
 |---|---|
-| `npm start` | `ng serve` on default port 4200 |
-| `npm run dev` | `ng serve --port=3000` |
-| `npm run build` | Production build (esbuild + SSR) |
-| `npm test -- --watch=false` | Run all Vitest unit tests once |
+| `pnpm start` | `ng serve` on default port 4200 |
+| `pnpm run dev` | `ng serve --port=3000` |
+| `pnpm run build` | Production build (esbuild + SSR) |
+| `pnpm test -- --watch=false` | Run all Vitest unit tests once |
 | `./node_modules/.bin/vitest run` | Run all unit tests (alternative, faster) |
 | `ng lint` | ESLint (TS + Angular template rules + boundary rules) |
-| `npx playwright test` | Run all E2E tests (server must be running) |
+| `pnpm exec playwright test` | Run all E2E tests (server must be running) |
