@@ -80,7 +80,7 @@
     "typescript": "~5.9.2",
     "typescript-eslint": "8.59.3",
     "vitest": "^4.1.7",
-    "wrangler": "^4.90.1",
+    "wrangler": "^4.95.0",
     "zone.js": "^0.16.1"
   },
   "packageManager": "pnpm@11.1.3",
