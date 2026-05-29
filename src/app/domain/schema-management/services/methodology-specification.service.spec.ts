@@ -36,9 +36,9 @@ describe('MethodologySpecificationService', () => {
     blockSizes: [3, 6],
     stratumCaps: [
       { levelIds: { sex: 'Male', age: 'Young' }, cap: 12 },
-      { levels: ['Male', 'Old'], cap: 9 },
-      { levels: ['Female', 'Young'], cap: 15 },
-      { levels: ['Female', 'Old'], cap: 6 },
+      { levelIds: {}, cap: 9 },
+      { levelIds: {}, cap: 15 },
+      { levelIds: {}, cap: 6 },
     ],
     seed: 'seed_strat',
     subjectIdMask: '[SiteID]-[001]',

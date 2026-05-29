@@ -73,12 +73,23 @@ export function generateSubjectId(
   mask: string,
   context: SubjectIdContext,
   usedIds: Set<string>,
+  rng: () => number,
   maxRetries = 100
 ): string {
   const hasRnd = /\{RND:\d+\}/.test(mask); // only {RND} tokens introduce non-determinism
 
+  const rndString = (n: number) => {
+    let result = '';
+    for (let i = 0; i < n; i++) {
+      // rng() returns a float in [0, 1)
+      const index = Math.floor(rng() * ALPHANUMERIC.length);
+      result += ALPHANUMERIC[index];
+    }
+    return result;
+  };
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const id = applyTokens(mask, context, secureRandomAlphanumeric);
+    const id = applyTokens(mask, context, rndString);
     if (!usedIds.has(id)) {
       usedIds.add(id);
       return id;
@@ -88,7 +99,7 @@ export function generateSubjectId(
   }
 
   // Fallback: return deterministic ID even if it already exists (shouldn't happen)
-  const id = applyTokens(mask, context, secureRandomAlphanumeric);
+  const id = applyTokens(mask, context, rndString);
   usedIds.add(id);
   return id;
 }
@@ -96,14 +107,6 @@ export function generateSubjectId(
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
 const ALPHANUMERIC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-
-function secureRandomAlphanumeric(n: number): string {
-  const bytes = new Uint8Array(n);
-  globalThis.crypto.getRandomValues(bytes);
-  return Array.from(bytes)
-    .map(b => ALPHANUMERIC[b % ALPHANUMERIC.length])
-    .join('');
-}
 
 /**
  * Calculate the Luhn check digit for the numeric characters in `str`.

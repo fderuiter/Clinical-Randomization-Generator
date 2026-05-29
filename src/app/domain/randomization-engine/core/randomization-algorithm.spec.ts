@@ -117,7 +117,7 @@ describe('generateRandomizationSchema – property tests', () => {
           fc.integer({ min: 1, max: 10 }).map(m => m * totalRatio),
           { minLength: 1, maxLength: 3 }
         ),
-        stratumCaps: fc.integer({ min: 1, max: 100 }).map(cap => [{ levelIds: {} as string[], cap }]),
+        stratumCaps: fc.integer({ min: 1, max: 100 }).map(cap => [{ levelIds: {} as Record<string, string>, cap }]),
         subjectIdMask: fc.constant('[SiteID]-[001]')
       });
     });
