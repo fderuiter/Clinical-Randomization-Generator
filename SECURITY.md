@@ -28,3 +28,28 @@ To ensure the integrity of our software supply chain, all GitHub Actions must us
 2. **Update the Workflow**: Replace the version tag in the `uses:` directive with the SHA. (e.g., `uses: actions/checkout@<SHA> # v4`).
 3. **Verify Compliance**: Push your changes. The CI linting check will automatically fail the build if any mutable tags are detected. Egress controls (`harden-runner`) block unauthorized network requests.
 4. **Rotating/Updating**: When a new version is required, locate the new SHA for that release, update the workflow file, and submit a PR.
+
+## Verifying Release Artifacts (SLSA & SBOM)
+
+All official releases are accompanied by cryptographically signed SLSA Build Provenance and SBOM (Software Bill of Materials) attestations, adhering to SLSA Level 3 requirements. These use keyless OIDC signatures via Sigstore.
+
+### 1. Verifying via GitHub CLI (Recommended)
+
+You can verify the integrity and provenance of the release artifacts using the [GitHub CLI](https://cli.github.com/):
+
+```bash
+# Verify the SLSA Build Provenance
+gh attestation verify sbom.json --owner fderuiter --repo Clinical-Randomization-Generator
+```
+
+### 2. Verifying via Cosign
+
+The attestations can also be verified using [Cosign](https://github.com/sigstore/cosign):
+
+```bash
+# Verify the attestation bundle
+cosign verify-blob-attestation sbom.json \
+  --bundle build-provenance.intoto.jsonl \
+  --certificate-identity-regexp "^https://github.com/.*/.github/workflows/ci.yml.*" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
