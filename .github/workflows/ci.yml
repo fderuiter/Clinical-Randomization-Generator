@@ -508,22 +508,45 @@ jobs:
 
   security_scan:
     runs-on: ubuntu-latest
+    needs: code_generation_fixtures
     permissions:
       contents: read
+      security-events: write
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v6
 
-    - name: Check for insecure Math.random() in randomization domain
+    - name: Download code-generation fixture scripts
+      uses: actions/download-artifact@v8
+      with:
+        name: code-generation-fixtures
+        path: artifacts/code-generation-fixtures/
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.11'
+
+    - name: Install Semgrep
+      run: pip install semgrep
+
+    - name: Run Polyglot Security Scan
       run: |
-        echo "Scanning for Math.random() usage in randomization-engine..."
-        if grep -rn "Math\.random()" src/app/domain/randomization-engine/; then
-          echo "ERROR: Math.random() detected in randomization-engine domain."
-          echo "Use seedrandom or the Web Crypto API (crypto.getRandomValues) instead."
-          exit 1
-        fi
-        echo "No insecure Math.random() found in randomization domain."
+        mkdir -p artifacts/
+        semgrep scan --config p/default \
+                     --config .semgrep/rules.yml \
+                     --exclude="*.html" \
+                     --error \
+                     --sarif --output=semgrep.sarif \
+                     src/ artifacts/
+
+    - name: Upload SARIF report
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: semgrep.sarif
+        category: semgrep
   deploy_preview:
     runs-on: ubuntu-latest
     needs: setup
