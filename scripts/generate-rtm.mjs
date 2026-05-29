@@ -7,10 +7,12 @@
  * This script:
  *  1. Scans Vitest unit-test spec files and Playwright E2E spec files for
  *     requirement tags in the format  // [REQ-XXX-YYY-NNN]
- *     placed immediately before a `test(` or `it(` call.
- *  2. Optionally reads Vitest JSON reporter output and Playwright JSON report
- *     to enrich each row with a PASS / FAIL / UNKNOWN status.
- *  3. Emits  Validation_Traceability_Matrix.md  in the repository root.
+ *  2. Parses the TypeScript AST to correctly associate requirement tags with
+ *     blocks, fully supporting dynamic template string tests (e.g., test.each)
+ *  3. Reads Vitest JSON reporter output and Playwright JSON report
+ *     to enrich each row with a PASS / FAIL / UNKNOWN status using exact lines.
+ *  4. Emits Validation_Traceability_Matrix.md, rtm.csv, and rtm.json in the
+ *     repository root.
  *
  * Usage (CI):
  *   node scripts/generate-rtm.mjs \
@@ -21,10 +23,10 @@
  * @regulatory RTM_GENERATION
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { join, relative, resolve, isAbsolute } from 'path';
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'fs';
+import { join, relative, resolve, isAbsolute, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { readdirSync, statSync } from 'fs';
+import ts from 'typescript';
 
 // ── CLI arg parsing ────────────────────────────────────────────────────────────
 
@@ -39,11 +41,10 @@ const playwrightResultsPath = getArg('--playwright-results') ?? null;
 const outputPath         = getArg('--out')                 ?? 'Validation_Traceability_Matrix.md';
 
 const __filename = fileURLToPath(import.meta.url);
-const repoRoot   = join(__filename, '..', '..');
+const repoRoot   = join(dirname(__filename), '..');
 
 // ── Regulatory requirements catalogue ─────────────────────────────────────────
 
-/** Mapping of requirement IDs to their descriptions. */
 const REQUIREMENTS = {
   'REQ-ICH-E9-001': 'Randomization algorithm must be deterministic and reproducible from a fixed PRNG seed (ICH E9 §2.3)',
   'REQ-ICH-E9-002': 'Stratification factors must be applied correctly to the randomization schedule (ICH E9 §2.3.3)',
@@ -65,11 +66,6 @@ const REQUIREMENTS = {
 
 // ── File discovery ─────────────────────────────────────────────────────────────
 
-/**
- * Recursively collects all *.spec.ts files under `dir`.
- * @param {string} dir
- * @returns {string[]}
- */
 function findSpecFiles(dir) {
   const results = [];
   if (!existsSync(dir)) return results;
@@ -89,116 +85,125 @@ const unitSpecFiles = findSpecFiles(join(repoRoot, 'src'));
 const e2eSpecFiles  = findSpecFiles(join(repoRoot, 'tests_e2e'));
 const allSpecFiles  = [...unitSpecFiles, ...e2eSpecFiles];
 
-// ── Tag extraction ─────────────────────────────────────────────────────────────
+// ── AST Block Mapping ──────────────────────────────────────────────────────────
 
-/**
- * @typedef {{ reqId: string; testName: string; file: string; line: number; suite: string }} TagEntry
- */
+function getLine(sourceFile, pos) {
+  return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
+}
 
-/** Pattern that matches `// [REQ-ICH-E9-001]` (with optional whitespace).
- *
- * Two alternatives are required because requirement IDs span two formats:
- *
- *  FOUR-segment IDs (category uses a hyphenated sub-prefix):
- *    REQ-ICH-E9-001, REQ-ICH-E6-001, REQ-ZERO-TRUST-001
- *
- *  THREE-segment IDs (category is a single compact token):
- *    REQ-21CFR11-001, REQ-SBOM-001, REQ-EXPORT-001
- *
- * The 4-segment alternative is listed first so the regex engine tries the
- * longer match before falling back to the shorter one, preventing partial
- * matches on the 3-segment prefix of a 4-segment ID.
- */
-const FOUR_SEG = '[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+';
-const THREE_SEG = '[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+';
-const TAG_RE = new RegExp(`\\/\\/\\s*\\[(${FOUR_SEG}|${THREE_SEG})\\]`, 'g');
-/** Pattern to capture the immediately following test/it call's description. */
-const TEST_NAME_RE = /(?:test|it)\s*\(\s*['"`]([^'"`]+)['"`]/;
-/** Pattern to capture describe block name. */
-const DESCRIBE_RE = /(?:test\.describe|describe)\s*\(\s*['"`]([^'"`]+)['"`]/;
+function findOwningNode(node, commentPos) {
+  if (commentPos < node.getFullStart() || commentPos >= node.getEnd()) return null;
+  // If comment is in the leading trivia, this node owns it (unless it's the root SourceFile container)
+  if (commentPos < node.getStart()) {
+    if (node.kind !== ts.SyntaxKind.SourceFile) return node;
+  }
+  let childOwner = null;
+  ts.forEachChild(node, child => {
+    if (!childOwner) childOwner = findOwningNode(child, commentPos);
+  });
+  return childOwner;
+}
 
-/**
- * Parse a spec file and return all tagged entries found.
- * @param {string} filePath
- * @returns {TagEntry[]}
- */
-function extractTags(filePath) {
-  const content = readFileSync(filePath, 'utf-8');
-  const lines   = content.split('\n');
-  const rel     = relative(repoRoot, filePath).replace(/\\/g, '/');
-  const entries = [];
+const fileReqBlocks = new Map();
 
-  // Maintain a stack of active describe block names.
+for (const file of allSpecFiles) {
+  const sourceText = readFileSync(file, 'utf-8');
+  const sourceFile = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true);
+  const blocks = [];
+  
+  const FOUR_SEG = '[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+';
+  const THREE_SEG = '[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+';
+  const TAG_RE = new RegExp(`\\[(${FOUR_SEG}|${THREE_SEG})\\]`, 'g');
+  
+  let match;
+  while ((match = TAG_RE.exec(sourceText)) !== null) {
+    const reqId = match[1];
+    if (!reqId.startsWith('REQ-')) continue;
+    const node = findOwningNode(sourceFile, match.index);
+    if (node) {
+      blocks.push({
+        reqId,
+        startLine: getLine(sourceFile, node.getStart()),
+        endLine: getLine(sourceFile, node.getEnd())
+      });
+    } else {
+      const line = getLine(sourceFile, match.index);
+      blocks.push({ reqId, startLine: line, endLine: line + 1 });
+    }
+  }
+  const rel = relative(repoRoot, file).replace(/\\/g, '/');
+  fileReqBlocks.set(rel, blocks);
+}
+
+function getReqId(file, line) {
+  const blocks = fileReqBlocks.get(file);
+  if (!blocks) return null;
+  let best = null;
+  for (const b of blocks) {
+    if (line >= b.startLine && line <= b.endLine) {
+      if (!best || (b.endLine - b.startLine < best.endLine - best.startLine)) {
+        best = b;
+      }
+    }
+  }
+  return best ? best.reqId : null;
+}
+
+// ── Static Fallback for missing results ────────────────────────────────────────
+
+function extractStaticTestsFallback(file) {
+  const content = readFileSync(file, 'utf-8');
+  const lines = content.split('\n');
+  const results = [];
+  
+  const DESCRIBE_RE = /(?:test\.describe|describe)\s*\(\s*['"`]([^'"`]+)['"`]/;
+  const TEST_NAME_RE = /(?:test|it)\s*\(\s*['"`]([^'"`]+)['"`]/;
+  
   const suiteStack = [];
-
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-
-    // Track describe / suite block starts
     const describeMatch = line.match(DESCRIBE_RE);
     if (describeMatch) {
       suiteStack.push(describeMatch[1]);
     }
-    // Very simplistic brace tracking to pop suite stack on closing '});'
-    // Best-effort: a line that is purely `});` or `})` is treated as the end
-    // of the most-recently-opened describe block.
-    //
-    // Known limitation: this heuristic will also fire on closing braces from
-    // other `});` patterns (e.g., arrow-function arguments, object literals).
-    // For accurate suite attribution, use a proper AST parser. The current
-    // implementation provides reasonable accuracy for standard test files.
     if (/^\s*\}\s*\)\s*;?\s*$/.test(line) && suiteStack.length > 0) {
       suiteStack.pop();
     }
-
-    const currentSuite = suiteStack[suiteStack.length - 1] ?? '';
-
-    // Scan for REQ tags
-    let tagMatch;
-    const tagRe = new RegExp(TAG_RE.source, 'g');
-    while ((tagMatch = tagRe.exec(line)) !== null) {
-      const reqId = tagMatch[1];
-
-      // Look ahead for the test name on the same or next few lines
-      let testName = '(unnamed test)';
-      for (let j = i; j <= Math.min(i + 5, lines.length - 1); j++) {
-        const nameMatch = lines[j].match(TEST_NAME_RE);
-        if (nameMatch) {
-          testName = nameMatch[1];
-          break;
-        }
-      }
-
-      entries.push({
-        reqId,
-        testName,
-        file: rel,
+    
+    const nameMatch = line.match(TEST_NAME_RE);
+    if (nameMatch) {
+      results.push({
+        file: relative(repoRoot, file).replace(/\\/g, '/'),
         line: i + 1,
-        suite: currentSuite,
+        suiteName: suiteStack.join(' > '),
+        testName: nameMatch[1],
+        status: 'UNKNOWN'
       });
     }
   }
-
-  return entries;
+  return results;
 }
 
-/** @type {TagEntry[]} */
-const allEntries = allSpecFiles.flatMap(extractTags);
+// ── Results Extraction ─────────────────────────────────────────────────────────
 
-// ── Test result enrichment ─────────────────────────────────────────────────────
-
-/** @type {Map<string, 'PASS'|'FAIL'|'SKIP'>} */
-const testStatusMap = new Map();
+const executedTests = [];
+let vitestLoaded = false;
+let playwrightLoaded = false;
 
 if (vitestResultsPath && existsSync(vitestResultsPath)) {
   try {
     const raw = JSON.parse(readFileSync(vitestResultsPath, 'utf-8'));
-    // Vitest JSON output: { testResults: [{ testFilePath, assertionResults: [{ fullName, status }] }] }
     for (const suite of (raw.testResults ?? [])) {
+      const relFile = relative(repoRoot, suite.name).replace(/\\/g, '/');
       for (const result of (suite.assertionResults ?? [])) {
-        testStatusMap.set(result.fullName, result.status === 'passed' ? 'PASS' : result.status === 'skipped' ? 'SKIP' : 'FAIL');
+        const line = result.location?.line;
+        const status = result.status === 'passed' ? 'PASS' : result.status === 'skipped' ? 'SKIP' : 'FAIL';
+        const suiteName = result.ancestorTitles.join(' > ');
+        const testName = result.title;
+        executedTests.push({ file: relFile, line, suiteName, testName, status });
       }
     }
+    vitestLoaded = true;
   } catch (e) {
     console.warn('[generate-rtm] Could not parse Vitest results:', e.message);
   }
@@ -207,115 +212,118 @@ if (vitestResultsPath && existsSync(vitestResultsPath)) {
 if (playwrightResultsPath && existsSync(playwrightResultsPath)) {
   try {
     const raw = JSON.parse(readFileSync(playwrightResultsPath, 'utf-8'));
-    // Playwright JSON: { suites: [{ specs: [{ title, tests: [{ results: [{ status }] }] }] }] }
-    function walkPWSuites(suites, prefix = '') {
+    function walkPWSuites(suites, prefix = '', file = '') {
       for (const suite of (suites ?? [])) {
         const title = prefix ? `${prefix} > ${suite.title}` : suite.title;
+        const currentFile = suite.file || file;
         for (const spec of (suite.specs ?? [])) {
           const lastResult = spec.tests?.[0]?.results?.slice(-1)?.[0];
           const status = lastResult?.status === 'passed' ? 'PASS' : lastResult?.status === 'skipped' ? 'SKIP' : 'FAIL';
-          testStatusMap.set(`${title} > ${spec.title}`, status);
-          testStatusMap.set(spec.title, status);
+          let relFile = currentFile;
+          if (relFile && !relFile.includes('/')) {
+            const found = allSpecFiles.find(f => f.endsWith(relFile));
+            if (found) relFile = relative(repoRoot, found).replace(/\\/g, '/');
+          }
+          executedTests.push({ file: relFile, line: spec.line, suiteName: title, testName: spec.title, status });
         }
-        walkPWSuites(suite.suites, title);
+        walkPWSuites(suite.suites, title, currentFile);
       }
     }
     walkPWSuites(raw.suites);
+    playwrightLoaded = true;
   } catch (e) {
     console.warn('[generate-rtm] Could not parse Playwright results:', e.message);
   }
 }
 
-/**
- * Resolve test status for an entry.
- * @param {TagEntry} entry
- * @returns {'✅ PASS'|'❌ FAIL'|'⏭️ SKIP'|'⬜ UNKNOWN'}
- */
-function resolveStatus(entry) {
-  // Try exact match, then partial
-  for (const [key, status] of testStatusMap.entries()) {
-    if (key.includes(entry.testName)) {
-      return status === 'PASS' ? '✅ PASS' : status === 'SKIP' ? '⏭️ SKIP' : '❌ FAIL';
-    }
+if (!vitestLoaded) {
+  for (const file of unitSpecFiles) {
+    executedTests.push(...extractStaticTestsFallback(file));
   }
-  return '⬜ UNKNOWN';
 }
 
-// ── Markdown generation ────────────────────────────────────────────────────────
+if (!playwrightLoaded) {
+  for (const file of e2eSpecFiles) {
+    executedTests.push(...extractStaticTestsFallback(file));
+  }
+}
 
-const now = new Date().toISOString();
-const hasResults = testStatusMap.size > 0;
+// ── Aggregation ────────────────────────────────────────────────────────────────
 
-/** Group entries by requirement ID */
-/** @type {Map<string, TagEntry[]>} */
 const byReq = new Map();
-
-for (const entry of allEntries) {
-  if (!byReq.has(entry.reqId)) byReq.set(entry.reqId, []);
-  byReq.get(entry.reqId).push(entry);
-}
-
-// Also include requirements from the catalogue that have no tagged tests yet
 for (const reqId of Object.keys(REQUIREMENTS)) {
-  if (!byReq.has(reqId)) byReq.set(reqId, []);
+  byReq.set(reqId, []);
 }
 
-/** Sort requirement IDs: ICH-E9 → ICH-E6 → 21CFR11 → others */
-const sortedReqIds = [...byReq.keys()].sort();
+for (const t of executedTests) {
+  if (!t.line) {
+    continue;
+  }
+  const reqId = getReqId(t.file, t.line);
+  if (reqId) {
+    byReq.get(reqId).push(t);
+  }
+}
 
-// ── Compute coverage summary ───────────────────────────────────────────────────
-const totalReqs      = sortedReqIds.length;
-const coveredReqs    = sortedReqIds.filter(id => (byReq.get(id) ?? []).length > 0).length;
-const totalTests     = allEntries.length;
+const sortedReqIds = [...byReq.keys()].sort();
+const totalReqs = sortedReqIds.length;
+const coveredReqs = sortedReqIds.filter(id => (byReq.get(id) ?? []).length > 0).length;
+const totalTests = executedTests.filter(t => t.line && getReqId(t.file, t.line)).length;
+const hasResults = vitestLoaded || playwrightLoaded;
+
+// ── Generate Outputs ───────────────────────────────────────────────────────────
 
 let lines = [];
-
-lines.push(`# Validation Traceability Matrix`);
-lines.push('');
-lines.push(`> **Generated:** ${now}  `);
+lines.push(`# Validation Traceability Matrix\n`);
+lines.push(`> **Generated:** ${new Date().toISOString()}  `);
 lines.push(`> **Status:** ${hasResults ? 'Test results loaded' : 'Test results not provided — status shown as UNKNOWN'}  `);
 lines.push(`> **Requirements covered:** ${coveredReqs} / ${totalReqs}  `);
-lines.push(`> **Tagged test cases:** ${totalTests}  `);
-lines.push('');
+lines.push(`> **Tagged test cases:** ${totalTests}  \n`);
 lines.push('---');
-lines.push('');
-lines.push('## Summary');
-lines.push('');
+lines.push('\n## Summary\n');
 lines.push('| Metric | Value |');
 lines.push('|---|---|');
 lines.push(`| Total regulatory requirements | ${totalReqs} |`);
 lines.push(`| Requirements with ≥1 test | ${coveredReqs} |`);
 lines.push(`| Requirements with no test coverage | ${totalReqs - coveredReqs} |`);
-lines.push(`| Total tagged test cases | ${totalTests} |`);
-lines.push('');
+lines.push(`| Total tagged test cases | ${totalTests} |\n`);
 lines.push('---');
-lines.push('');
-lines.push('## Traceability Matrix');
-lines.push('');
-lines.push('| Requirement ID | Description | Test File | Line | Test Name | Suite | Status |');
-lines.push('|---|---|---|---|---|---|---|');
+lines.push('\n## Traceability Matrix\n');
+lines.push(`| Requirement ID | Description | Test File | Line | Test Name | Suite | Status |`);
+lines.push(`|---|---|---|---|---|---|---|`);
+
+const csvRows = [];
+csvRows.push(`Requirement ID,Suite Name,Test Name,Status`);
+
+const jsonExport = [];
 
 for (const reqId of sortedReqIds) {
   const entries = byReq.get(reqId) ?? [];
-  const desc    = REQUIREMENTS[reqId] ?? '*(undocumented requirement)*';
+  const desc = REQUIREMENTS[reqId] ?? '*(undocumented requirement)*';
   if (entries.length === 0) {
     lines.push(`| \`${reqId}\` | ${desc} | — | — | *(no tests tagged)* | — | ⚠️ NO COVERAGE |`);
   } else {
     for (const entry of entries) {
-      const status = resolveStatus(entry);
-      // Escape backslashes first, then pipe characters so Markdown table cells render correctly.
-      const safeTest  = entry.testName.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
-      const safeSuite = entry.suite.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
-      lines.push(`| \`${reqId}\` | ${desc} | \`${entry.file}\` | ${entry.line} | ${safeTest} | ${safeSuite} | ${status} |`);
+      const statusIcon = entry.status === 'PASS' ? '✅ PASS' : entry.status === 'SKIP' ? '⏭️ SKIP' : entry.status === 'UNKNOWN' ? '⬜ UNKNOWN' : '❌ FAIL';
+      const safeTest = entry.testName.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
+      const safeSuite = entry.suiteName.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
+      lines.push(`| \`${reqId}\` | ${desc} | \`${entry.file}\` | ${entry.line} | ${safeTest} | ${safeSuite} | ${statusIcon} |`);
+      
+      const escapeCsv = (str) => `"${str.replace(/"/g, '""')}"`;
+      csvRows.push(`${reqId},${escapeCsv(entry.suiteName)},${escapeCsv(entry.testName)},${entry.status}`);
+      
+      jsonExport.push({
+        "Requirement ID": reqId,
+        "Suite Name": entry.suiteName,
+        "Test Name": entry.testName,
+        "Status": entry.status
+      });
     }
   }
 }
 
-lines.push('');
-lines.push('---');
-lines.push('');
-lines.push('## Regulatory References');
-lines.push('');
+lines.push('\n---\n');
+lines.push('## Regulatory References\n');
 lines.push('| Tag Prefix | Regulatory Source |');
 lines.push('|---|---|');
 lines.push('| `REQ-ICH-E9` | ICH E9 – Statistical Principles for Clinical Trials |');
@@ -323,21 +331,22 @@ lines.push('| `REQ-ICH-E6` | ICH E6(R2) – Good Clinical Practice (GCP) |');
 lines.push('| `REQ-21CFR11` | 21 CFR Part 11 – Electronic Records; Electronic Signatures |');
 lines.push('| `REQ-ZERO-TRUST` | Equipose Zero-Trust Architecture Requirement |');
 lines.push('| `REQ-SBOM` | Supply-Chain Security – Software Bill of Materials |');
-lines.push('| `REQ-EXPORT` | Export Artifact Provenance Requirements |');
-lines.push('');
-lines.push('---');
-lines.push('');
-lines.push('## SAS & Stata Cross-Environment Note');
-lines.push('');
+lines.push('| `REQ-EXPORT` | Export Artifact Provenance Requirements |\n');
+lines.push('---\n');
+lines.push('## SAS & Stata Cross-Environment Note\n');
 lines.push('Mathematical result validation for SAS and Stata is deferred to the end-user ');
-lines.push('environment per the formal Exception Report. See `docs/SAS_Stata_Exception_Report.md`.');
-lines.push('');
+lines.push('environment per the formal Exception Report. See `docs/SAS_Stata_Exception_Report.md`.\n');
 lines.push('Static syntax validation of generated SAS scripts is automated in CI via the ');
 lines.push('`sas_static_validation` job (`scripts/validate-sas-syntax.mjs`). ');
-lines.push('See `docs/adr/0001-sas-static-validation-strategy.md` for the validation strategy ADR.');
-lines.push('');
+lines.push('See `docs/adr/0001-sas-static-validation-strategy.md` for the validation strategy ADR.\n');
 
-const markdown = lines.join('\n');
 const resolvedOutputPath = isAbsolute(outputPath) ? outputPath : join(repoRoot, outputPath);
-writeFileSync(resolvedOutputPath, markdown, 'utf-8');
-console.log(`[generate-rtm] Wrote ${resolvedOutputPath} (${coveredReqs}/${totalReqs} requirements covered, ${totalTests} tagged tests)`);
+writeFileSync(resolvedOutputPath, lines.join('\n') + '\n', 'utf-8');
+
+const rtmJsonPath = join(dirname(resolvedOutputPath), 'rtm.json');
+writeFileSync(rtmJsonPath, JSON.stringify(jsonExport, null, 2), 'utf-8');
+
+const rtmCsvPath = join(dirname(resolvedOutputPath), 'rtm.csv');
+writeFileSync(rtmCsvPath, csvRows.join('\n') + '\n', 'utf-8');
+
+console.log(`[generate-rtm] Wrote ${resolvedOutputPath}, rtm.json and rtm.csv`);

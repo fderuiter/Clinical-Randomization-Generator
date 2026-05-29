@@ -60,6 +60,7 @@ function angularTemplateInliner(): Plugin {
 export default defineConfig({
   plugins: [angularTemplateInliner()],
   test: {
+    includeTaskLocation: true,
     globals: true,
     environment: 'jsdom',
     setupFiles: ['src/setup-vitest.ts'],
