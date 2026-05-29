@@ -13,4 +13,4 @@ This checklist must be completed for any release that is intended for regulated 
 
 ## Post-Release
 - [ ] Document completion of this checklist in the release notes or a dedicated compliance artifact.
-- [ ] Sign off by the designated release manager or QA lead.
+- [ ] Cryptographically verify the release artifacts (e.g., using Cosign or GitHub CLI) to ensure the build provenance and SBOM attestations are valid.

@@ -781,3 +781,81 @@ jobs:
           exit 1
         fi
         echo "All actions are pinned to SHAs."
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [setup, e2e, code_generation_fixtures, python_script_execution_check, sas_static_validation, stata_static_validation, merge_reports, traceability_matrix, script_validation_report, cross_env_equivalence, sbom, security_scan, lint_actions]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+      attestations: write
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
+          fulcio.sigstore.dev:443
+          rekor.sigstore.dev:443
+          tuf-repo-cdn.sigstore.dev:443
+          ghcr.io:443
+          pkg-containers.githubusercontent.com:443
+          token.actions.githubusercontent.com:443
+
+    - name: Checkout repository
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      with:
+        fetch-depth: 0
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
+      with:
+        run_install: false
+
+    - name: Set up Node.js
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
+      with:
+        node-version: '22'
+        
+    - name: Install Dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Download SBOM artifact
+      uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
+      with:
+        name: sbom
+        path: .
+
+    - name: Generate Build Provenance
+      uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018
+      id: provenance
+      with:
+        subject-path: 'sbom.json'
+
+    - name: Copy Provenance for Release
+      run: cp ${{ steps.provenance.outputs.bundle-path }} ./build-provenance.intoto.jsonl
+
+    - name: Generate SBOM Attestation
+      uses: actions/attest-sbom@5026d3663739160db546203eeaffa6aa1c51a4d6
+      id: sbom_attest
+      with:
+        subject-path: 'sbom.json'
+        sbom-path: 'sbom.json'
+
+    - name: Copy SBOM Attestation for Release
+      run: cp ${{ steps.sbom_attest.outputs.bundle-path }} ./sbom-attestation.intoto.jsonl
+
+    - name: Run semantic-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: npx semantic-release
+
