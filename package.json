@@ -42,7 +42,7 @@
     "express": "^5.1.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
-    "motion": "^12.39.0",
+    "motion": "^12.40.0",
     "rxjs": "~7.8.0",
     "seedrandom": "^3.0.5",
     "tslib": "^2.3.0"
