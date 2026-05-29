@@ -47,6 +47,12 @@ import {APP_VERSION} from '../environments/version';
             <a routerLink="/about" routerLinkActive #rlaAbout="routerLinkActive"
                [class]="rlaAbout.isActive ? 'text-white dark:text-white' : 'hover:text-white transition-colors'"
                [attr.aria-current]="rlaAbout.isActive ? 'page' : null">About</a>
+            <a routerLink="/trust" routerLinkActive #rlaTrust="routerLinkActive"
+               [class]="rlaTrust.isActive ? 'text-white dark:text-white flex items-center gap-1' : 'hover:text-white transition-colors flex items-center gap-1'"
+               [attr.aria-current]="rlaTrust.isActive ? 'page' : null">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+              Trust Center
+            </a>
 
             <!-- Theme Toggle -->
             <div class="relative ml-2">
@@ -182,6 +188,11 @@ import {APP_VERSION} from '../environments/version';
                  class="block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
                  [class]="mRlaAbout.isActive ? 'bg-indigo-600 dark:bg-slate-700 text-white' : 'text-indigo-100 hover:bg-indigo-600 dark:hover:bg-slate-700'"
                  [attr.aria-current]="mRlaAbout.isActive ? 'page' : null">About</a>
+              <a routerLink="/trust" routerLinkActive #mRlaTrust="routerLinkActive"
+                 (click)="mobileMenuOpen.set(false)"
+                 class="block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
+                 [class]="mRlaTrust.isActive ? 'bg-indigo-600 dark:bg-slate-700 text-white' : 'text-indigo-100 hover:bg-indigo-600 dark:hover:bg-slate-700'"
+                 [attr.aria-current]="mRlaTrust.isActive ? 'page' : null">Trust Center</a>
 
               <!-- Mobile theme options -->
               <div class="pt-2 border-t border-indigo-600/50 dark:border-slate-600">

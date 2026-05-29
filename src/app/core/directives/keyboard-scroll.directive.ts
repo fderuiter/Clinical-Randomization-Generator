@@ -1,11 +1,11 @@
-import { Directive, ElementRef, HostListener } from '@angular/core';
+import { Directive, ElementRef, HostListener, inject } from '@angular/core';
 
 @Directive({
   selector: '[appKeyboardScroll]',
   standalone: true
 })
 export class KeyboardScrollDirective {
-  constructor(private el: ElementRef<HTMLElement>) {}
+  private el = inject<ElementRef<HTMLElement>>(ElementRef);
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent) {

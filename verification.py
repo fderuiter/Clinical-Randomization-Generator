@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright
 
+
 def run_cuj(page):
     page.goto("http://localhost:4200")
     page.wait_for_timeout(2000)
@@ -32,6 +33,7 @@ def run_cuj(page):
     page.wait_for_timeout(500)
     page.screenshot(path="/home/jules/verification/screenshots/verification_focus.png")
     page.wait_for_timeout(1000)
+
 
 if __name__ == "__main__":
     with sync_playwright() as p:

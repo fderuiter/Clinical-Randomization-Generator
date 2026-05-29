@@ -1,6 +1,6 @@
 import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Dialog } from '@angular/cdk/dialog';
+import { Dialog, DialogRef } from '@angular/cdk/dialog';
 import {
   RandomizationConfig,
   RandomizationResult
@@ -69,7 +69,7 @@ export class RandomizationEngineFacade {
   readonly monteCarloProgress = signal(0);
   readonly monteCarloResults = signal<MonteCarloSuccessPayload | null>(null);
   
-  private monteCarloDialogRef: any = null;
+  private monteCarloDialogRef: DialogRef<unknown, MonteCarloModalComponent> | null = null;
 
   constructor() {
     if (this.isBrowser) {
@@ -150,7 +150,7 @@ export class RandomizationEngineFacade {
       restoreFocus: true
     });
     
-    this.monteCarloDialogRef.closed.subscribe(() => {
+    this.monteCarloDialogRef?.closed.subscribe(() => {
        // Stop the run if the modal was closed mid-flight or reset state
        this.closeMonteCarloModal();
     });

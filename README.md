@@ -7,6 +7,7 @@
   ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss)
   ![Vitest](https://img.shields.io/badge/Tested_with-Vitest-6E9F18?logo=vitest)
   ![Playwright](https://img.shields.io/badge/E2E-Playwright-2EAD33?logo=playwright)
+  [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/fderuiter/Clinical-Randomization-Generator/badge)](https://securityscorecards.dev/viewer/?uri=github.com/fderuiter/Clinical-Randomization-Generator)
 </div>
 
 ## Overview

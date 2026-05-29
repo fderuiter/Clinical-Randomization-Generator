@@ -73,7 +73,7 @@ class FakeWorker {
 describe('RandomizationEngineFacade – Monte Carlo', () => {
   let facade: RandomizationEngineFacade;
   let fakeWorker: FakeWorker;
-  let dialogMock: any;
+  let dialogMock: { open: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     fakeWorker = new FakeWorker();

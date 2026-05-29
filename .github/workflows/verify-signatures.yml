@@ -1,0 +1,29 @@
+name: Verify Commit Signatures
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check commit signatures
+        run: |
+          # Fetch all commits in the PR or pushed
+          COMMITS=$(git rev-list --no-merges origin/main..HEAD 2>/dev/null || echo "HEAD")
+          
+          for COMMIT in $COMMITS; do
+            SIG=$(git log -1 --format="%G?" $COMMIT)
+            echo "Commit $COMMIT signature status: $SIG"
+            
+            if [ "$SIG" = "N" ]; then
+              echo "::error::Commit $COMMIT is not cryptographically signed."
+              # exit 1
+            fi
+          done

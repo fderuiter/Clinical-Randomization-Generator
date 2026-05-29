@@ -33,33 +33,34 @@ import numpy as np
 # Configuration (mirrors the Vitest fixture STRATIFIED_CONFIG)
 # ---------------------------------------------------------------------------
 
-PROTOCOL_ID  = "XENV-PYTHON-001"
-STUDY_NAME   = "Cross-Env Equivalence Study"
-SEED         = 20240101   # integer seed for np.random.default_rng
+PROTOCOL_ID = "XENV-PYTHON-001"
+STUDY_NAME = "Cross-Env Equivalence Study"
+SEED = 20240101  # integer seed for np.random.default_rng
 
-sites        = ["Site-Alpha", "Site-Beta"]
-arms         = [{"name": "Drug", "id": "D", "ratio": 1},
-                {"name": "Placebo", "id": "P", "ratio": 1}]
-block_sizes  = [4]
-strata       = [{"id": "sex",  "levels": ["M", "F"]},
-                {"id": "age",  "levels": ["<65", ">=65"]}]
+sites = ["Site-Alpha", "Site-Beta"]
+arms = [
+    {"name": "Drug", "id": "D", "ratio": 1},
+    {"name": "Placebo", "id": "P", "ratio": 1},
+]
+block_sizes = [4]
+strata = [{"id": "sex", "levels": ["M", "F"]}, {"id": "age", "levels": ["<65", ">=65"]}]
 
 # Intersection caps: 20 subjects per (sex × age) combination per site
 stratum_caps = {
-    ("M",  "<65"):  20,
-    ("M",  ">=65"): 20,
-    ("F",  "<65"):  20,
-    ("F",  ">=65"): 20,
+    ("M", "<65"): 20,
+    ("M", ">=65"): 20,
+    ("F", "<65"): 20,
+    ("F", ">=65"): 20,
 }
 
 # ---------------------------------------------------------------------------
 # Derived constants
 # ---------------------------------------------------------------------------
 
-total_ratio       = sum(a["ratio"] for a in arms)
-strata_names      = [s["id"] for s in strata]
+total_ratio = sum(a["ratio"] for a in arms)
+strata_names = [s["id"] for s in strata]
 strata_levels_lst = [s["levels"] for s in strata]
-combos            = list(itertools.product(*strata_levels_lst))
+combos = list(itertools.product(*strata_levels_lst))
 
 EXPECTED_PER_STRATUM_SITE = 20
 EXPECTED_TOTAL = len(sites) * len(combos) * EXPECTED_PER_STRATUM_SITE
@@ -67,6 +68,7 @@ EXPECTED_TOTAL = len(sites) * len(combos) * EXPECTED_PER_STRATUM_SITE
 # ---------------------------------------------------------------------------
 # Block-generation helper (Fisher-Yates shuffle via numpy)
 # ---------------------------------------------------------------------------
+
 
 def generate_block(block_size: int, rng: np.random.Generator) -> list[str]:
     multiplier = block_size // total_ratio
@@ -76,9 +78,11 @@ def generate_block(block_size: int, rng: np.random.Generator) -> list[str]:
     rng.shuffle(block)
     return block
 
+
 # ---------------------------------------------------------------------------
 # Schema generation (MANUAL_MATRIX / intersection caps)
 # ---------------------------------------------------------------------------
+
 
 def generate_schema(seed: int) -> list[dict]:
     rng = np.random.default_rng(seed)
@@ -101,14 +105,16 @@ def generate_schema(seed: int) -> list[dict]:
                     site_subject_count += 1
                     stratum_subject_count += 1
 
-                    schema.append({
-                        "SubjectID":   f"{site}-{site_subject_count:03d}",
-                        "Site":        site,
-                        "BlockNumber": block_number,
-                        "BlockSize":   bs,
-                        "Treatment":   treatment,
-                        **stratum,
-                    })
+                    schema.append(
+                        {
+                            "SubjectID": f"{site}-{site_subject_count:03d}",
+                            "Site": site,
+                            "BlockNumber": block_number,
+                            "BlockSize": bs,
+                            "Treatment": treatment,
+                            **stratum,
+                        }
+                    )
 
                     if stratum_subject_count >= cap:
                         break
@@ -117,18 +123,18 @@ def generate_schema(seed: int) -> list[dict]:
 
     return schema
 
+
 # ---------------------------------------------------------------------------
 # Assertions
 # ---------------------------------------------------------------------------
+
 
 def assert_structural_properties(schema: list[dict]) -> list[str]:
     failures: list[str] = []
 
     # 1. Total subject count
     if len(schema) != EXPECTED_TOTAL:
-        failures.append(
-            f"Total subjects: expected {EXPECTED_TOTAL}, got {len(schema)}"
-        )
+        failures.append(f"Total subjects: expected {EXPECTED_TOTAL}, got {len(schema)}")
 
     # 2. Arm names in output
     observed_arms = {row["Treatment"] for row in schema}
@@ -141,9 +147,7 @@ def assert_structural_properties(schema: list[dict]) -> list[str]:
     # 3. Sites in output
     observed_sites = {row["Site"] for row in schema}
     if observed_sites != set(sites):
-        failures.append(
-            f"Sites in schema: expected {set(sites)}, got {observed_sites}"
-        )
+        failures.append(f"Sites in schema: expected {set(sites)}, got {observed_sites}")
 
     # 4. Block internal balance: every complete block must have
     #    exactly (block_size / total_ratio) assignments per arm.
@@ -199,12 +203,14 @@ def assert_structural_properties(schema: list[dict]) -> list[str]:
 
     return failures
 
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main() -> int:
-    print(f"Cross-Environment Equivalence Check (Python)")
+    print("Cross-Environment Equivalence Check (Python)")
     print(f"  Protocol: {PROTOCOL_ID}")
     print(f"  Seed:     {SEED}")
     print(f"  Expected subjects: {EXPECTED_TOTAL}")
