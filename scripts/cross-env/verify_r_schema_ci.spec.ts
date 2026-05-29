@@ -8,7 +8,7 @@ describe('R generated-script CI wiring', () => {
   it('downloads the code-generation fixture artifact before the R verification step', () => {
     const workflow = readFileSync(resolve(repoRoot, '.github/workflows/ci.yml'), 'utf-8');
 
-    expect(workflow).toContain('needs: [build_and_test, code_generation_fixtures]');
+    expect(workflow).toContain('needs: [setup, code_generation_fixtures]');
     expect(workflow).toContain('- name: Download code-generation fixture scripts');
     expect(workflow).toContain('name: code-generation-fixtures');
     expect(workflow).toContain('path: artifacts/code-generation-fixtures/');
