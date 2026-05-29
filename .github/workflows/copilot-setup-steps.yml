@@ -5,10 +5,10 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - .github/workflows/copilot-setup-steps.yml
+    - .github/workflows/copilot-setup-steps.yml
   pull_request:
     paths:
-      - .github/workflows/copilot-setup-steps.yml
+    - .github/workflows/copilot-setup-steps.yml
 
 jobs:
   # CRITICAL: This exact job key name is required by GitHub Copilot
@@ -18,21 +18,32 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7c394e58
+      with:
+        egress-policy: block
+        allowed-endpoints: |-
+          github.com:443
+          api.github.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          registry.yarnpkg.com:443
+          nodejs.org:443
+    - name: Checkout Code
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
+    - name: Install pnpm
+      uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
+      with:
           # Automatically picks up the appropriate version or defaults to latest stable
-          run_install: false 
+        run_install: false
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22" # Aligns with modern environment typings specified in the repository
-          cache: "pnpm"      # Leverages pnpm's global store cache topology for performance
+    - name: Set up Node.js
+      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
+      with:
+        node-version: "22"   # Aligns with modern environment typings specified in the repository
+        cache: "pnpm"        # Leverages pnpm's global store cache topology for performance
 
-      - name: Install Dependencies
+    - name: Install Dependencies
         # Enforces strict lockfile compliance based on your pnpm-lock.yaml file
-        run: pnpm install --frozen-lockfile
+      run: pnpm install --frozen-lockfile
