@@ -90,21 +90,41 @@
           
           <div class="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-1"></div>
           
-          @if (!isSaved()) {
-            <button (click)="showSaveVersionModal.set(true)" title="Save Version Checkpoint" aria-label="Save Version" class="min-h-[44px] text-sm bg-indigo-600 border border-transparent text-white px-4 py-1.5 rounded-lg hover:bg-indigo-700 font-medium transition-colors flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-              </svg>
-              Save Version
-            </button>
-          } @else {
-            <button (click)="exportComplianceBundle()" title="Export Compliance Bundle" aria-label="Export Bundle" class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-border-strong text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export Compliance Bundle
-            </button>
-          }
+          <button (click)="exportCsv()" title="Export as CSV" aria-label="Export as CSV" class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-border-strong text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            CSV
+          </button>
+          <button
+            (click)="exportXlsx()"
+            data-testid="export-xlsx-btn"
+            title="Export as Excel (.xlsx) – preserves leading zeros and provides two-sheet audit workbook"
+            aria-label="Export as Excel"
+            class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-border-strong text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Excel
+          </button>
+          <button (click)="exportPdf()" title="Export as PDF" aria-label="Export as PDF" class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-border-strong text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            PDF
+          </button>
+          <button
+            (click)="exportJson()"
+            data-testid="export-json-btn"
+            [disabled]="!isUnblinded()"
+            [title]="isUnblinded() ? 'Download unblinded results as JSON for reproducibility verification' : 'Unblind the schema to enable JSON export'"
+            [attr.aria-label]="isUnblinded() ? 'Export JSON' : 'JSON export requires unblinded schema'"
+            class="min-h-[44px] text-sm bg-white dark:bg-slate-700 border border-border-strong text-gray-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-medium transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-slate-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            JSON
+          </button>
         </div>
       </div>
 
@@ -541,10 +561,3 @@
     }
   </div>
 </ng-template>
-
-@if (showSaveVersionModal()) {
-  <app-save-version-modal
-    (cancel)="showSaveVersionModal.set(false)"
-    (save)="handleSaveVersion($event)"
-  ></app-save-version-modal>
-}

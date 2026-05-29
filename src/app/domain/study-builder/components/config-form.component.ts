@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, computed, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild, ChangeDetectionStrategy, effect } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, DestroyRef, ElementRef, HostListener, inject, OnInit, signal, Signal, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs/operators';
@@ -11,9 +11,8 @@ import { TagInputComponent } from './tag-input.component';
 import { previewSubjectIdMask, validateSubjectIdMask } from '../../randomization-engine/core/subject-id-engine';
 import { BlockPreviewComponent, ArmInput } from './block-preview.component';
 import { computeProportionalCaps, validateProportionalPercentages } from '../../randomization-engine/core/cap-strategy';
-import { CapStrategy, RandomizationConfig } from '../../core/models/randomization.model';
+import { CapStrategy } from '../../core/models/randomization.model';
 import { ToastService } from '../../../core/services/toast.service';
-import { VersionHistoryService } from '../../version-history/version-history.service';
 
 /**
  * ⚡ Bolt Performance Optimization:
@@ -33,7 +32,6 @@ export class ConfigFormComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly toastService = inject(ToastService);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly versionHistory = inject(VersionHistoryService);
 
   dropdownOpen = false;
   @ViewChild('dropdownContainer') dropdownContainer!: ElementRef;
@@ -159,14 +157,6 @@ export class ConfigFormComponent implements OnInit {
       ),
       { initialValue: parseBlockSizes(blockSizesCtrl.value as string) }
     );
-
-    effect(() => {
-      const configToRestore = this.versionHistory.configToRestore();
-      if (configToRestore) {
-        this.loadConfig(configToRestore);
-        this.versionHistory.configToRestore.set(null);
-      }
-    });
   }
 
   ngOnInit(): void {
@@ -530,100 +520,6 @@ export class ConfigFormComponent implements OnInit {
     this.syncStratumCaps();
     this.syncLevelDetails(this.strata.value as StratumFormValue[]);
     this.markCapsStale();
-  }
-
-  loadConfig(config: RandomizationConfig): void {
-    this.metadataGroup.patchValue({
-      protocolId: config.protocolId,
-      studyName: config.studyName,
-      phase: config.phase,
-      subjectIdMask: config.subjectIdMask,
-      seed: config.seed
-    }, { emitEvent: false });
-
-    this.strataGroup.patchValue({ sitesStr: config.sites.join(', ') }, { emitEvent: false });
-    
-    this.form.get('designGroup.randomizationMethod')?.patchValue(config.randomizationMethod ?? 'BLOCK', { emitEvent: false });
-
-    if (config.randomizationMethod === 'MINIMIZATION') {
-      this.allocationGroup.patchValue({
-        minimizationP: config.minimizationConfig?.p ?? 0.8,
-        totalSampleSize: config.minimizationConfig?.totalSampleSize ?? 100
-      }, { emitEvent: false });
-    } else {
-      this.allocationGroup.patchValue({ blockSizesStr: config.blockSizes.join(', ') }, { emitEvent: false });
-    }
-
-    this.arms.clear({ emitEvent: false });
-    config.arms.forEach(a => this.arms.push(
-      this.fb.group({ id: [a.id], name: [a.name], ratio: [a.ratio, [Validators.required, Validators.min(1)]] }),
-      { emitEvent: false }
-    ));
-
-    this.strata.clear({ emitEvent: false });
-    config.strata.forEach(s => this.strata.push(
-      this.fb.group({ id: [s.id], name: [s.name], levelsStr: [s.levels.join(', '), Validators.required] }),
-      { emitEvent: false }
-    ));
-
-    this.form.get('capsGroup.capStrategy')?.patchValue(config.capStrategy ?? 'MANUAL_MATRIX', { emitEvent: false });
-    this.form.get('capsGroup.globalCap')?.patchValue(config.globalCap ?? 100, { emitEvent: false });
-
-    this.form.updateValueAndValidity();
-    this.store.setStrata(this.strata.value as StratumFormValue[]);
-    
-    // Restore level details (percentages, marginal caps, minimization probabilities)
-    this.proportionalPercentages.update(prev => {
-      const next = { ...prev };
-      for (const s of config.strata) {
-        if (!next[s.id]) next[s.id] = {};
-        for (const l of s.levels) {
-          const detail = s.levelDetails?.find(d => d.name === l);
-          next[s.id][l] = detail?.targetPercentage ?? 0;
-        }
-      }
-      return next;
-    });
-
-    this.marginalCaps.update(prev => {
-      const next = { ...prev };
-      for (const s of config.strata) {
-        if (!next[s.id]) next[s.id] = {};
-        for (const l of s.levels) {
-          const detail = s.levelDetails?.find(d => d.name === l);
-          next[s.id][l] = detail?.marginalCap;
-        }
-      }
-      return next;
-    });
-
-    this.minimizationProbabilities.update(prev => {
-      const next = { ...prev };
-      for (const s of config.strata) {
-        if (!next[s.id]) next[s.id] = {};
-        for (const l of s.levels) {
-          const detail = s.levelDetails?.find(d => d.name === l);
-          next[s.id][l] = detail?.expectedProbability ? detail.expectedProbability * 100 : 0;
-        }
-      }
-      return next;
-    });
-
-    this.syncStratumCaps();
-    // Reapply caps from config
-    this.stratumCaps.clear({ emitEvent: false });
-    for (const cap of config.stratumCaps) {
-      this.stratumCaps.push(
-        this.fb.group({ levelIds: [cap.levelIds], cap: [cap.cap, [Validators.required, Validators.min(0)]] }),
-        { emitEvent: false }
-      );
-    }
-
-    if (config.capStrategy === 'PROPORTIONAL') {
-      this.matrixComputed.set(true);
-    }
-    
-    this.form.updateValueAndValidity();
   }
 
   parseCommaSeparated(value: string | null | undefined): string[] {
