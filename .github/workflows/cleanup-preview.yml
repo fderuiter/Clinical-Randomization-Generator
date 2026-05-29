@@ -27,7 +27,7 @@ jobs:
         run_install: false
 
     - name: Set up Node.js
-      uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
       with:
         node-version: '22'
         cache: 'pnpm'
