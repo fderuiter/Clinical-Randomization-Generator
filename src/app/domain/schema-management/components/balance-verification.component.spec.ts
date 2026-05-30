@@ -1,6 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BalanceVerificationComponent } from './balance-verification.component';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
+import { SchemaViewStateService } from '../services/schema-view-state.service';
+import { BIOSTAT_DATA_ADAPTER } from '../adapters/biostat-data-adapter';
+import { BIOSTAT_VALIDATION_ADAPTER } from '../adapters/biostat-validation-adapter';
+import { RandomizationDataAdapter, RandomizationValidationAdapter } from '../adapters/randomization-adapters';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
 import { RandomizationResult } from '../../core/models/randomization.model';
@@ -108,6 +112,8 @@ describe('BalanceVerificationComponent', () => {
       imports: [BalanceVerificationComponent],
       providers: [
         { provide: RandomizationEngineFacade, useValue: mockFacade },
+        { provide: BIOSTAT_DATA_ADAPTER, useClass: RandomizationDataAdapter },
+        { provide: BIOSTAT_VALIDATION_ADAPTER, useClass: RandomizationValidationAdapter }
       ],
     }).compileComponents();
 
@@ -153,8 +159,8 @@ describe('BalanceVerificationComponent', () => {
   it('should compute globalRow arms with correct arm names', () => {
     mockFacade.results.set(buildMockResult({ totalSubjects: 12 }));
     fixture.detectChanges();
-    const arms = component.globalRow().arms;
-    expect(arms.map(a => a.arm.name)).toEqual(['Active', 'Placebo']);
+    const categories = component.globalRow().categories;
+    expect(categories.map(a => a.category.name)).toEqual(['Active', 'Placebo']);
   });
 
   it('should compute siteRows for each site', () => {
@@ -198,9 +204,9 @@ describe('BalanceVerificationComponent', () => {
     fixture.detectChanges();
 
     // At least one arm should have status 0 or we check the expected balance
-    const globalArms = component.globalRow().arms;
+    const globalCategories = component.globalRow().categories;
     // The test data creates balanced blocks so all variances should be 0
-    for (const ab of globalArms) {
+    for (const ab of globalCategories) {
       // Either perfect or within tolerance - key check is no critical errors
       expect(ab.status).not.toBe(2);
     }
@@ -219,18 +225,18 @@ describe('BalanceVerificationComponent', () => {
   });
 
   it('tooltipText should mention "Perfect balance" for status 0', () => {
-    const ab = { arm: { id: 'A', name: 'Active', ratio: 2 }, actual: 8, target: 8, variance: 0, status: 0 as const };
-    expect(component.tooltipText(ab)).toContain('Perfect balance');
+    const validation = TestBed.inject(BIOSTAT_VALIDATION_ADAPTER);
+    expect(validation.getDeviationTooltip(0, 0, 'Active')).toContain('Perfect balance');
   });
 
   it('tooltipText should mention "incomplete final block" for status 1', () => {
-    const ab = { arm: { id: 'A', name: 'Active', ratio: 2 }, actual: 9, target: 8, variance: 1, status: 1 as const };
-    expect(component.tooltipText(ab)).toContain('incomplete final block');
+    const validation = TestBed.inject(BIOSTAT_VALIDATION_ADAPTER);
+    expect(validation.getDeviationTooltip(1, 1, 'Active')).toContain('incomplete final block');
   });
 
   it('tooltipText should mention "Critical error" for status 2', () => {
-    const ab = { arm: { id: 'A', name: 'Active', ratio: 2 }, actual: 15, target: 8, variance: 7, status: 2 as const };
-    expect(component.tooltipText(ab)).toContain('Critical error');
+    const validation = TestBed.inject(BIOSTAT_VALIDATION_ADAPTER);
+    expect(validation.getDeviationTooltip(2, 7, 'Active')).toContain('Critical error');
   });
 
   it('should not show "Balance by Stratum" section when no strata configured', () => {

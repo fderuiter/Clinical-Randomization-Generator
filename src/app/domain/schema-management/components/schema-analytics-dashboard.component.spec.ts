@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SchemaAnalyticsDashboardComponent } from './schema-analytics-dashboard.component';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { SchemaViewStateService } from '../services/schema-view-state.service';
+import { BIOSTAT_DATA_ADAPTER } from '../adapters/biostat-data-adapter';
+import { RandomizationDataAdapter } from '../adapters/randomization-adapters';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
 import { RandomizationResult } from '../../core/models/randomization.model';
@@ -58,7 +60,8 @@ describe('SchemaAnalyticsDashboardComponent', () => {
     await TestBed.configureTestingModule({
       imports: [SchemaAnalyticsDashboardComponent],
       providers: [
-        { provide: RandomizationEngineFacade, useValue: mockFacade }
+        { provide: RandomizationEngineFacade, useValue: mockFacade },
+        { provide: BIOSTAT_DATA_ADAPTER, useClass: RandomizationDataAdapter }
       ]
     }).compileComponents();
 

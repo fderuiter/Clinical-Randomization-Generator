@@ -17,8 +17,7 @@ import {
   GridComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
-import { SchemaViewStateService } from '../services/schema-view-state.service';
+import { BIOSTAT_DATA_ADAPTER } from '../adapters/biostat-data-adapter';
 
 // Register only the ECharts modules we need (tree-shakeable).
 echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer]);
@@ -28,7 +27,7 @@ echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendCompone
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (state.results()) {
+    @if (adapter.records().length > 0) {
       <div data-testid="schema-analytics-dashboard" class="bg-surface rounded-xl shadow-sm border border-border-subtle p-6 space-y-4">
 
         <!-- Header -->
@@ -36,21 +35,21 @@ echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendCompone
           <h3 class="text-base font-semibold text-main">Schema Analytics</h3>
 
           <!-- Active filter HUD -->
-          @if (viewState.activeFilter()) {
+          @if (adapter.activeFilter()) {
             <div class="flex items-center gap-2 text-sm">
               <span class="text-muted">Active filter:</span>
               <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 font-medium text-xs">
-                {{ viewState.activeFilter()!.type === 'site' ? 'Site' : 'Treatment' }}:
-                {{ viewState.activeFilter()!.value }}
+                {{ adapter.activeFilter()!.type === 'groupingFactor' ? 'Site' : 'Category' }}:
+                {{ adapter.activeFilter()!.value }}
                 <button
-                  (click)="viewState.clearFilter()"
+                  (click)="adapter.clearFilter()"
                   class="ml-1 hover:text-indigo-600 dark:hover:text-indigo-200 leading-none rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   aria-label="Remove filter"
                   title="Remove filter"
                 >✕</button>
               </span>
               <button
-                (click)="viewState.clearFilter()"
+                (click)="adapter.clearFilter()"
                 class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
               >Clear all filters</button>
             </div>
@@ -63,7 +62,7 @@ echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendCompone
           <div>
             <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">
               Treatment Balance
-              @if (!viewState.isUnblinded()) {
+              @if (!adapter.isUnblinded()) {
                 <span class="ml-1 text-amber-700 dark:text-amber-400">(blinded)</span>
               }
             </p>
@@ -87,8 +86,7 @@ echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendCompone
   `,
 })
 export class SchemaAnalyticsDashboardComponent implements OnDestroy {
-  protected readonly state = inject(RandomizationEngineFacade);
-  protected readonly viewState = inject(SchemaViewStateService);
+  protected readonly adapter = inject(BIOSTAT_DATA_ADAPTER);
 
   private readonly donutContainerRef = viewChild<ElementRef<HTMLDivElement>>('donutContainer');
   private readonly barContainerRef = viewChild<ElementRef<HTMLDivElement>>('barContainer');
@@ -108,27 +106,27 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
 
   /** Aggregated treatment counts from the filtered schema. */
   private readonly treatmentCounts = computed(() => {
-    const schema = this.viewState.filteredSchema();
+    const schema = this.adapter.filteredRecords();
     const map = new Map<string, number>();
     for (const row of schema) {
-      map.set(row.treatmentArm, (map.get(row.treatmentArm) ?? 0) + 1);
+      map.set(row.category, (map.get(row.category) ?? 0) + 1);
     }
     return map;
   });
 
   /** Aggregated site counts from the filtered schema. */
   private readonly siteCounts = computed(() => {
-    const schema = this.viewState.filteredSchema();
+    const schema = this.adapter.filteredRecords();
     const map = new Map<string, number>();
     for (const row of schema) {
-      map.set(row.site, (map.get(row.site) ?? 0) + 1);
+      map.set(row.groupingFactor, (map.get(row.groupingFactor) ?? 0) + 1);
     }
     return map;
   });
 
   /** ECharts option object for the donut chart (reacts to blinding state). */
   private readonly donutOption = computed(() => {
-    const isUnblinded = this.viewState.isUnblinded();
+    const isUnblinded = this.adapter.isUnblinded();
     const counts = this.treatmentCounts();
     const blindedColour = this.getCssColor('--text-muted', '#94a3b8');
 
@@ -169,14 +167,14 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
 
   /** ECharts option object for the grouped bar chart. */
   private readonly barOption = computed(() => {
-    const schema = this.viewState.filteredSchema();
-    const isUnblinded = this.viewState.isUnblinded();
+    const schema = this.adapter.filteredRecords();
+    const isUnblinded = this.adapter.isUnblinded();
     const blindedColour = this.getCssColor('--text-muted', '#94a3b8');
 
     // Collect unique sites and treatment arms
-    const sites = [...new Set(schema.map(r => r.site))].sort();
+    const sites = [...new Set(schema.map(r => r.groupingFactor))].sort();
     const arms = isUnblinded
-      ? [...new Set(schema.map(r => r.treatmentArm))].sort()
+      ? [...new Set(schema.map(r => r.category))].sort()
       : ['Total'];
 
     // Build series data
@@ -184,9 +182,9 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
       const palette = ['#6366f1', '#34d399', '#fb923c', '#f472b6', '#38bdf8', '#a78bfa'];
       const data = sites.map(site => {
         if (!isUnblinded) {
-          return schema.filter(r => r.site === site).length;
+          return schema.filter(r => r.groupingFactor === site).length;
         }
-        return schema.filter(r => r.site === site && r.treatmentArm === arm).length;
+        return schema.filter(r => r.groupingFactor === site && r.category === arm).length;
       });
       return {
         name: arm,
@@ -221,13 +219,13 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
         try {
           this.donutChart = echarts.init(donutEl, undefined, { renderer: 'canvas' });
           this.donutChart.on('click', (params: echarts.ECElementEvent) => {
-            if (!this.viewState.isUnblinded()) return; // blinded: no interaction
+            if (!this.adapter.isUnblinded()) return; // blinded: no interaction
             const name = params.name as string;
-            const current = this.viewState.activeFilter();
-            if (current?.type === 'treatment' && current.value === name) {
-              this.viewState.clearFilter();
+            const current = this.adapter.activeFilter();
+            if (current?.type === 'category' && current.value === name) {
+              this.adapter.clearFilter();
             } else {
-              this.viewState.setFilter({ type: 'treatment', value: name });
+              this.adapter.setFilter({ type: 'category', value: name });
             }
           });
         } catch {
@@ -242,11 +240,11 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
           this.barChart.on('click', (params: echarts.ECElementEvent) => {
             // params.name holds the category (site) in a bar chart
             const siteName = params.name as string;
-            const current = this.viewState.activeFilter();
-            if (current?.type === 'site' && current.value === siteName) {
-              this.viewState.clearFilter();
+            const current = this.adapter.activeFilter();
+            if (current?.type === 'groupingFactor' && current.value === siteName) {
+              this.adapter.clearFilter();
             } else {
-              this.viewState.setFilter({ type: 'site', value: siteName });
+              this.adapter.setFilter({ type: 'groupingFactor', value: siteName });
             }
           });
         } catch {

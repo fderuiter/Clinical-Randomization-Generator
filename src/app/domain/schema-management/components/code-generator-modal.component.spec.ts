@@ -8,6 +8,7 @@ import { CodeGenerationError } from '../errors/code-generation-errors';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
 import { RandomizationConfig } from '../../core/models/randomization.model';
+import { BIOSTAT_DATA_ADAPTER } from '../adapters/biostat-data-adapter';
 
 describe('CodeGeneratorModalComponent (domain)', () => {
   let component: CodeGeneratorModalComponent;
@@ -38,7 +39,8 @@ describe('CodeGeneratorModalComponent (domain)', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: RandomizationEngineFacade, useValue: mockFacade },
-        { provide: CodeGeneratorService, useValue: mockCodeGeneratorService }
+        { provide: CodeGeneratorService, useValue: mockCodeGeneratorService },
+        { provide: BIOSTAT_DATA_ADAPTER, useValue: { records: signal([]) } }
       ]
     });
 
@@ -82,7 +84,7 @@ describe('CodeGeneratorModalComponent (domain)', () => {
       (mockCodeGeneratorService as any).generate.mockReturnValue('Mock R Code');
       component.setActiveTab('R');
       const code = component.currentCode;
-      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('R', mockConfig);
+      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('R', mockConfig, []);
       expect(code).toBe('Mock R Code');
     });
 
@@ -90,7 +92,7 @@ describe('CodeGeneratorModalComponent (domain)', () => {
       (mockCodeGeneratorService as any).generate.mockReturnValue('Mock Python Code');
       component.setActiveTab('Python');
       const code = component.currentCode;
-      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('Python', mockConfig);
+      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('Python', mockConfig, []);
       expect(code).toBe('Mock Python Code');
     });
 
@@ -98,7 +100,7 @@ describe('CodeGeneratorModalComponent (domain)', () => {
       (mockCodeGeneratorService as any).generate.mockReturnValue('Mock SAS Code');
       component.setActiveTab('SAS');
       const code = component.currentCode;
-      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('SAS', mockConfig);
+      expect((mockCodeGeneratorService as any).generate).toHaveBeenCalledWith('SAS', mockConfig, []);
       expect(code).toBe('Mock SAS Code');
     });
   });

@@ -1,4 +1,4 @@
-@if (state.results(); as data) {
+@if (adapter.metadata(); as metadata) {
 
     <!-- ── Audit Integrity Banner ──────────────────────────────────────────── -->
     <div data-testid="audit-integrity-banner"
@@ -14,7 +14,7 @@
         <p class="text-xs text-indigo-600 dark:text-indigo-400 mb-1">SHA-256 Hash</p>
         <span
           class="font-mono text-xs text-indigo-900 dark:text-indigo-100 block break-all"
-          [title]="data.metadata.auditHash"
+          [title]="metadata.auditHash"
           data-testid="audit-hash-value">{{ truncatedAuditHash }}</span>
       </div>
       <button
@@ -42,7 +42,7 @@
         <div>
           <h2 class="text-xl font-bold text-main">Generated Schema</h2>
           <p class="text-sm text-muted mt-1">
-            Protocol: {{data.metadata.protocolId}} | Seed: <span class="font-mono bg-subtle dark:text-slate-300 px-1 rounded">{{data.metadata.seed}}</span>
+            Protocol: {{metadata.protocolId}} | Seed: <span class="font-mono bg-subtle dark:text-slate-300 px-1 rounded">{{metadata.seed}}</span>
           </p>
         </div>
         
@@ -131,11 +131,11 @@
       <!-- ── Mobile Card Layout ───────────────────────────────────────────── -->
       @if (viewport.isMobile()) {
         <div class="divide-y divide-gray-200 dark:divide-slate-700">
-          @for (row of processedData(); track row.subjectId) {
+          @for (row of processedData(); track row.id) {
             <div data-testid="result-row" class="p-4 space-y-2">
               <div class="flex items-center justify-between">
                 <span class="font-mono text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  @for (chunk of splitSubjectId(row.subjectId); track $index) {
+                  @for (chunk of splitSubjectId(row.id); track $index) {
                     @if ($index > 0) {
                       <span class="text-muted">-</span>
                     }
@@ -148,8 +148,8 @@
                   [cdkMenuTriggerFor]="rowMenu"
                   (click)="openRowMenu(row)"
                   class="inline-flex items-center justify-center w-11 h-11 rounded-full text-muted hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
-                  [attr.aria-label]="'Actions for subject ' + row.subjectId"
-                  [attr.title]="'Actions for subject ' + row.subjectId"
+                  [attr.aria-label]="'Actions for subject ' + row.id"
+                  [attr.title]="'Actions for subject ' + row.id"
                 >
                   <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <circle cx="12" cy="5" r="1.5"/>
@@ -159,18 +159,18 @@
                 </button>
               </div>
               <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                <dt class="text-muted">Site</dt>
-                <dd class="font-semibold text-slate-900 dark:text-slate-100">{{row.site}}</dd>
-                @for (stratum of data.metadata.strata; track stratum.id) {
+                <dt class="text-muted">Grouping Factor</dt>
+                <dd class="font-semibold text-slate-900 dark:text-slate-100">{{row.groupingFactor}}</dd>
+                @for (stratum of metadata.strata; track stratum.id) {
                   <dt class="text-muted">{{stratum.name || stratum.id}}</dt>
                   <dd class="text-gray-700 dark:text-slate-300">{{row.stratum[stratum.id]}}</dd>
                 }
                 <dt class="text-muted">Block</dt>
                 <dd class="tabular-nums text-slate-900 dark:text-slate-100">{{row.blockNumber}} <span class="text-muted">(Size: {{row.blockSize}})</span></dd>
-                <dt class="text-muted">Treatment Arm</dt>
+                <dt class="text-muted">Category</dt>
                 <dd data-testid="result-arm-cell">
                   @if (isUnblinded()) {
-                    <span class="font-semibold text-slate-900 dark:text-slate-100">{{row.treatmentArm}}</span>
+                    <span class="font-semibold text-slate-900 dark:text-slate-100">{{row.category}}</span>
                   } @else {
                     <span class="text-muted">*** BLINDED ***</span>
                   }
@@ -196,31 +196,31 @@
               <!-- Sticky header: sticks to the top of the scroll viewport -->
               <thead class="sticky top-0 z-20 bg-subtle/50">
                 <tr>
-                  <!-- Subject ID – pinned column (intersection: z-30) -->
+                  <!-- Record ID – pinned column (intersection: z-30) -->
                   <th scope="col"
                       class="sticky left-0 z-30 bg-subtle/50 border-r border-border-base px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">
-                    <button (click)="toggleSort('subjectId')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" aria-label="Sort by Subject ID" title="Sort by Subject ID">
-                      Subject ID
+                    <button (click)="toggleSort('id')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group" aria-label="Sort by Record ID" title="Sort by Record ID">
+                      Record ID
                       <!-- Chevron sort indicator -->
                       <svg class="h-3 w-3 transition-transform"
-                           [class.text-indigo-500]="sortState().column === 'subjectId'"
-                           [class.text-gray-300]="sortState().column !== 'subjectId'"
-                           [class.rotate-180]="sortState().column === 'subjectId' && sortState().direction === 'desc'"
+                           [class.text-indigo-500]="sortState().column === 'id'"
+                           [class.text-gray-300]="sortState().column !== 'id'"
+                           [class.rotate-180]="sortState().column === 'id' && sortState().direction === 'desc'"
                            viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
                       </svg>
                     </button>
                   </th>
 
-                  <!-- Site column with sort + filter -->
+                  <!-- Grouping Factor column with sort + filter -->
                   <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">
                     <div class="inline-flex items-center gap-1">
-                      <button (click)="toggleSort('site')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Site" title="Sort by Site">
-                        Site
+                      <button (click)="toggleSort('groupingFactor')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Grouping Factor" title="Sort by Grouping Factor">
+                        Grouping Factor
                         <svg class="h-3 w-3 transition-transform"
-                             [class.text-indigo-500]="sortState().column === 'site'"
-                             [class.text-gray-300]="sortState().column !== 'site'"
-                             [class.rotate-180]="sortState().column === 'site' && sortState().direction === 'desc'"
+                             [class.text-indigo-500]="sortState().column === 'groupingFactor'"
+                             [class.text-gray-300]="sortState().column !== 'groupingFactor'"
+                             [class.rotate-180]="sortState().column === 'groupingFactor' && sortState().direction === 'desc'"
                              viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                           <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
                         </svg>
@@ -228,12 +228,12 @@
                       <!-- Filter trigger -->
                       <button type="button"
                               [cdkMenuTriggerFor]="columnFilterMenu"
-                              (click)="openColumnFilter('site')"
+                              (click)="openColumnFilter('groupingFactor')"
                               class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-                              [class.text-indigo-500]="hasActiveFilter('site')"
-                              [class.text-gray-400]="!hasActiveFilter('site')"
-                              aria-label="Filter Site"
-                              title="Filter Site">
+                              [class.text-indigo-500]="hasActiveFilter('groupingFactor')"
+                              [class.text-gray-400]="!hasActiveFilter('groupingFactor')"
+                              aria-label="Filter Grouping Factor"
+                              title="Filter Grouping Factor">
                         <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                           <path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clip-rule="evenodd"/>
                         </svg>
@@ -242,7 +242,7 @@
                   </th>
 
                   <!-- Dynamic stratum columns with filter -->
-                  @for (stratum of data.metadata.strata; track stratum.id) {
+                  @for (stratum of metadata.strata; track stratum.id) {
                     <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">
                       <div class="inline-flex items-center gap-1">
                         <button (click)="toggleSort('stratum_' + stratum.id)" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" [attr.aria-label]="'Sort by ' + (stratum.name || stratum.id)" [attr.title]="'Sort by ' + (stratum.name || stratum.id)">
@@ -285,27 +285,27 @@
                     </button>
                   </th>
 
-                  <!-- Treatment Arm column with sort + filter -->
+                  <!-- Category column with sort + filter -->
                   <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider whitespace-nowrap">
                     <div class="inline-flex items-center gap-1">
-                      <button (click)="toggleSort('treatmentArm')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Treatment Arm" title="Sort by Treatment Arm">
-                        Treatment Arm
+                      <button (click)="toggleSort('category')" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" aria-label="Sort by Category" title="Sort by Category">
+                        Category
                         <svg class="h-3 w-3 transition-transform"
-                             [class.text-indigo-500]="sortState().column === 'treatmentArm'"
-                             [class.text-gray-300]="sortState().column !== 'treatmentArm'"
-                             [class.rotate-180]="sortState().column === 'treatmentArm' && sortState().direction === 'desc'"
+                             [class.text-indigo-500]="sortState().column === 'category'"
+                             [class.text-gray-300]="sortState().column !== 'category'"
+                             [class.rotate-180]="sortState().column === 'category' && sortState().direction === 'desc'"
                              viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                           <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
                         </svg>
                       </button>
                       <button type="button"
                               [cdkMenuTriggerFor]="columnFilterMenu"
-                              (click)="openColumnFilter('treatmentArm')"
+                              (click)="openColumnFilter('category')"
                               class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-                              [class.text-indigo-500]="hasActiveFilter('treatmentArm')"
-                              [class.text-gray-400]="!hasActiveFilter('treatmentArm')"
-                              aria-label="Filter Treatment Arm"
-                              title="Filter Treatment Arm">
+                              [class.text-indigo-500]="hasActiveFilter('category')"
+                              [class.text-gray-400]="!hasActiveFilter('category')"
+                              aria-label="Filter Category"
+                              title="Filter Category">
                         <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                           <path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clip-rule="evenodd"/>
                         </svg>
@@ -323,17 +323,17 @@
                 <tr *cdkVirtualFor="let row of processedData(); trackBy: trackBySubjectId"
                     data-testid="result-row"
                     class="group hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-                  <!-- Subject ID – pinned left (z-10 body, solid bg) -->
+                  <!-- Record ID – pinned left (z-10 body, solid bg) -->
                   <td class="sticky left-0 z-10 bg-surface group-hover:bg-gray-50 dark:group-hover:bg-slate-700/50 border-r border-border-base px-6 py-3 whitespace-nowrap text-sm font-medium font-mono tabular-nums">
-                    @for (chunk of splitSubjectId(row.subjectId); track $index) {
+                    @for (chunk of splitSubjectId(row.id); track $index) {
                       @if ($index > 0) {
                         <span class="text-muted">-</span>
                       }
                       <span class="font-semibold text-slate-900 dark:text-slate-100">{{chunk}}</span>
                     }
                   </td>
-                  <td class="px-6 py-3 whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-slate-100">{{row.site}}</td>
-                  @for (stratum of data.metadata.strata; track stratum.id) {
+                  <td class="px-6 py-3 whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-slate-100">{{row.groupingFactor}}</td>
+                  @for (stratum of metadata.strata; track stratum.id) {
                     <td class="px-6 py-3 whitespace-nowrap text-sm text-muted">{{row.stratum[stratum.id]}}</td>
                   }
                   <td class="px-6 py-3 whitespace-nowrap text-sm tabular-nums">
@@ -343,7 +343,7 @@
                   <td data-testid="result-arm-cell" class="px-6 py-3 whitespace-nowrap text-sm">
                     @if (isUnblinded()) {
                       <span class="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
-                        {{row.treatmentArm}}
+                        {{row.category}}
                       </span>
                     } @else {
                       <span class="text-muted">
@@ -357,8 +357,8 @@
                       [cdkMenuTriggerFor]="rowMenu"
                       (click)="openRowMenu(row)"
                       class="inline-flex items-center justify-center w-11 h-11 rounded-full text-muted hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
-                      [attr.aria-label]="'Actions for subject ' + row.subjectId"
-                            [attr.title]="'Actions for subject ' + row.subjectId"
+                      [attr.aria-label]="'Actions for subject ' + row.id"
+                            [attr.title]="'Actions for subject ' + row.id"
                     >
                       <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <circle cx="12" cy="5" r="1.5"/>
@@ -380,7 +380,7 @@
                 <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clip-rule="evenodd"/>
                 </svg>
-                <span class="font-medium">{{processedData().length}} of {{viewState.filteredSchema().length}} rows shown</span>
+                <span class="font-medium">{{processedData().length}} of {{adapter.filteredRecords().length}} rows shown</span>
                 @for (kv of activeFilters; track kv.key) {
                   @if (kv.value) {
                     <span class="inline-flex items-center gap-1 bg-indigo-100 dark:bg-indigo-800/60 px-2 py-0.5 rounded-full">
@@ -399,13 +399,13 @@
             <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
               <thead class="sticky top-0 z-20 bg-subtle/50">
                 <tr>
-                  <th scope="col" class="sticky left-0 z-30 bg-subtle/50 border-r border-border-base px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Subject ID</th>
-                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Site</th>
-                  @for (stratum of data.metadata.strata; track stratum.id) {
+                  <th scope="col" class="sticky left-0 z-30 bg-subtle/50 border-r border-border-base px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Record ID</th>
+                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Grouping Factor</th>
+                  @for (stratum of metadata.strata; track stratum.id) {
                     <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">{{stratum.name || stratum.id}}</th>
                   }
                   <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Block</th>
-                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Treatment Arm</th>
+                  <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Category</th>
                   <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-muted uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -427,15 +427,15 @@
                     @case ('data') {
                       <tr data-testid="result-row" class="group hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
                         <td class="sticky left-0 z-10 bg-surface group-hover:bg-gray-50 dark:group-hover:bg-slate-700/50 border-r border-border-base px-6 py-5 whitespace-nowrap text-sm font-medium font-mono tabular-nums">
-                          @for (chunk of splitSubjectId($any(item).data.subjectId); track $index) {
+                          @for (chunk of splitSubjectId($any(item).data.id); track $index) {
                             @if ($index > 0) {
                               <span class="text-muted">-</span>
                             }
                             <span class="font-semibold text-slate-900 dark:text-slate-100">{{chunk}}</span>
                           }
                         </td>
-                        <td class="px-6 py-5 whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-slate-100">{{$any(item).data.site}}</td>
-                        @for (stratum of data.metadata.strata; track stratum.id) {
+                        <td class="px-6 py-5 whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-slate-100">{{$any(item).data.groupingFactor}}</td>
+                        @for (stratum of metadata.strata; track stratum.id) {
                           <td class="px-6 py-5 whitespace-nowrap text-sm text-muted">{{$any(item).data.stratum[stratum.id]}}</td>
                         }
                         <td class="px-6 py-5 whitespace-nowrap text-sm tabular-nums">
@@ -445,7 +445,7 @@
                         <td data-testid="result-arm-cell" class="px-6 py-5 whitespace-nowrap text-sm">
                           @if (isUnblinded()) {
                             <span class="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
-                              {{$any(item).data.treatmentArm}}
+                              {{$any(item).data.category}}
                             </span>
                           } @else {
                             <span class="text-muted">
@@ -459,8 +459,8 @@
                             [cdkMenuTriggerFor]="rowMenu"
                             (click)="openRowMenu($any(item).data)"
                             class="inline-flex items-center justify-center w-11 h-11 rounded-full text-muted hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus:ring-2 focus:ring-indigo-500"
-                            [attr.aria-label]="'Actions for subject ' + $any(item).data.subjectId"
-                            [attr.title]="'Actions for subject ' + $any(item).data.subjectId"
+                            [attr.aria-label]="'Actions for subject ' + $any(item).data.id"
+                            [attr.title]="'Actions for subject ' + $any(item).data.id"
                           >
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                               <circle cx="12" cy="5" r="1.5"/>
