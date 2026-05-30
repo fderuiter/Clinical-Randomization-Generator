@@ -1,11 +1,11 @@
 import { RandomizationConfig } from '../../../../core/models/randomization.model';
-import { generateRandomizationSchema } from '../../../../randomization-engine/core/randomization-algorithm';
 import { FormattingUtil } from '../formatting.util';
 import { ReproducibilityUtil } from '../reproducibility.util';
+import { TrialRecord } from '../../../../schema-management/adapters/trial-record.model';
 
 export class CodeTranspiler {
-  static transpile(lang: 'R'|'Python'|'SAS'|'STATA', config: RandomizationConfig, method: 'BLOCK' | 'MINIMIZATION'): string {
-    const schema = generateRandomizationSchema(config).schema;
+  static transpile(lang: 'R'|'Python'|'SAS'|'STATA', config: RandomizationConfig, method: 'BLOCK' | 'MINIMIZATION', records?: TrialRecord[]): string {
+    const schema = records || [];
     const seedHash = ReproducibilityUtil.hashCode(config.seed);
     const dateStr = new Date().toISOString().substring(0, 19);
     
@@ -41,14 +41,14 @@ export class CodeTranspiler {
       }
       out += `;\n`;
       for (const row of schema) {
-         out += `  SubjectID="${FormattingUtil.escapeSasString(row.subjectId)}"; ` +
-                `Site="${FormattingUtil.escapeSasString(row.site)}"; ` +
-                `Treatment="${FormattingUtil.escapeSasString(row.treatmentArm)}"; ` +
-                `BlockNumber=${row.blockNumber}; ` +
-                `BlockSize=${row.blockSize}; ` +
-                `StratumCode="${FormattingUtil.escapeSasString(row.stratumCode)}"; `;
+         out += `  SubjectID="${FormattingUtil.escapeSasString(row.id)}"; ` +
+                `Site="${FormattingUtil.escapeSasString(row.groupingFactor)}"; ` +
+                `Treatment="${FormattingUtil.escapeSasString(row.category)}"; ` +
+                `BlockNumber=${row['blockNumber'] ?? '.'}; ` +
+                `BlockSize=${row['blockSize'] ?? '.'}; ` +
+                `StratumCode="${FormattingUtil.escapeSasString(row['stratumCode'] ?? '')}"; `;
          for (const s of config.strata || []) {
-             out += `  ${FormattingUtil.escapeSasString(s.id)}="${FormattingUtil.escapeSasString(row.stratum[s.id])}"; `;
+             out += `  ${FormattingUtil.escapeSasString(s.id)}="${FormattingUtil.escapeSasString(row.stratum[s.id] ?? '')}"; `;
          }
          out += `output;\n`;
       }
@@ -83,15 +83,15 @@ export class CodeTranspiler {
       out += `gen str20 SubjectID = ""\ngen str20 Site = ""\ngen str50 Treatment = ""\ngen BlockNumber = .\ngen BlockSize = .\ngen str50 StratumCode = ""\n`;
       (config.strata || []).forEach(s => out += `gen str50 ${FormattingUtil.sanitizeStataVarName(s.id)} = ""\n`);
       schema.forEach((row, i) => {
-         out += `replace SubjectID=${FormattingUtil.stataLabelQuote(row.subjectId)} in ${i+1}\n`;
-         out += `replace Site=${FormattingUtil.stataLabelQuote(row.site)} in ${i+1}\n`;
-         const armName = config.arms.find(a => a.id === row.treatmentArmId)?.name || row.treatmentArmId;
+         out += `replace SubjectID=${FormattingUtil.stataLabelQuote(row.id)} in ${i+1}\n`;
+         out += `replace Site=${FormattingUtil.stataLabelQuote(row.groupingFactor)} in ${i+1}\n`;
+         const armName = config.arms.find(a => a.id === row['treatmentArmId'])?.name || row.category;
          out += `replace Treatment=${FormattingUtil.stataLabelQuote(armName)} in ${i+1}\n`;
-         out += `replace BlockNumber=${row.blockNumber} in ${i+1}\n`;
-         out += `replace BlockSize=${row.blockSize} in ${i+1}\n`;
-         out += `replace StratumCode=${FormattingUtil.stataLabelQuote(row.stratumCode)} in ${i+1}\n`;
+         out += `replace BlockNumber=${row['blockNumber'] ?? '.'} in ${i+1}\n`;
+         out += `replace BlockSize=${row['blockSize'] ?? '.'} in ${i+1}\n`;
+         out += `replace StratumCode=${FormattingUtil.stataLabelQuote(row['stratumCode'] ?? '')} in ${i+1}\n`;
          (config.strata || []).forEach(s => {
-             out += `replace ${FormattingUtil.sanitizeStataVarName(s.id)}=${FormattingUtil.stataLabelQuote(row.stratum[s.id])} in ${i+1}\n`;
+             out += `replace ${FormattingUtil.sanitizeStataVarName(s.id)}=${FormattingUtil.stataLabelQuote(row.stratum[s.id] ?? '')} in ${i+1}\n`;
          });
       });
     } else if (lang === 'Python') {
@@ -113,9 +113,9 @@ export class CodeTranspiler {
       }
       out += `schema = [\n`;
       for (const row of schema) {
-         out += `  {"SubjectID": "${row.subjectId}", "Site": "${row.site}", "Treatment": "${row.treatmentArm}", "BlockNumber": ${row.blockNumber}, "BlockSize": ${row.blockSize}, "StratumCode": "${row.stratumCode}"`;
+         out += `  {"SubjectID": "${row.id}", "Site": "${row.groupingFactor}", "Treatment": "${row.category}", "BlockNumber": ${row['blockNumber'] ?? 'None'}, "BlockSize": ${row['blockSize'] ?? 'None'}, "StratumCode": "${row['stratumCode'] ?? ''}"`;
          for (const s of config.strata || []) {
-             out += `, "${s.id}": "${FormattingUtil.escapePythonString(row.stratum[s.id])}"`;
+             out += `, "${s.id}": "${FormattingUtil.escapePythonString(row.stratum[s.id] ?? '')}"`;
          }
          out += `},\n`;
       }
@@ -138,9 +138,9 @@ export class CodeTranspiler {
       }
       out += `schema_list <- list()\n`;
       schema.forEach((row, i) => {
-         out += `schema_list[[${i+1}]] <- data.frame(SubjectID="${row.subjectId}", Site="${row.site}", Treatment="${row.treatmentArm}", BlockNumber=${row.blockNumber}, BlockSize=${row.blockSize}, StratumCode="${row.stratumCode}"`;
+         out += `schema_list[[${i+1}]] <- data.frame(SubjectID="${row.id}", Site="${row.groupingFactor}", Treatment="${row.category}", BlockNumber=${row['blockNumber'] ?? 'NA'}, BlockSize=${row['blockSize'] ?? 'NA'}, StratumCode="${row['stratumCode'] ?? ''}"`;
          for (const s of config.strata || []) {
-             out += `, ${s.id}="${FormattingUtil.escapeRString(row.stratum[s.id])}"`;
+             out += `, ${s.id}="${FormattingUtil.escapeRString(row.stratum[s.id] ?? '')}"`;
          }
          out += `, stringsAsFactors=FALSE)\n`;
       });

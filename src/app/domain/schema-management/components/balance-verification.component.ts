@@ -1,14 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
-import { GeneratedSchema, TreatmentArm } from '../../core/models/randomization.model';
+import { BIOSTAT_DATA_ADAPTER } from '../adapters/biostat-data-adapter';
+import { BIOSTAT_VALIDATION_ADAPTER, CategoryTarget } from '../adapters/biostat-validation-adapter';
+import { TrialRecord } from '../adapters/trial-record.model';
 
 // ---------------------------------------------------------------------------
 // Data model for the aggregation engine
 // ---------------------------------------------------------------------------
 
-export interface ArmBalance {
-  arm: TreatmentArm;
+export interface CategoryBalance {
+  category: CategoryTarget;
   actual: number;
   target: number;
   variance: number;
@@ -19,14 +20,14 @@ export interface ArmBalance {
 export interface BalanceRow {
   label: string;
   total: number;
-  arms: ArmBalance[];
+  categories: CategoryBalance[];
 }
 
 export interface MarginalBalanceRow {
   factor: string;
   level: string;
   total: number;
-  armCounts: { name: string; actual: number; target: number }[];
+  categoryCounts: { name: string; actual: number; target: number }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -37,7 +38,7 @@ export interface MarginalBalanceRow {
   imports: [DecimalPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (state.results(); as result) {
+    @if (adapter.records().length > 0) {
       <div class="space-y-6">
 
         <!-- ── Legend ─────────────────────────────────────────────────── -->
@@ -49,7 +50,7 @@ export interface MarginalBalanceRow {
           </span>
           <span class="inline-flex items-center gap-1.5">
             <span class="inline-block w-3 h-3 rounded-full bg-amber-400"></span>
-            @if (isMinimization()) { Expected marginal deviation } @else { Expected deviation (incomplete block) }
+            @if (validation.isMarginalBalanceTarget()) { Expected marginal deviation } @else { Expected deviation (incomplete block) }
           </span>
           <span class="inline-flex items-center gap-1.5">
             <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
@@ -74,8 +75,8 @@ export interface MarginalBalanceRow {
                 <tr>
                   <th class="px-6 py-3 text-left">Scope</th>
                   <th class="px-6 py-3 text-right">N</th>
-                  @for (ab of globalRow().arms; track ab.arm.id) {
-                    <th class="px-6 py-3 text-right">{{ ab.arm.name }}</th>
+                  @for (ab of globalRow().categories; track ab.category.id) {
+                    <th class="px-6 py-3 text-right">{{ ab.category.name }}</th>
                   }
                 </tr>
               </thead>
@@ -83,10 +84,10 @@ export interface MarginalBalanceRow {
                 <tr>
                   <td class="px-6 py-3 font-medium text-main">All Sites</td>
                   <td class="px-6 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{{ globalRow().total }}</td>
-                  @for (ab of globalRow().arms; track ab.arm.id) {
+                  @for (ab of globalRow().categories; track ab.category.id) {
                     <td class="px-6 py-3 text-right tabular-nums"
                         [class]="cellClass(ab.status)"
-                        [title]="tooltipText(ab)">
+                        [title]="validation.getDeviationTooltip(ab.status, ab.variance, ab.category.name)">
                       {{ ab.actual }}&nbsp;/&nbsp;{{ ab.target | number:'1.0-2' }}
                       @if (ab.status === 0) { <span class="ml-1">✓</span> }
                       @if (ab.status === 1) { <span class="ml-1">⚠</span> }
@@ -114,8 +115,8 @@ export interface MarginalBalanceRow {
                   <tr>
                     <th class="px-6 py-3 text-left">Site</th>
                     <th class="px-6 py-3 text-right">N</th>
-                    @for (ab of siteRows()[0].arms; track ab.arm.id) {
-                      <th class="px-6 py-3 text-right">{{ ab.arm.name }}</th>
+                    @for (ab of siteRows()[0].categories; track ab.category.id) {
+                      <th class="px-6 py-3 text-right">{{ ab.category.name }}</th>
                     }
                   </tr>
                 </thead>
@@ -124,10 +125,10 @@ export interface MarginalBalanceRow {
                     <tr class="hover:bg-hover/30">
                       <td class="px-6 py-3 font-medium text-main">{{ row.label }}</td>
                       <td class="px-6 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{{ row.total }}</td>
-                      @for (ab of row.arms; track ab.arm.id) {
+                      @for (ab of row.categories; track ab.category.id) {
                         <td class="px-6 py-3 text-right tabular-nums"
                             [class]="cellClass(ab.status)"
-                            [title]="tooltipText(ab)">
+                            [title]="validation.getDeviationTooltip(ab.status, ab.variance, ab.category.name)">
                           {{ ab.actual }}&nbsp;/&nbsp;{{ ab.target | number:'1.0-2' }}
                           @if (ab.status === 0) { <span class="ml-1">✓</span> }
                           @if (ab.status === 1) { <span class="ml-1">⚠</span> }
@@ -143,12 +144,12 @@ export interface MarginalBalanceRow {
         }
 
         <!-- ── Minimization: Marginal Balance by Factor/Level ─────────── -->
-        @if (isMinimization() && marginalBalanceRows().length > 0) {
+        @if (validation.isMarginalBalanceTarget() && marginalBalanceRows().length > 0) {
           <section class="bg-surface rounded-xl shadow-sm border border-purple-100 dark:border-purple-800 overflow-hidden">
             <div class="px-6 py-4 border-b border-purple-100 dark:border-purple-800">
               <h3 class="text-sm font-semibold text-main">Marginal Balance by Factor Level</h3>
               <p class="text-xs text-muted mt-0.5">
-                Arm distribution per stratification factor level (Pocock-Simon minimization target: equal marginal totals)
+                Category distribution per stratification factor level (target: equal marginal totals)
               </p>
             </div>
             <div class="overflow-x-auto">
@@ -159,7 +160,7 @@ export interface MarginalBalanceRow {
                     <th class="px-6 py-3 text-left">Level</th>
                     <th class="px-6 py-3 text-right">N</th>
                     @for (row of marginalBalanceRows().slice(0, 1); track row.factor) {
-                      @for (ac of row.armCounts; track ac.name) {
+                      @for (ac of row.categoryCounts; track ac.name) {
                         <th class="px-6 py-3 text-right">{{ ac.name }}</th>
                       }
                     }
@@ -171,7 +172,7 @@ export interface MarginalBalanceRow {
                       <td class="px-6 py-3 font-medium text-main text-xs">{{ row.factor }}</td>
                       <td class="px-6 py-3 text-gray-700 dark:text-slate-300">{{ row.level }}</td>
                       <td class="px-6 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{{ row.total }}</td>
-                      @for (ac of row.armCounts; track ac.name) {
+                      @for (ac of row.categoryCounts; track ac.name) {
                         <td class="px-6 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">
                           {{ ac.actual }}&nbsp;/&nbsp;{{ ac.target | number:'1.0-1' }}
                         </td>
@@ -185,7 +186,7 @@ export interface MarginalBalanceRow {
         }
 
         <!-- ── Per-Stratum Balance ────────────────────────────────────── -->
-        @if (!isMinimization() && stratumRows().length > 0) {
+        @if (!validation.isMarginalBalanceTarget() && stratumRows().length > 0) {
           <section class="bg-surface rounded-xl shadow-sm border border-border-subtle overflow-hidden">
             <div class="px-6 py-4 border-b border-border-subtle">
               <h3 class="text-sm font-semibold text-main">Balance by Stratum</h3>
@@ -199,8 +200,8 @@ export interface MarginalBalanceRow {
                   <tr>
                     <th class="px-6 py-3 text-left">Stratum</th>
                     <th class="px-6 py-3 text-right">N</th>
-                    @for (ab of stratumRows()[0].arms; track ab.arm.id) {
-                      <th class="px-6 py-3 text-right">{{ ab.arm.name }}</th>
+                    @for (ab of stratumRows()[0].categories; track ab.category.id) {
+                      <th class="px-6 py-3 text-right">{{ ab.category.name }}</th>
                     }
                   </tr>
                 </thead>
@@ -209,10 +210,10 @@ export interface MarginalBalanceRow {
                     <tr class="hover:bg-hover/30">
                       <td class="px-6 py-3 font-medium text-main max-w-xs truncate" [title]="row.label">{{ row.label }}</td>
                       <td class="px-6 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{{ row.total }}</td>
-                      @for (ab of row.arms; track ab.arm.id) {
+                      @for (ab of row.categories; track ab.category.id) {
                         <td class="px-6 py-3 text-right tabular-nums"
                             [class]="cellClass(ab.status)"
-                            [title]="tooltipText(ab)">
+                            [title]="validation.getDeviationTooltip(ab.status, ab.variance, ab.category.name)">
                           {{ ab.actual }}&nbsp;/&nbsp;{{ ab.target | number:'1.0-2' }}
                           @if (ab.status === 0) { <span class="ml-1">✓</span> }
                           @if (ab.status === 1) { <span class="ml-1">⚠</span> }
@@ -229,7 +230,7 @@ export interface MarginalBalanceRow {
 
         <!-- Footnote -->
         <p class="text-xs text-muted pb-2">
-          @if (isMinimization()) {
+          @if (validation.isMarginalBalanceTarget()) {
             ⚠&nbsp;Minimization (Pocock-Simon) achieves marginal balance across factor levels rather than perfect block-level balance.
             Small deviations from exact equal allocation are expected due to stochastic assignment and covariate sampling.
           } @else {
@@ -247,110 +248,78 @@ export interface MarginalBalanceRow {
   `,
 })
 export class BalanceVerificationComponent {
-  protected readonly state = inject(RandomizationEngineFacade);
+  protected readonly adapter = inject(BIOSTAT_DATA_ADAPTER);
+  protected readonly validation = inject(BIOSTAT_VALIDATION_ADAPTER);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  readonly isMinimization = computed(() =>
-    this.state.results()?.metadata.config?.randomizationMethod === 'MINIMIZATION'
-  );
-
-  /** Maximum block size from the config - used to classify deviations.
-   * Returns Infinity for minimization so any non-zero variance is classified
-   * as 'expected deviation' (status 1) rather than 'critical error' (status 2),
-   * since minimization does not guarantee perfect block-level balance.
-   */
-  private readonly maxBlockSize = computed<number>(() => {
-    const config = this.state.results()?.metadata.config;
-    if (this.isMinimization()) return Infinity;
-    if (!config?.blockSizes?.length) return 0;
-    return Math.max(...config.blockSizes);
-  });
-
-  /** All treatment arms from the config. */
-  private readonly arms = computed<TreatmentArm[]>(() => {
-    return this.state.results()?.metadata.config?.arms ?? [];
-  });
-
-  /** Sum of all arm ratios (e.g. 2:1 → 3). */
+  /** Sum of all category ratios (e.g. 2:1 → 3). */
   private readonly totalRatio = computed<number>(() =>
-    this.arms().reduce((sum, a) => sum + a.ratio, 0)
+    this.validation.targets().reduce((sum, a) => sum + a.ratio, 0)
   );
 
   // ── Core aggregation helper ───────────────────────────────────────────────
 
-  private buildArmBalances(rows: GeneratedSchema[]): ArmBalance[] {
-    const arms = this.arms();
+  private buildCategoryBalances(rows: TrialRecord[]): CategoryBalance[] {
+    const targets = this.validation.targets();
     const totalRatio = this.totalRatio();
     const n = rows.length;
-    const maxBlock = this.maxBlockSize();
 
     const actualMap = new Map<string, number>();
     for (const row of rows) {
-      actualMap.set(row.treatmentArm, (actualMap.get(row.treatmentArm) ?? 0) + 1);
+      actualMap.set(row.category, (actualMap.get(row.category) ?? 0) + 1);
     }
 
-    return arms.map(arm => {
-      const actual = actualMap.get(arm.name) ?? 0;
-      const target = totalRatio > 0 ? (arm.ratio / totalRatio) * n : 0;
+    return targets.map(category => {
+      const actual = actualMap.get(category.name) ?? 0;
+      const target = totalRatio > 0 ? (category.ratio / totalRatio) * n : 0;
       const variance = actual - target;
-      const absVariance = Math.abs(variance);
+      
+      const { status } = this.validation.calculateDeviationStatus(variance);
 
-      let status: 0 | 1 | 2;
-      if (absVariance === 0) {
-        status = 0;
-      } else if (maxBlock > 0 && absVariance < maxBlock) {
-        status = 1;
-      } else {
-        status = 2;
-      }
-
-      return { arm, actual, target, variance, status };
+      return { category, actual, target, variance, status };
     });
   }
 
   // ── Computed signal: global aggregation ──────────────────────────────────
 
   readonly globalRow = computed<BalanceRow>(() => {
-    const schema = this.state.results()?.schema ?? [];
+    const records = this.adapter.records();
     return {
       label: 'All Sites',
-      total: schema.length,
-      arms: this.buildArmBalances(schema),
+      total: records.length,
+      categories: this.buildCategoryBalances(records),
     };
   });
 
   // ── Computed signal: per-site aggregation ────────────────────────────────
 
   readonly siteRows = computed<BalanceRow[]>(() => {
-    const schema = this.state.results()?.schema ?? [];
-    const grouped = new Map<string, GeneratedSchema[]>();
-    for (const row of schema) {
-      if (!grouped.has(row.site)) grouped.set(row.site, []);
-      grouped.get(row.site)!.push(row);
+    const records = this.adapter.records();
+    const grouped = new Map<string, TrialRecord[]>();
+    for (const row of records) {
+      if (!grouped.has(row.groupingFactor)) grouped.set(row.groupingFactor, []);
+      grouped.get(row.groupingFactor)!.push(row);
     }
     return Array.from(grouped.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([site, rows]) => ({
         label: site,
         total: rows.length,
-        arms: this.buildArmBalances(rows),
+        categories: this.buildCategoryBalances(rows),
       }));
   });
 
   // ── Computed signal: per-stratum aggregation ─────────────────────────────
 
   readonly stratumRows = computed<BalanceRow[]>(() => {
-    const result = this.state.results();
-    if (!result) return [];
+    const records = this.adapter.records();
+    const factors = this.adapter.factors();
+    if (records.length === 0 || factors.length === 0) return [];
 
-    const schema = result.schema;
-    const strata = result.metadata.strata ?? [];
-    if (strata.length === 0) return [];
-
-    const grouped = new Map<string, GeneratedSchema[]>();
-    for (const row of schema) {
-      const parts = [row.site, ...strata.map(s => `${s.name || s.id}=${row.stratum[s.id] ?? '?'}`)];
+    const grouped = new Map<string, TrialRecord[]>();
+    for (const row of records) {
+      const parts = [row.groupingFactor, ...factors.map(s => `${s.name || s.id}=${row.stratum[s.id] ?? '?'}`)];
       const key = parts.join(' | ');
       if (!grouped.has(key)) grouped.set(key, []);
       grouped.get(key)!.push(row);
@@ -361,59 +330,58 @@ export class BalanceVerificationComponent {
       .map(([label, rows]) => ({
         label,
         total: rows.length,
-        arms: this.buildArmBalances(rows),
+        categories: this.buildCategoryBalances(rows),
       }));
   });
 
   // ── Computed signal: minimization marginal balance ────────────────────────
 
   readonly marginalBalanceRows = computed<MarginalBalanceRow[]>(() => {
-    const result = this.state.results();
-    if (!result || result.metadata.config?.randomizationMethod !== 'MINIMIZATION') return [];
+    if (!this.validation.isMarginalBalanceTarget()) return [];
 
-    const schema = result.schema;
-    const strata = result.metadata.strata ?? [];
-    const arms = result.metadata.config?.arms ?? [];
-    const totalRatio = arms.reduce((s, a) => s + a.ratio, 0);
+    const records = this.adapter.records();
+    const factors = this.adapter.factors();
+    const targets = this.validation.targets();
+    const totalRatio = this.totalRatio();
 
-    // Single-pass aggregation: nested Maps keyed by factorId → levelValue → armName.
-    const countsByFactor = new Map<string, Map<string, { total: number; armCounts: Map<string, number> }>>();
+    // Single-pass aggregation: nested Maps keyed by factorId → levelValue → categoryName.
+    const countsByFactor = new Map<string, Map<string, { total: number; categoryCounts: Map<string, number> }>>();
 
-    for (const row of schema) {
-      for (const factor of strata) {
+    for (const row of records) {
+      for (const factor of factors) {
         const level = row.stratum[factor.id];
         if (level == null) continue;
 
         let levelsForFactor = countsByFactor.get(factor.id);
         if (!levelsForFactor) {
-          levelsForFactor = new Map<string, { total: number; armCounts: Map<string, number> }>();
+          levelsForFactor = new Map<string, { total: number; categoryCounts: Map<string, number> }>();
           countsByFactor.set(factor.id, levelsForFactor);
         }
 
         let aggregate = levelsForFactor.get(level);
         if (!aggregate) {
-          aggregate = { total: 0, armCounts: new Map<string, number>() };
+          aggregate = { total: 0, categoryCounts: new Map<string, number>() };
           levelsForFactor.set(level, aggregate);
         }
 
         aggregate.total += 1;
-        aggregate.armCounts.set(row.treatmentArm, (aggregate.armCounts.get(row.treatmentArm) ?? 0) + 1);
+        aggregate.categoryCounts.set(row.category, (aggregate.categoryCounts.get(row.category) ?? 0) + 1);
       }
     }
 
-    return strata.flatMap(factor =>
+    return factors.flatMap(factor =>
       factor.levels.map(level => {
         const aggregate = countsByFactor.get(factor.id)?.get(level);
         const total = aggregate?.total ?? 0;
-        const armCounts = aggregate?.armCounts ?? new Map<string, number>();
+        const categoryCounts = aggregate?.categoryCounts ?? new Map<string, number>();
         return {
           factor: factor.name || factor.id,
           level,
           total,
-          armCounts: arms.map(arm => ({
-            name: arm.name,
-            actual: armCounts.get(arm.name) ?? 0,
-            target: totalRatio > 0 ? (arm.ratio / totalRatio) * total : 0
+          categoryCounts: targets.map(target => ({
+            name: target.name,
+            actual: categoryCounts.get(target.name) ?? 0,
+            target: totalRatio > 0 ? (target.ratio / totalRatio) * total : 0
           }))
         };
       })
@@ -427,24 +395,7 @@ export class BalanceVerificationComponent {
       case 0: return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300';
       case 1: return 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300';
       case 2: return 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300';
-    }
-  }
-
-  tooltipText(ab: ArmBalance): string {
-    const isMinimization = this.isMinimization();
-    switch (ab.status) {
-      case 0:
-        return `${ab.arm.name}: Perfect balance. Actual = Target = ${ab.actual}.`;
-      case 1:
-        return isMinimization
-          ? `${ab.arm.name}: Expected marginal deviation (Δ = ${ab.variance > 0 ? '+' : ''}${ab.variance.toFixed(1)}). ` +
-            `Minimization achieves marginal rather than exact balance; small deviations are normal.`
-          : `${ab.arm.name}: Expected deviation (Δ = ${ab.variance > 0 ? '+' : ''}${ab.variance.toFixed(1)}). ` +
-            `The total enrollment for this stratum is not a perfect multiple of the block size, ` +
-            `resulting in an incomplete final block.`;
-      case 2:
-        return `${ab.arm.name}: Critical error! Deviation Δ = ${ab.variance > 0 ? '+' : ''}${ab.variance.toFixed(1)} ` +
-          `exceeds the maximum expected for a single incomplete block. Investigate the randomization algorithm.`;
+      default: return '';
     }
   }
 }

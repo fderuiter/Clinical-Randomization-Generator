@@ -3,6 +3,7 @@ import { JsonPipe } from '@angular/common';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { CodeGeneratorService } from '../services/code-generator.service';
 import { CodeGenerationError } from '../errors/code-generation-errors';
+import { BIOSTAT_DATA_ADAPTER } from '../adapters/biostat-data-adapter';
 
 /**
  * ⚡ Bolt Performance Optimization:
@@ -18,6 +19,7 @@ import { CodeGenerationError } from '../errors/code-generation-errors';
 export class CodeGeneratorModalComponent implements OnInit {
   public state = inject(RandomizationEngineFacade);
   private codeGenService = inject(CodeGeneratorService);
+  private dataAdapter = inject(BIOSTAT_DATA_ADAPTER);
 
   activeTab = signal<'R' | 'SAS' | 'Python' | 'STATA'>('R');
   copied = signal(false);
@@ -46,7 +48,7 @@ export class CodeGeneratorModalComponent implements OnInit {
       return;
     }
     try {
-      const code = this.codeGenService.generate(this.activeTab(), config);
+      const code = this.codeGenService.generate(this.activeTab(), config, this.dataAdapter.records());
       this.generatedCode.set(code);
     } catch (e) {
       console.error('Error generating code:', e);

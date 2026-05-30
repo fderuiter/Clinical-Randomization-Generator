@@ -11,12 +11,19 @@ import { BalanceVerificationComponent } from '../../schema-management/components
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { ViewportService } from '../../../core/services/viewport.service';
 import { SeoService } from '../../../core/services/seo.service';
+import { BIOSTAT_DATA_ADAPTER } from '../../schema-management/adapters/biostat-data-adapter';
+import { BIOSTAT_VALIDATION_ADAPTER } from '../../schema-management/adapters/biostat-validation-adapter';
+import { RandomizationDataAdapter, RandomizationValidationAdapter } from '../../schema-management/adapters/randomization-adapters';
 
 type ResultsTab = 'grid' | 'balance';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-generator',
+  providers: [
+    { provide: BIOSTAT_DATA_ADAPTER, useClass: RandomizationDataAdapter },
+    { provide: BIOSTAT_VALIDATION_ADAPTER, useClass: RandomizationValidationAdapter }
+  ],
   imports: [
     RouterLink,
     ConfigFormComponent,

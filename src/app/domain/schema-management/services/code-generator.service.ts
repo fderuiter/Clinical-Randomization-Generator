@@ -13,6 +13,8 @@ import { SasStrategy } from './generation/sas.strategy';
 import { StataStrategy } from './generation/stata.strategy';
 import { MethodologySpecificationService } from './methodology-specification.service';
 
+import { TrialRecord } from '../adapters/trial-record.model';
+
 export const CODE_GENERATION_STRATEGIES = new InjectionToken<CodeGenerationStrategy[]>('CODE_GENERATION_STRATEGIES', {
   providedIn: 'root',
   factory: () => {
@@ -34,7 +36,7 @@ export class CodeGeneratorService {
    * Phase 0 – Language dispatch entry point.
    * Runs pre-flight config validation, then delegates to the appropriate generator.
    */
-  generate(language: 'R' | 'SAS' | 'Python' | 'STATA', config: RandomizationConfig): string {
+  generate(language: 'R' | 'SAS' | 'Python' | 'STATA', config: RandomizationConfig, records?: TrialRecord[]): string {
     this.validateConfig(config);
     
     const strategy = this.strategies.find(s => s.language === language);
@@ -44,9 +46,9 @@ export class CodeGeneratorService {
 
     let output: string;
     if (config.randomizationMethod === 'MINIMIZATION') {
-      output = strategy.generateMinimization(config);
+      output = strategy.generateMinimization(config, records);
     } else {
-      output = strategy.generate(config);
+      output = strategy.generate(config, records);
     }
 
     // Static mapping guard runs after generation
@@ -87,19 +89,19 @@ export class CodeGeneratorService {
     }
   }
 
-  generateR(config: RandomizationConfig): string {
-    return this.generate('R', config);
+  generateR(config: RandomizationConfig, records?: TrialRecord[]): string {
+    return this.generate('R', config, records);
   }
 
-  generatePython(config: RandomizationConfig): string {
-    return this.generate('Python', config);
+  generatePython(config: RandomizationConfig, records?: TrialRecord[]): string {
+    return this.generate('Python', config, records);
   }
 
-  generateSas(config: RandomizationConfig): string {
-    return this.generate('SAS', config);
+  generateSas(config: RandomizationConfig, records?: TrialRecord[]): string {
+    return this.generate('SAS', config, records);
   }
 
-  generateStata(config: RandomizationConfig): string {
-    return this.generate('STATA', config);
+  generateStata(config: RandomizationConfig, records?: TrialRecord[]): string {
+    return this.generate('STATA', config, records);
   }
 }

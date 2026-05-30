@@ -10,11 +10,11 @@ export class PythonStrategy implements CodeGenerationStrategy {
 
   constructor(private methodologySpec: MethodologySpecificationService) {}
 
-  generate(config: RandomizationConfig): string {
-    return CodeTranspiler.transpile(this.language, config, 'BLOCK');
+  generate(config: RandomizationConfig, records?: any[]): string {
+    return CodeTranspiler.transpile(this.language, config, 'BLOCK', records);
   }
 
-  generateMinimization(config: RandomizationConfig): string {
-    return CodeTranspiler.transpile(this.language, config, 'MINIMIZATION');
+  generateMinimization(config: RandomizationConfig, records?: any[]): string {
+    return CodeTranspiler.transpile(this.language, config, 'MINIMIZATION', records);
   }
 }
