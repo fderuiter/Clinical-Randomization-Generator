@@ -7,6 +7,12 @@ import {
   inject,
   OnDestroy,
   viewChild,
+  Input,
+  Output,
+  EventEmitter,
+  OnInit,
+  SimpleChanges,
+  OnChanges
 } from '@angular/core';
 import * as echarts from 'echarts/core';
 import { PieChart, BarChart } from 'echarts/charts';
@@ -19,16 +25,76 @@ import {
 import { CanvasRenderer } from 'echarts/renderers';
 import { RandomizationEngineFacade } from '../../randomization-engine/randomization-engine.facade';
 import { SchemaViewStateService } from '../services/schema-view-state.service';
+import { AdamLiteDataset, AdamLiteVariable } from '../../core/models/adam-lite.model';
 
 // Register only the ECharts modules we need (tree-shakeable).
 echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer]);
 
 @Component({
+  selector: 'app-echart',
+  standalone: true,
+  template: `<div class="w-full h-full" #container></div>`
+})
+export class EchartComponent implements OnDestroy, OnInit, OnChanges {
+  @Input() option: any;
+  @Output() chartClick = new EventEmitter<any>();
+  private readonly containerRef = viewChild<ElementRef<HTMLDivElement>>('container');
+  private chart: echarts.ECharts | null = null;
+
+  ngOnInit() {
+    this.initChart();
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['option'] && this.chart) {
+      try {
+        this.chart.setOption(this.option, { notMerge: true });
+      } catch {}
+    }
+  }
+
+  ngAfterViewInit() {
+    this.initChart();
+  }
+
+  private initChart() {
+    const el = this.containerRef()?.nativeElement;
+    if (!el || !this.option || this.chart) return;
+
+    try {
+      this.chart = echarts.init(el, undefined, { renderer: 'canvas' });
+      this.chart.on('click', (params: echarts.ECElementEvent) => {
+        this.chartClick.emit(params);
+      });
+      this.chart.setOption(this.option, { notMerge: true });
+    } catch {
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', this.onResize);
+    }
+  }
+
+  ngOnDestroy() {
+    try { this.chart?.dispose(); } catch {}
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', this.onResize);
+    }
+  }
+
+  private readonly onResize = () => {
+    this.chart?.resize();
+  };
+}
+
+@Component({
   selector: 'app-schema-analytics-dashboard',
   standalone: true,
+  imports: [EchartComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (state.results()) {
+    @if (viewState.adamDataset()) {
       <div data-testid="schema-analytics-dashboard" class="bg-surface rounded-xl shadow-sm border border-border-subtle p-6 space-y-4">
 
         <!-- Header -->
@@ -40,7 +106,7 @@ echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendCompone
             <div class="flex items-center gap-2 text-sm">
               <span class="text-muted">Active filter:</span>
               <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 font-medium text-xs">
-                {{ viewState.activeFilter()!.type === 'site' ? 'Site' : 'Treatment' }}:
+                {{ getVariableLabel(viewState.activeFilter()!.variableId || viewState.activeFilter()!.type || '') }}:
                 {{ viewState.activeFilter()!.value }}
                 <button
                   (click)="viewState.clearFilter()"
@@ -59,24 +125,19 @@ echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendCompone
 
         <!-- Charts grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Donut chart: Treatment Balance -->
-          <div>
-            <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">
-              Treatment Balance
-              @if (!viewState.isUnblinded()) {
-                <span class="ml-1 text-amber-700 dark:text-amber-400">(blinded)</span>
-              }
-            </p>
-            <div #donutContainer class="h-56 w-full"></div>
-          </div>
-
-          <!-- Bar chart: Site Distribution -->
-          <div>
-            <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">
-              Distribution by Site
-            </p>
-            <div #barContainer class="h-56 w-full"></div>
-          </div>
+          @for (chart of chartConfigs(); track chart.id) {
+            <div>
+              <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">
+                Distribution by {{ chart.label }}
+                @if (chart.isBlinded) {
+                  <span class="ml-1 text-amber-700 dark:text-amber-400">(blinded)</span>
+                }
+              </p>
+              <div class="h-56 w-full">
+                <app-echart [option]="chart.option" (chartClick)="chart.clickHandler($event)"></app-echart>
+              </div>
+            </div>
+          }
         </div>
 
         <p class="text-xs text-muted">
@@ -86,15 +147,8 @@ echarts.use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendCompone
     }
   `,
 })
-export class SchemaAnalyticsDashboardComponent implements OnDestroy {
-  protected readonly state = inject(RandomizationEngineFacade);
+export class SchemaAnalyticsDashboardComponent {
   protected readonly viewState = inject(SchemaViewStateService);
-
-  private readonly donutContainerRef = viewChild<ElementRef<HTMLDivElement>>('donutContainer');
-  private readonly barContainerRef = viewChild<ElementRef<HTMLDivElement>>('barContainer');
-
-  private donutChart: echarts.ECharts | null = null;
-  private barChart: echarts.ECharts | null = null;
 
   private getCssColor(token: string, fallback: string): string {
     if (typeof window === 'undefined') return fallback;
@@ -102,184 +156,111 @@ export class SchemaAnalyticsDashboardComponent implements OnDestroy {
     return value || fallback;
   }
 
-  // -------------------------------------------------------------------------
-  // Derived data for charts
-  // -------------------------------------------------------------------------
+  getVariableLabel(id: string): string {
+    if (id === 'treatment') id = 'treatmentArm';
+    const ds = this.viewState.adamDataset();
+    if (!ds) return id;
+    const v = ds.variables.find(v => v.id === id);
+    return v ? v.label : id;
+  }
 
-  /** Aggregated treatment counts from the filtered schema. */
-  private readonly treatmentCounts = computed(() => {
-    const schema = this.viewState.filteredSchema();
-    const map = new Map<string, number>();
-    for (const row of schema) {
-      map.set(row.treatmentArm, (map.get(row.treatmentArm) ?? 0) + 1);
-    }
-    return map;
-  });
+  readonly chartConfigs = computed(() => {
+    const dataset = this.viewState.adamDataset();
+    const filteredDataset = this.viewState.filteredAdamDataset();
+    if (!dataset || !filteredDataset) return [];
 
-  /** Aggregated site counts from the filtered schema. */
-  private readonly siteCounts = computed(() => {
-    const schema = this.viewState.filteredSchema();
-    const map = new Map<string, number>();
-    for (const row of schema) {
-      map.set(row.site, (map.get(row.site) ?? 0) + 1);
-    }
-    return map;
-  });
-
-  /** ECharts option object for the donut chart (reacts to blinding state). */
-  private readonly donutOption = computed(() => {
     const isUnblinded = this.viewState.isUnblinded();
-    const counts = this.treatmentCounts();
     const blindedColour = this.getCssColor('--text-muted', '#94a3b8');
-
-    if (!isUnblinded) {
-      // Blinded: solid monochromatic ring, no treatment info leaked
-      return {
-        tooltip: { show: false },
-        legend: { show: false },
-        series: [{
-          type: 'pie',
-          radius: ['45%', '70%'],
-          label: { show: true, formatter: 'Blinded', position: 'center', fontSize: 13, color: blindedColour, fontWeight: 'bold' },
-          emphasis: { disabled: true },
-          data: [{ value: 1, name: 'Blinded', itemStyle: { color: blindedColour } }],
-        }],
-      };
-    }
-
     const palette = ['#6366f1', '#34d399', '#fb923c', '#f472b6', '#38bdf8', '#a78bfa'];
-    const data = Array.from(counts.entries()).map(([name, value], i) => ({
-      name,
-      value,
-      itemStyle: { color: palette[i % palette.length] },
-    }));
 
-    return {
-      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-      legend: { orient: 'horizontal', bottom: 0, textStyle: { fontSize: 11 } },
-      series: [{
-        type: 'pie',
-        radius: ['45%', '70%'],
-        label: { show: false },
-        emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.3)' } },
-        data,
-      }],
-    };
-  });
+    const categoricalVars = dataset.variables.filter(v => v.type === 'categorical');
+    const charts = [];
 
-  /** ECharts option object for the grouped bar chart. */
-  private readonly barOption = computed(() => {
-    const schema = this.viewState.filteredSchema();
-    const isUnblinded = this.viewState.isUnblinded();
-    const blindedColour = this.getCssColor('--text-muted', '#94a3b8');
+    for (let i = 0; i < categoricalVars.length; i++) {
+      const v = categoricalVars[i];
+      const isBlindedGroup = v.metadataTags.includes('Group') && !isUnblinded;
 
-    // Collect unique sites and treatment arms
-    const sites = [...new Set(schema.map(r => r.site))].sort();
-    const arms = isUnblinded
-      ? [...new Set(schema.map(r => r.treatmentArm))].sort()
-      : ['Total'];
+      // Calculate counts from filtered dataset
+      const counts = new Map<string, number>();
+      for (const row of filteredDataset.records) {
+        const val = String(row[v.id]);
+        counts.set(val, (counts.get(val) || 0) + 1);
+      }
 
-    // Build series data
-    const series = arms.map((arm, i) => {
-      const palette = ['#6366f1', '#34d399', '#fb923c', '#f472b6', '#38bdf8', '#a78bfa'];
-      const data = sites.map(site => {
-        if (!isUnblinded) {
-          return schema.filter(r => r.site === site).length;
+      let option: any;
+
+      if (isBlindedGroup) {
+        option = {
+          tooltip: { show: false },
+          legend: { show: false },
+          series: [{
+            type: 'pie',
+            radius: ['45%', '70%'],
+            label: { show: true, formatter: 'Blinded', position: 'center', fontSize: 13, color: blindedColour, fontWeight: 'bold' },
+            emphasis: { disabled: true },
+            data: [{ value: 1, name: 'Blinded', itemStyle: { color: blindedColour } }],
+          }],
+        };
+      } else {
+        // Alternate between pie and bar charts for variety (or based on metadata)
+        if (i % 2 === 0 || v.metadataTags.includes('Group')) {
+          const data = Array.from(counts.entries()).map(([name, value], idx) => ({
+            name,
+            value,
+            itemStyle: { color: palette[idx % palette.length] },
+          }));
+
+          option = {
+            tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+            legend: { orient: 'horizontal', bottom: 0, textStyle: { fontSize: 11 } },
+            series: [{
+              type: 'pie',
+              radius: ['45%', '70%'],
+              label: { show: false },
+              emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.3)' } },
+              data,
+            }],
+          };
+        } else {
+          // Bar chart
+          const names = Array.from(counts.keys()).sort();
+          const data = names.map((name, idx) => ({
+            value: counts.get(name) || 0,
+            itemStyle: { color: palette[idx % palette.length] }
+          }));
+
+          option = {
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+            legend: { show: false },
+            grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
+            xAxis: { type: 'category', data: names, axisLabel: { rotate: names.length > 5 ? 30 : 0, fontSize: 11 } },
+            yAxis: { type: 'value', minInterval: 1 },
+            series: [{ type: 'bar', data }]
+          };
         }
-        return schema.filter(r => r.site === site && r.treatmentArm === arm).length;
-      });
-      return {
-        name: arm,
-        type: 'bar' as const,
-        data,
-        itemStyle: { color: isUnblinded ? palette[i % palette.length] : blindedColour },
+      }
+
+      const clickHandler = (params: any) => {
+        if (isBlindedGroup) return;
+        const current = this.viewState.activeFilter();
+        const clickedValue = String(params.name);
+        if (current?.variableId === v.id && current.value === clickedValue) {
+          this.viewState.clearFilter();
+        } else {
+          this.viewState.setFilter({ variableId: v.id, type: v.id, value: clickedValue });
+        }
       };
-    });
 
-    return {
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      legend: isUnblinded ? { bottom: 0, textStyle: { fontSize: 11 } } : { show: false },
-      grid: { left: '3%', right: '4%', bottom: isUnblinded ? '18%' : '5%', containLabel: true },
-      xAxis: { type: 'category', data: sites, axisLabel: { rotate: sites.length > 5 ? 30 : 0, fontSize: 11 } },
-      yAxis: { type: 'value', minInterval: 1 },
-      series,
-    };
+      charts.push({
+        id: v.id,
+        label: v.label,
+        isBlinded: isBlindedGroup,
+        option,
+        clickHandler
+      });
+    }
+
+    return charts;
   });
-
-  // -------------------------------------------------------------------------
-  // Chart lifecycle via Angular effects
-  // -------------------------------------------------------------------------
-
-  constructor() {
-    // Initialize charts once their host elements appear
-    effect(() => {
-      const donutEl = this.donutContainerRef()?.nativeElement;
-      const barEl = this.barContainerRef()?.nativeElement;
-      if (!donutEl || !barEl) return;
-
-      if (!this.donutChart) {
-        try {
-          this.donutChart = echarts.init(donutEl, undefined, { renderer: 'canvas' });
-          this.donutChart.on('click', (params: echarts.ECElementEvent) => {
-            if (!this.viewState.isUnblinded()) return; // blinded: no interaction
-            const name = params.name as string;
-            const current = this.viewState.activeFilter();
-            if (current?.type === 'treatment' && current.value === name) {
-              this.viewState.clearFilter();
-            } else {
-              this.viewState.setFilter({ type: 'treatment', value: name });
-            }
-          });
-        } catch {
-          // Canvas not fully supported (e.g., SSR or test environments).
-          return;
-        }
-      }
-
-      if (!this.barChart) {
-        try {
-          this.barChart = echarts.init(barEl, undefined, { renderer: 'canvas' });
-          this.barChart.on('click', (params: echarts.ECElementEvent) => {
-            // params.name holds the category (site) in a bar chart
-            const siteName = params.name as string;
-            const current = this.viewState.activeFilter();
-            if (current?.type === 'site' && current.value === siteName) {
-              this.viewState.clearFilter();
-            } else {
-              this.viewState.setFilter({ type: 'site', value: siteName });
-            }
-          });
-        } catch {
-          // Canvas not fully supported (e.g., SSR or test environments).
-          return;
-        }
-      }
-
-      // Apply latest options (triggers smooth animation)
-      try {
-        this.donutChart?.setOption(this.donutOption(), { notMerge: true });
-        this.barChart?.setOption(this.barOption(), { notMerge: true });
-      } catch {
-        // Canvas rendering errors (e.g., in test environments).
-      }
-    });
-
-    // Resize charts when window resizes
-    if (typeof window !== 'undefined') {
-      window.addEventListener('resize', this.onResize);
-    }
-  }
-
-  ngOnDestroy(): void {
-    try { this.donutChart?.dispose(); } catch { /* ignore */ }
-    try { this.barChart?.dispose(); } catch { /* ignore */ }
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('resize', this.onResize);
-    }
-  }
-
-  private readonly onResize = (): void => {
-    this.donutChart?.resize();
-    this.barChart?.resize();
-  };
 }
+

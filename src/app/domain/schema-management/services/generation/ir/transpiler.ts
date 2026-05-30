@@ -2,152 +2,159 @@ import { RandomizationConfig } from '../../../../core/models/randomization.model
 import { generateRandomizationSchema } from '../../../../randomization-engine/core/randomization-algorithm';
 import { FormattingUtil } from '../formatting.util';
 import { ReproducibilityUtil } from '../reproducibility.util';
+import { R_TEMPLATE, SAS_TEMPLATE, PYTHON_TEMPLATE, STATA_TEMPLATE } from './templates';
 
 export class CodeTranspiler {
+  
+  private static renderTemplate(template: string, data: Record<string, string | number>): string {
+    let result = template;
+    for (const [key, value] of Object.entries(data)) {
+      const regex = new RegExp(`{{${key}}}`, 'g');
+      result = result.replace(regex, String(value));
+    }
+    return result.trim() + '\n';
+  }
+
   static transpile(lang: 'R'|'Python'|'SAS'|'STATA', config: RandomizationConfig, method: 'BLOCK' | 'MINIMIZATION'): string {
     const schema = generateRandomizationSchema(config).schema;
     const seedHash = ReproducibilityUtil.hashCode(config.seed);
     const dateStr = new Date().toISOString().substring(0, 19);
-    
-    let out = '';
-    
+    const algorithm = method === 'MINIMIZATION' ? 'Pocock-Simon Minimization' : 'PRNG Algorithm: MT19937';
+
+    const data: Record<string, string | number> = {
+      protocolId: config.protocolId,
+      dateStr,
+      algorithm,
+      seedHash
+    };
+
     if (lang === 'SAS') {
-      out += `/* Randomization Schema Generation in SAS */\n`;
-      out += `/* Protocol: ${config.protocolId} */\n`;
-      out += `/* App Version: 1.0 */\n`;
-      out += `/* Generated At: ${dateStr} */\n`;
-      out += method === 'MINIMIZATION' ? `/* Algorithm: Pocock-Simon Minimization */\n` : `/* PRNG Algorithm: MT19937 */\n`;
-      out += `%let seed = ${seedHash};\n`;
-      out += `%let arms = ` + config.arms.map(a => `"${FormattingUtil.escapeSasString(a.name)}"`).join(' ') + `;\n`;
-      out += `%let arms_names = ` + config.arms.map(a => `"${FormattingUtil.escapeSasString(a.name)}"`).join(' ') + `;\n`;
-      out += `%let strata_factors = ` + (config.strata || []).map(s => `"${FormattingUtil.escapeSasString(s.id)}"`).join(' ') + `;\n`;
-      out += `/* Ratios: ${config.arms.map(a => a.ratio).join(', ')} */\n`;
+      data['arms'] = config.arms.map(a => `"${FormattingUtil.escapeSasString(a.name)}"`).join(' ');
+      data['armsNames'] = data['arms'];
+      data['strataFactors'] = (config.strata || []).map(s => `"${FormattingUtil.escapeSasString(s.id)}"`).join(' ');
+      data['ratios'] = config.arms.map(a => a.ratio).join(', ');
+      
+      let strataComments = '';
       (config.strata || []).forEach(s => {
-          out += `/* Levels for ${s.id}: ${s.levels.join(', ')} */\n`;
+          strataComments += `/* Levels for ${s.id}: ${s.levels.join(', ')} */\n`;
       });
-      out += `\n/* --- SINGLE-SOURCE TRANSPILED LOGIC --- */\n`;
-      out += `%let MAX_SITES = 1000; /* SAS site-limit constraint workaround */\n`;
-      if (method === 'MINIMIZATION') {
-         out += `%let p_minimization = ${config.minimizationConfig?.p || 0.8}; /* maintain precision parity */\n`;
-         out += `/* specific rounding or comparison functions injected for SAS */\n`;
-      }
-      if (method === 'BLOCK') {
-         out += `%let block_sizes = ${(config.blockSizes || []).join(' ')};\n`;
-      }
-      out += `data RandomizationSchema;\n`;
-      out += `  length SubjectID $20 Site $20 Treatment $50 StratumCode $50`;
+      data['strataComments'] = strataComments.trim();
+
+      data['minimizationParam'] = method === 'MINIMIZATION' ? `%let p_minimization = ${config.minimizationConfig?.p || 0.8}; /* maintain precision parity */\n/* specific rounding or comparison functions injected for SAS */` : '';
+      data['blockSizesParam'] = method === 'BLOCK' ? `%let block_sizes = ${(config.blockSizes || []).join(' ')};` : '';
+
+      let strataLength = '';
       for (const s of config.strata || []) {
-          out += ` ${FormattingUtil.escapeSasString(s.id)} $50`;
+          strataLength += ` ${FormattingUtil.escapeSasString(s.id)} $50`;
       }
-      out += `;\n`;
+      data['strataLength'] = strataLength;
+
+      let schemaRows = '';
       for (const row of schema) {
-         out += `  SubjectID="${FormattingUtil.escapeSasString(row.subjectId)}"; ` +
+         schemaRows += `  SubjectID="${FormattingUtil.escapeSasString(row.subjectId)}"; ` +
                 `Site="${FormattingUtil.escapeSasString(row.site)}"; ` +
                 `Treatment="${FormattingUtil.escapeSasString(row.treatmentArm)}"; ` +
                 `BlockNumber=${row.blockNumber}; ` +
                 `BlockSize=${row.blockSize}; ` +
                 `StratumCode="${FormattingUtil.escapeSasString(row.stratumCode)}"; `;
          for (const s of config.strata || []) {
-             out += `  ${FormattingUtil.escapeSasString(s.id)}="${FormattingUtil.escapeSasString(row.stratum[s.id])}"; `;
+             schemaRows += `  ${FormattingUtil.escapeSasString(s.id)}="${FormattingUtil.escapeSasString(row.stratum[s.id])}"; `;
          }
-         out += `output;\n`;
+         schemaRows += `output;\n`;
       }
-      out += `run;\n`;
+      data['schemaRows'] = schemaRows.trimEnd();
+      return this.renderTemplate(SAS_TEMPLATE, data);
     } else if (lang === 'STATA') {
-      out += `* Randomization Schema Configuration\n`;
-      out += `* Protocol: ${config.protocolId}\n`;
-      out += `* App Version: 1.0\n`;
-      out += `* Generated At: ${dateStr}\n`;
-      out += method === 'MINIMIZATION' ? `* Algorithm: Pocock-Simon Minimization\n` : `* PRNG Algorithm: MT19937\n`;
-      out += `set seed ${seedHash}\n`;
+      let armsVars = '';
       config.arms.forEach((a, i) => {
-      out += `local arm_name_${i + 1} ${FormattingUtil.stataLabelQuote(a.name)}\n`;
+        armsVars += `local arm_name_${i + 1} ${FormattingUtil.stataLabelQuote(a.name)}\n`;
       });
+      data['armsVars'] = armsVars.trim();
+
+      let strataComments = '';
       (config.strata || []).forEach((s, i) => {
-         out += `local strata_${i+1} "\`"${FormattingUtil.sanitizeStataVarName(s.id)}"'"\n`;
+         strataComments += `local strata_${i+1} "\`"${FormattingUtil.sanitizeStataVarName(s.id)}"'"\n`;
          s.levels.forEach(l => {
-             out += `* Level: ${FormattingUtil.stataLabelQuote(l)}\n`;
+             strataComments += `* Level: ${FormattingUtil.stataLabelQuote(l)}\n`;
          });
       });
-      out += `* Ratios: ${config.arms.map(a => a.ratio).join(', ')}\n`;
-      out += `\n* --- SINGLE-SOURCE TRANSPILED LOGIC ---\n`;
-      out += `local missing_val = . /* Stata missing value constant workaround */\n`;
-      if (method === 'MINIMIZATION') {
-         out += `local p_minimization = round(${config.minimizationConfig?.p || 0.8}, 1e-6) // Stata 1e-6 precision handled\n`;
-      }
+      data['strataComments'] = strataComments.trim();
+      data['ratios'] = config.arms.map(a => a.ratio).join(', ');
+
+      data['minimizationParam'] = method === 'MINIMIZATION' ? `local p_minimization = round(${config.minimizationConfig?.p || 0.8}, 1e-6) // Stata 1e-6 precision handled` : '';
+      
+      let blockSizesParam = '';
       if (method === 'BLOCK') {
-         config.blockSizes.forEach((b, i) => out += `local block_${i+1} ${b}\n`);
-         out += `local cap = 0\n`;
+         config.blockSizes.forEach((b, i) => blockSizesParam += `local block_${i+1} ${b}\n`);
+         blockSizesParam += `local cap = 0`;
       }
-      out += `clear\nset obs ${schema.length || 1}\n`;
-      out += `gen str20 SubjectID = ""\ngen str20 Site = ""\ngen str50 Treatment = ""\ngen BlockNumber = .\ngen BlockSize = .\ngen str50 StratumCode = ""\n`;
-      (config.strata || []).forEach(s => out += `gen str50 ${FormattingUtil.sanitizeStataVarName(s.id)} = ""\n`);
+      data['blockSizesParam'] = blockSizesParam.trim();
+
+      data['schemaLength'] = schema.length || 1;
+
+      let strataLength = '';
+      (config.strata || []).forEach(s => strataLength += `gen str50 ${FormattingUtil.sanitizeStataVarName(s.id)} = ""\n`);
+      data['strataLength'] = strataLength.trimEnd();
+
+      let schemaRows = '';
       schema.forEach((row, i) => {
-         out += `replace SubjectID=${FormattingUtil.stataLabelQuote(row.subjectId)} in ${i+1}\n`;
-         out += `replace Site=${FormattingUtil.stataLabelQuote(row.site)} in ${i+1}\n`;
+         schemaRows += `replace SubjectID=${FormattingUtil.stataLabelQuote(row.subjectId)} in ${i+1}\n`;
+         schemaRows += `replace Site=${FormattingUtil.stataLabelQuote(row.site)} in ${i+1}\n`;
          const armName = config.arms.find(a => a.id === row.treatmentArmId)?.name || row.treatmentArmId;
-         out += `replace Treatment=${FormattingUtil.stataLabelQuote(armName)} in ${i+1}\n`;
-         out += `replace BlockNumber=${row.blockNumber} in ${i+1}\n`;
-         out += `replace BlockSize=${row.blockSize} in ${i+1}\n`;
-         out += `replace StratumCode=${FormattingUtil.stataLabelQuote(row.stratumCode)} in ${i+1}\n`;
+         schemaRows += `replace Treatment=${FormattingUtil.stataLabelQuote(armName)} in ${i+1}\n`;
+         schemaRows += `replace BlockNumber=${row.blockNumber} in ${i+1}\n`;
+         schemaRows += `replace BlockSize=${row.blockSize} in ${i+1}\n`;
+         schemaRows += `replace StratumCode=${FormattingUtil.stataLabelQuote(row.stratumCode)} in ${i+1}\n`;
          (config.strata || []).forEach(s => {
-             out += `replace ${FormattingUtil.sanitizeStataVarName(s.id)}=${FormattingUtil.stataLabelQuote(row.stratum[s.id])} in ${i+1}\n`;
+             schemaRows += `replace ${FormattingUtil.sanitizeStataVarName(s.id)}=${FormattingUtil.stataLabelQuote(row.stratum[s.id])} in ${i+1}\n`;
          });
       });
+      data['schemaRows'] = schemaRows.trimEnd();
+      return this.renderTemplate(STATA_TEMPLATE, data);
     } else if (lang === 'Python') {
-      out += `# Randomization Schema Configuration\n`;
-      out += `# Protocol: ${config.protocolId}\n`;
-      out += `# App Version: 1.0\n`;
-      out += `# Generated At: ${dateStr}\n`;
-      out += method === 'MINIMIZATION' ? `# Algorithm: Pocock-Simon Minimization\n` : `# PRNG Algorithm: MT19937\n`;
-      out += `import numpy as np\nimport pandas as pd\n`;
-      out += `rng = np.random.default_rng(${seedHash})\n`;
-      out += `# Arms: ${config.arms.map(a => FormattingUtil.escapePythonString(a.name)).join(', ')}\n`;
-      out += `# Ratios: ${config.arms.map(a => a.ratio).join(', ')}\n`;
+      data['arms'] = config.arms.map(a => FormattingUtil.escapePythonString(a.name)).join(', ');
+      data['ratios'] = config.arms.map(a => a.ratio).join(', ');
+      
+      let strataComments = '';
       (config.strata || []).forEach(s => {
-          out += `# Stratum: ${s.id}, Levels: ${s.levels.map(l => FormattingUtil.escapePythonString(l)).join(', ')}\n`;
+          strataComments += `# Stratum: ${s.id}, Levels: ${s.levels.map(l => FormattingUtil.escapePythonString(l)).join(', ')}\n`;
       });
-      out += `\n# --- SINGLE-SOURCE TRANSPILED LOGIC ---\n`;
-      if (method === 'MINIMIZATION') {
-         out += `p_minimization = ${config.minimizationConfig?.p || 0.8} # maintain precision parity\n`;
-      }
-      out += `schema = [\n`;
+      data['strataComments'] = strataComments.trimEnd();
+      data['minimizationParam'] = method === 'MINIMIZATION' ? `p_minimization = ${config.minimizationConfig?.p || 0.8} # maintain precision parity` : '';
+
+      let schemaRows = '';
       for (const row of schema) {
-         out += `  {"SubjectID": "${row.subjectId}", "Site": "${row.site}", "Treatment": "${row.treatmentArm}", "BlockNumber": ${row.blockNumber}, "BlockSize": ${row.blockSize}, "StratumCode": "${row.stratumCode}"`;
+         schemaRows += `  {"SubjectID": "${row.subjectId}", "Site": "${row.site}", "Treatment": "${row.treatmentArm}", "BlockNumber": ${row.blockNumber}, "BlockSize": ${row.blockSize}, "StratumCode": "${row.stratumCode}"`;
          for (const s of config.strata || []) {
-             out += `, "${s.id}": "${FormattingUtil.escapePythonString(row.stratum[s.id])}"`;
+             schemaRows += `, "${s.id}": "${FormattingUtil.escapePythonString(row.stratum[s.id])}"`;
          }
-         out += `},\n`;
+         schemaRows += `},\n`;
       }
-      out += `]\ndf = pd.DataFrame(schema)\nprint(df.head())\n`;
+      data['schemaRows'] = schemaRows.trimEnd();
+      return this.renderTemplate(PYTHON_TEMPLATE, data);
     } else if (lang === 'R') {
-      out += `# Randomization Schema Configuration\n`;
-      out += `# Protocol: ${config.protocolId}\n`;
-      out += `# App Version: 1.0\n`;
-      out += `# Generated At: ${dateStr}\n`;
-      out += method === 'MINIMIZATION' ? `# Algorithm: Pocock-Simon Minimization\n` : `# PRNG Algorithm: MT19937\n`;
-      out += `set.seed(${seedHash})\n`;
-      out += `# Arms: ${config.arms.map(a => FormattingUtil.escapeRString(a.name)).join(', ')}\n`;
-      out += `# Ratios: ${config.arms.map(a => a.ratio).join(', ')}\n`;
+      data['arms'] = config.arms.map(a => FormattingUtil.escapeRString(a.name)).join(', ');
+      data['ratios'] = config.arms.map(a => a.ratio).join(', ');
+      
+      let strataComments = '';
       (config.strata || []).forEach(s => {
-          out += `# Stratum: ${s.id}, Levels: ${s.levels.map(l => FormattingUtil.escapeRString(l)).join(', ')}\n`;
+          strataComments += `# Stratum: ${s.id}, Levels: ${s.levels.map(l => FormattingUtil.escapeRString(l)).join(', ')}\n`;
       });
-      out += `\n# --- SINGLE-SOURCE TRANSPILED LOGIC ---\n`;
-      if (method === 'MINIMIZATION') {
-         out += `p_minimization <- ${config.minimizationConfig?.p || 0.8} # maintain precision parity\n`;
-      }
-      out += `schema_list <- list()\n`;
+      data['strataComments'] = strataComments.trimEnd();
+      data['minimizationParam'] = method === 'MINIMIZATION' ? `p_minimization <- ${config.minimizationConfig?.p || 0.8} # maintain precision parity` : '';
+
+      let schemaRows = '';
       schema.forEach((row, i) => {
-         out += `schema_list[[${i+1}]] <- data.frame(SubjectID="${row.subjectId}", Site="${row.site}", Treatment="${row.treatmentArm}", BlockNumber=${row.blockNumber}, BlockSize=${row.blockSize}, StratumCode="${row.stratumCode}"`;
+         schemaRows += `schema_list[[${i+1}]] <- data.frame(SubjectID="${row.subjectId}", Site="${row.site}", Treatment="${row.treatmentArm}", BlockNumber=${row.blockNumber}, BlockSize=${row.blockSize}, StratumCode="${row.stratumCode}"`;
          for (const s of config.strata || []) {
-             out += `, ${s.id}="${FormattingUtil.escapeRString(row.stratum[s.id])}"`;
+             schemaRows += `, ${s.id}="${FormattingUtil.escapeRString(row.stratum[s.id])}"`;
          }
-         out += `, stringsAsFactors=FALSE)\n`;
+         schemaRows += `, stringsAsFactors=FALSE)\n`;
       });
-      out += `schema <- do.call(rbind, schema_list)\n`;
-      out += `if (is.null(schema)) schema <- data.frame()\nprint(head(schema))\n`;
+      data['schemaRows'] = schemaRows.trimEnd();
+      return this.renderTemplate(R_TEMPLATE, data);
     }
     
-    return out;
+    return '';
   }
 }
